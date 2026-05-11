@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webfinance — Persoonlijk financieel beheer</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-icon">€</div>
+            <div>
+                <h1 class="brand-title">Webfinance</h1>
+                <p class="brand-sub">Persoonlijk beheer</p>
+            </div>
+        </div>
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="invoer">💰 Invoer</button>
+            <button class="tab-btn" data-tab="overzicht">📊 Overzicht</button>
+            <button class="tab-btn" data-tab="database">📋 Database</button>
+            <button class="tab-btn" data-tab="vaste-lasten">📅 Vaste Lasten</button>
+        </nav>
+    </header>
+
+    <!-- ─── Tab: Invoer ─── -->
+    <main class="app-main">
+        <section id="tab-invoer" class="tab-content active">
+            <div class="form-container">
+                <div class="card card-accent-blue">
+                    <h3 class="card-title">💰 Nieuwe transactie</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Datum</label>
+                            <input type="date" id="inp-datum">
+                        </div>
+                        <div class="form-group">
+                            <label>Bedrag (€)</label>
+                            <input type="number" step="0.01" placeholder="0,00" id="inp-bedrag" class="mono">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Omschrijving</label>
+                            <input type="text" placeholder="Bijv. Boodschappen Albert Heijn" id="inp-omschrijving">
+                        </div>
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="inp-type">
+                                <option value="Uitgave">Uitgave</option>
+                                <option value="Inkomst">Inkomst</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Categorie</label>
+                            <select id="inp-categorie"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Waar</label>
+                            <input type="text" placeholder="Bijv. Albert Heijn" id="inp-waar">
+                        </div>
+                        <div class="form-group">
+                            <label>Vast / Variabel</label>
+                            <select id="inp-vast">
+                                <option value="Variabel">Variabel</option>
+                                <option value="Vast">Vast</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-primary" id="btn-save">Opslaan</button>
+                        <span class="save-feedback" id="save-feedback">✓ Transactie opgeslagen</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Tab: Overzicht ─── -->
+        <section id="tab-overzicht" class="tab-content">
+            <!-- Stats cards -->
+            <div class="stats-row" id="stats-cards"></div>
+
+            <!-- Month selector -->
+            <div class="month-selector" id="month-selector"></div>
+
+            <!-- Charts -->
+            <div class="charts-row">
+                <div class="card">
+                    <h3 class="card-title">🥧 Uitgaven per categorie</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-pie" width="320" height="280"></canvas>
+                    </div>
+                    <div id="pie-legend" class="pie-legend"></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">📊 Maandelijks overzicht 2026</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-bar" width="500" height="280"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kostenverdeling + Spaardoelen -->
+            <div class="charts-row">
+                <div class="card">
+                    <h3 class="card-title">🧮 Kostenverdeling</h3>
+                    <div class="kosten-grid" id="kosten-grid"></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">💰 Spaardoelen</h3>
+                    <div id="spaardoelen-list"></div>
+                </div>
+            </div>
+
+            <!-- Top 5 -->
+            <div class="card">
+                <h3 class="card-title">🏆 Top 5 uitgaven 2026</h3>
+                <div id="top5-list"></div>
+            </div>
+        </section>
+
+        <!-- ─── Tab: Database ─── -->
+        <section id="tab-database" class="tab-content">
+            <div class="db-filters">
+                <div class="form-group">
+                    <label>Zoeken</label>
+                    <input type="text" placeholder="Zoek op omschrijving of locatie..." id="db-search" class="db-search-input">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="db-type">
+                        <option value="">Alles</option>
+                        <option value="Uitgave">Uitgave</option>
+                        <option value="Inkomst">Inkomst</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Categorie</label>
+                    <select id="db-categorie">
+                        <option value="">Alle categorieën</option>
+                    </select>
+                </div>
+                <div class="db-totals" id="db-totals"></div>
+            </div>
+            <div class="card table-card">
+                <div class="table-scroll">
+                    <table id="db-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="datum">Datum ↕</th>
+                                <th data-sort="bedrag">Bedrag ↕</th>
+                                <th data-sort="omschrijving">Omschrijving ↕</th>
+                                <th data-sort="type">Type ↕</th>
+                                <th data-sort="categorie">Categorie ↕</th>
+                                <th data-sort="waar">Waar ↕</th>
+                                <th data-sort="vast">Vast/Var ↕</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="db-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="table-footer" id="db-footer"></div>
+            </div>
+        </section>
+
+        <!-- ─── Tab: Vaste Lasten ─── -->
+        <section id="tab-vaste-lasten" class="tab-content">
+            <div class="stats-row" id="vl-stats"></div>
+            <button class="btn-primary" id="btn-toggle-vl-form">+ Vaste last toevoegen</button>
+
+            <div class="card card-accent-orange" id="vl-form-card" style="display:none; margin-top: 20px;">
+                <h3 class="card-title">Nieuwe vaste last</h3>
+                <div class="form-grid form-grid-3">
+                    <div class="form-group">
+                        <label>Startdatum</label>
+                        <input type="date" id="vl-datum">
+                    </div>
+                    <div class="form-group">
+                        <label>Herhaling</label>
+                        <select id="vl-herhaling">
+                            <option>Maandelijks</option>
+                            <option>Wekelijks</option>
+                            <option>Jaarlijks</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bedrag (€)</label>
+                        <input type="number" step="0.01" id="vl-bedrag" class="mono">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Omschrijving</label>
+                        <input type="text" id="vl-omschrijving">
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="vl-type">
+                            <option value="Uitgave">Uitgave</option>
+                            <option value="Inkomst">Inkomst</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Categorie</label>
+                        <select id="vl-categorie"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Waar</label>
+                        <input type="text" id="vl-waar">
+                    </div>
+                </div>
+                <button class="btn-primary" id="btn-add-vl" style="margin-top:16px;">Toevoegen</button>
+            </div>
+
+            <div class="card table-card" style="margin-top:20px;">
+                <div class="table-scroll">
+                    <table id="vl-table">
+                        <thead>
+                            <tr>
+                                <th>Omschrijving</th>
+                                <th>Bedrag</th>
+                                <th>Herhaling</th>
+                                <th>Categorie</th>
+                                <th>Waar</th>
+                                <th>Type</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="vl-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
