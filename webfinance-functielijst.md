@@ -1,6 +1,6 @@
 # Webfinance — Definitief functielijst per pagina
 
-Versie: 12 mei 2026
+Versie: 12 mei 2026 (v2 — definitief)
 Status: Klaar voor design
 
 ---
@@ -9,7 +9,7 @@ Status: Klaar voor design
 
 - Taal: Nederlands (eerste versie). Meertalig later (Engels, Duits, etc.)
 - Bij eerste gebruik: taalkeuze
-- Lettertype: Inter met tabular numbers
+- Lettertype: Inter met tabular numbers (font-variant-numeric: tabular-nums)
 - Sidebar: inklapbaar (iconen-only ~64px / volledig ~240px)
 - Bedragen: gebruiker voert altijd positief getal in, kiest type (Uitgave/Inkomst)
 - Uitgave is de standaard bij invoer
@@ -66,6 +66,16 @@ Gebruiker kan zelf categorieën en subcategorieën toevoegen/verwijderen in Inst
 
 ---
 
+## Soort-indeling (vervangt Vast/Variabel)
+
+| Soort      | Betekenis                                   | 50/30/20 mapping |
+|------------|---------------------------------------------|-------------------|
+| Noodzaak   | Vaste lasten, basisbehoeften, must-haves    | 50%               |
+| Wens       | Leuke dingen, persoonlijke keuzes, nice-to-haves | 30%          |
+| Sparen     | Spaargeld, beleggingen, aflossing schulden  | 20%               |
+
+---
+
 ## Transactievelden (bij elke transactie)
 
 | Veld              | Type        | Toelichting                                    |
@@ -77,8 +87,8 @@ Gebruiker kan zelf categorieën en subcategorieën toevoegen/verwijderen in Inst
 | Categorie         | Dropdown    | Hoofdcategorie                                 |
 | Subcategorie      | Dropdown    | Verschijnt na keuze hoofdcategorie             |
 | Winkel / Bron     | Tekst       | Waar gekocht/ontvangen (was: "Waar")           |
-| Soort             | Keuze       | Noodzaak / Wens / Sparen (was: Vast/Variabel)  |
-| Wie               | Dropdown    | Ronald / Anne (of wie er in huishouden zit)    |
+| Soort             | Keuze       | Noodzaak / Wens / Sparen                       |
+| Wie               | Dropdown    | Ronald / Anne (personen uit huishouden)        |
 | Notitie           | Tekst       | Optioneel, extra toelichting                   |
 | Rekening          | Dropdown    | (Premium) Welke bankrekening                   |
 
@@ -91,13 +101,14 @@ Bouwen: als laatste
 
 ### Inhoud
 - Welkomstbericht: "Goedemiddag, Ronald"
-- Snelle actie-knop: "+ Transactie"
+- Snelle actie-knop: "+ Transactie" (compact snelformulier)
 - 4 statistiekkaarten: saldo, inkomsten, uitgaven, budget resterend
 - Donut chart: uitgaven per hoofdcategorie
 - Bar chart: inkomsten vs uitgaven per maand
 - Spaardoelen met voortgangsbalken
 - Recente transacties (laatste 5)
 - Kostenverdeling Ronald / Anne
+- 50/30/20 indicator: hoe scoor je deze maand vs de regel
 - (Later) Rekeningkiezer als meerdere rekeningen gekoppeld zijn
 - (Later) Notificaties/meldingen
 
@@ -117,6 +128,7 @@ Bouwen: als laatste
 - Subcategorie verschijnt dynamisch na keuze hoofdcategorie
 - "Wie" veld met personen uit huishouden
 - Opslaan-knop + "Opslaan en nog één toevoegen"
+- Slimme suggesties: na 3x dezelfde winkel invullen, stelt systeem categorie en winkel voor
 
 ### Tabel
 - Kolommen: datum, bedrag, omschrijving, type, categorie, winkel/bron, soort, wie
@@ -140,7 +152,7 @@ Bouwen: als laatste
 - Maandselector of datumrange-picker
 
 ### Vaste grafieken (gratis)
-- Balans-lijndiagram: saldo verloop over tijd (NIEUW)
+- Balans-lijndiagram: saldo verloop over tijd
 - Lijndiagram: uitgaven-trend over de geselecteerde periode
 - Staafdiagram: top 5 categorieën (horizontale balken)
 - Vergelijkingskaarten: deze maand vs vorige maand
@@ -156,11 +168,12 @@ Bouwen: als laatste
   3. Kostenverdeling Ronald / Anne
   4. Spaardoelen voortgang
   5. Noodzaak vs Wens vs Sparen verdeling
-  6. Weekdag-analyse (wanneer geef je het meeste uit)
-  7. Gemiddelde daguitgave
-  8. Jaaroverzicht vergelijking (dit jaar vs vorig jaar)
-  9. Uitgaven per persoon (wie geeft wat uit)
-  10. Categorie-trend over meerdere maanden
+  6. 50/30/20 score per maand
+  7. Weekdag-analyse (wanneer geef je het meeste uit)
+  8. Gemiddelde daguitgave
+  9. Jaaroverzicht vergelijking (dit jaar vs vorig jaar)
+  10. Uitgaven per persoon (wie geeft wat uit)
+  11. Categorie-trend over meerdere maanden
 - Knop "+ Widget toevoegen" → keuzemenu
 - Gratis gebruikers: lock-icoon + "Upgrade naar Premium"
 
@@ -173,10 +186,20 @@ Bouwen: als laatste
 - Totaal besteed
 - Totaal resterend
 
+### 50/30/20 Budget methode
+- Toggle of keuzemenu: "Handmatig" of "50/30/20 regel"
+- Bij 50/30/20: systeem berekent automatisch budgetten op basis van netto inkomen:
+  - Noodzaak (50%): €3.069,49 (50% van €6.138,98 gezamenlijk)
+  - Wens (30%): €1.841,69
+  - Sparen (20%): €1.227,80
+- Per soort een grote voortgangsbalk met besteed vs budget
+- Indicatie of je op schema zit (groen/oranje/rood)
+- Toelichting: "Gebaseerd op jullie gezamenlijk netto inkomen van €6.138,98"
+
 ### Budget per categorie
 - Per HOOFDCATEGORIE een budgetregel:
   - Categorienaam met icoon
-  - Ingesteld budget (aanpasbaar)
+  - Ingesteld budget (aanpasbaar, of automatisch bij 50/30/20)
   - Besteed bedrag
   - Voortgangsbalk (groen <60%, oranje 60-80%, rood >80%)
   - Resterend
@@ -205,7 +228,7 @@ Bouwen: als laatste
   - Bedrag
   - Herhaling (maandelijks/wekelijks/jaarlijks)
   - Subcategorie
-  - Winkel/Bron
+  - Winkel / Bron
   - Type (uitgave/inkomst)
   - Bewerken / verwijderen
 - Subtotaal per groep
@@ -229,7 +252,7 @@ Bouwen: als laatste
 
 ---
 
-## PAGINA 6: Kalender (NIEUW — Premium)
+## PAGINA 6: Kalender (Premium)
 
 ### Maandweergave
 - Kalender met dagen
@@ -263,12 +286,17 @@ Bouwen: als laatste
 - Knop "+ Persoon toevoegen"
 - Knop "Persoon verwijderen"
 
+### Budget methode
+- Keuze: Handmatig / 50-30-20 regel
+- Bij 50/30/20: automatische berekening op basis van netto inkomen huishouden
+- Aanpasbare percentages (bijv. 60/25/15 als je dat wilt)
+
 ### Weergave
 - Thema: licht / donker / systeem
 - Taal: Nederlands (later: Engels, Duits, Frans, Spaans)
 - Valuta: EUR (later uitbreidbaar)
 - Startpagina: Dashboard (standaard) / Transacties / Analytics
-- Compacte modus aan/uit (kleinere kaarten, meer data op scherm)
+- Compacte modus aan/uit
 
 ### Meldingen
 - Budgetwaarschuwing aan/uit (met drempel: 80% standaard)
@@ -308,13 +336,23 @@ Onderaan sidebar:
 
 ---
 
+## Slimme functies (later toe te voegen)
+
+- Terugkerende transactie-herkenning: na 3x dezelfde winkel → automatische suggestie
+- Maandafsluiting: samenvatting met score vs budget
+- Snelle invoer op Dashboard: compact formulier zonder pagina-switch
+- AI-categorisering bij bankimport (premium)
+- n8n workflow voor automatisering
+
+---
+
 ## Verdienmodel samenvatting
 
 ### Gratis
-- Transacties invoeren (max 100/maand?)
+- Transacties invoeren (max 100/maand)
 - Basis dashboard
 - Vaste grafieken in Analytics
-- Budgetten instellen
+- Budgetten instellen (handmatig + 50/30/20)
 - Vaste lasten beheren
 - Advertenties (subtiel, niet opdringerig)
 
