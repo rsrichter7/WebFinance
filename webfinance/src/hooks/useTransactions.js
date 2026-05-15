@@ -39,6 +39,7 @@ export default function useTransactions() {
     search: '',
     type: '',
     categorie: '',
+    subcategorie: '',
     soort: '',
     wie: '',
     maand: '',
@@ -66,8 +67,15 @@ export default function useTransactions() {
   }, [])
 
   // ─── Filter updaten ───
+  // Bij wijziging hoofdcategorie: subcategorie automatisch resetten
   const updateFilter = useCallback((key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+    setFilters(prev => {
+      const next = { ...prev, [key]: value }
+      if (key === 'categorie') {
+        next.subcategorie = ''
+      }
+      return next
+    })
   }, [])
 
   // ─── Sortering updaten ───
@@ -99,6 +107,11 @@ export default function useTransactions() {
     // Categorie filter
     if (filters.categorie) {
       result = result.filter(t => t.categorie === filters.categorie)
+    }
+
+    // Subcategorie filter
+    if (filters.subcategorie) {
+      result = result.filter(t => t.sub === filters.subcategorie)
     }
 
     // Soort filter
