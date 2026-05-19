@@ -35,7 +35,7 @@ export default function useTransactions() {
   const [transactions, setTransactions] = useState(loadTransactions)
   const [formOpen, setFormOpen] = useState(false)
 
-  const [filters, setFilters] = useState({
+const [filters, setFilters] = useState({
     search: '',
     type: '',
     categorie: '',
@@ -43,6 +43,7 @@ export default function useTransactions() {
     soort: '',
     wie: '',
     maand: '',
+    jaar: String(new Date().getFullYear()),
   })
 
   const [sort, setSort] = useState({ field: 'datum', dir: 'desc' })
@@ -132,6 +133,14 @@ export default function useTransactions() {
       })
     }
 
+    // Jaar filter
+    if (filters.jaar) {
+      result = result.filter(t => {
+        const year = new Date(t.datum).getFullYear()
+        return year === parseInt(filters.jaar)
+      })
+    }
+
     // Sorteren
     result.sort((a, b) => {
       let va = a[sort.field]
@@ -154,14 +163,26 @@ export default function useTransactions() {
   const totals = useMemo(() => {
     const uitgaven = filtered.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
     const inkomsten = filtered.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
-    return { uitgaven, inkomsten, saldo: inkomsten - uitgaven }
+    return { uitgaven, inkomsten, balans: inkomsten - uitgaven }
   }, [filtered])
+
+// Oudste jaar bepalen op basis van eerste transactie
+  const eersteJaar = useMemo(() => {
+    if (transactions.length === 0) return new Date().getFullYear()
+    let min = Infinity
+    for (const t of transactions) {
+      const y = new Date(t.datum).getFullYear()
+      if (y < min) min = y
+    }
+    return min
+  }, [transactions])
 
   return {
     // Data
     transactions: filtered,
     totals,
     transactionCount: filtered.length,
+    eersteJaar,
 
     // Acties
     addTransaction,
@@ -178,5 +199,7 @@ export default function useTransactions() {
     // Formulier
     formOpen,
     setFormOpen,
+
+    
   }
 }

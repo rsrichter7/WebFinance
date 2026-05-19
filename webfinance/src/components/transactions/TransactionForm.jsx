@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
 import { CATEGORIES, SOORTEN, PERSONEN } from '../../data/categories'
+import DatePicker from '../ui/DatePicker'
 
 const EMPTY_FORM = {
   type: 'Uitgave',
@@ -153,11 +154,9 @@ export default function TransactionForm({ open, onClose, onSave }) {
             </div>
             <div>
               <label style={labelStyle}>Datum *</label>
-              <input
-                type="date"
+              <DatePicker
                 value={form.datum}
-                onChange={e => update('datum', e.target.value)}
-                style={inputStyle}
+                onChange={v => update('datum', v)}
               />
             </div>
           </div>

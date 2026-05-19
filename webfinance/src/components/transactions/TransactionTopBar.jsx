@@ -16,7 +16,7 @@ export default function TransactionTopBar({ onNewClick }) {
     }}>
       <div>
         <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Transacties</div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}>Alle mutaties · 2026</div>
+        <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}></div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* Importeren knop (Premium placeholder) */}

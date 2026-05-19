@@ -9,10 +9,11 @@ import TransactionTable from '../components/transactions/TransactionTable'
 import TransactionForm from '../components/transactions/TransactionForm'
 
 export default function TransactionsPage() {
-  const {
+const {
     transactions,
     totals,
     transactionCount,
+    eersteJaar,
     addTransaction,
     removeTransaction,
     filters,
@@ -32,6 +33,7 @@ export default function TransactionsPage() {
           filters={filters}
           updateFilter={updateFilter}
           totals={totals}
+          eersteJaar={eersteJaar}
         />
 
         <div style={{ padding: '0 28px' }}>

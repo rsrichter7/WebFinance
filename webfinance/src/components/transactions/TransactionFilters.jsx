@@ -8,7 +8,6 @@ import { ICONS } from '../ui/Icons'
 import { CATEGORIES, SOORTEN, PERSONEN } from '../../data/categories'
 
 const MAANDEN = [
-  { value: '', label: 'Alle maanden' },
   { value: '0', label: 'Januari' }, { value: '1', label: 'Februari' },
   { value: '2', label: 'Maart' }, { value: '3', label: 'April' },
   { value: '4', label: 'Mei' }, { value: '5', label: 'Juni' },
@@ -17,29 +16,7 @@ const MAANDEN = [
   { value: '10', label: 'November' }, { value: '11', label: 'December' },
 ]
 
-// ─── Herbruikbare native select (voor filters die je nog niet hebt omgebouwd) ───
-function FilterSelect({ value, onChange, options, width = 140 }) {
-  return (
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      style={{
-        padding: '7px 12px', borderRadius: 8,
-        border: `1px solid ${T.border}`, background: T.card,
-        fontSize: 13, color: T.ink, cursor: 'pointer',
-        outline: 'none', fontFamily: 'inherit', width,
-      }}
-    >
-      {options.map(o => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  )
-}
-
 // ─── Herbruikbare custom dropdown (zelfde stijl als CategoryDropdown) ───
-// Gebruik: <CustomDropdown label="Type" value="Uitgave" allLabel="Type: Alles"
-//            options={[{ value: 'Uitgave', label: 'Uitgave' }, ...]} onChange={v => ...} />
 function CustomDropdown({ label, value, allLabel, options, onChange }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -324,9 +301,41 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
   )
 }
 
-export default function TransactionFilters({ filters, updateFilter, totals }) {
+export default function TransactionFilters({ filters, updateFilter, totals, eersteJaar }) {
   return (
     <div style={{ padding: '0 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Totalen badges */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{
+          padding: '6px 14px', background: T.card, borderRadius: 8,
+          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span style={{ color: T.ink4 }}>Uitgaven</span>
+          <span style={{ fontWeight: 600, color: T.red, ...TAB }}>{fmt(totals.uitgaven)}</span>
+        </div>
+
+        <div style={{
+          padding: '6px 14px', background: T.card, borderRadius: 8,
+          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span style={{ color: T.ink4 }}>Inkomsten</span>
+          <span style={{ fontWeight: 600, color: T.green, ...TAB }}>{fmt(totals.inkomsten)}</span>
+        </div>
+
+        <div style={{
+          padding: '6px 14px', background: T.card, borderRadius: 8,
+          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span style={{ color: T.ink4 }}>Balans</span>
+          <span style={{ fontWeight: 600, color: totals.balans >= 0 ? T.green : T.red, ...TAB }}>
+            {totals.balans >= 0 ? '+' : ''}{fmt(totals.balans)}
+          </span>
+        </div>
+      </div>
+
       {/* Zoekbalk + filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Zoekbalk */}
@@ -367,67 +376,48 @@ export default function TransactionFilters({ filters, updateFilter, totals }) {
           onSubChange={v => updateFilter('subcategorie', v)}
         />
 
-        {/* Soort */}
-        <FilterSelect
+        {/* Soort — custom dropdown */}
+        <CustomDropdown
+          label="Soort"
           value={filters.soort}
+          allLabel="Soort: Alles"
+          options={SOORTEN.map(s => ({ value: s, label: s }))}
           onChange={v => updateFilter('soort', v)}
-          options={[
-            { value: '', label: 'Soort: Alles' },
-            ...SOORTEN.map(s => ({ value: s, label: s })),
-          ]}
-          width={140}
         />
 
-        {/* Wie */}
-        <FilterSelect
+        {/* Wie — custom dropdown */}
+        <CustomDropdown
+          label="Wie"
           value={filters.wie}
+          allLabel="Wie: Iedereen"
+          options={PERSONEN.map(p => ({ value: p.initials, label: p.name }))}
           onChange={v => updateFilter('wie', v)}
-          options={[
-            { value: '', label: 'Wie: Iedereen' },
-            ...PERSONEN.map(p => ({ value: p.initials, label: p.name })),
-          ]}
-          width={160}
         />
 
-        {/* Maand */}
-        <FilterSelect
+{/* Maand — custom dropdown */}
+        <CustomDropdown
+          label="Maand"
           value={filters.maand}
-          onChange={v => updateFilter('maand', v)}
+          allLabel="Alle maanden"
           options={MAANDEN}
-          width={140}
+          onChange={v => updateFilter('maand', v)}
         />
-      </div>
 
-      {/* Totalen badges */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{
-          padding: '6px 14px', background: T.card, borderRadius: 8,
-          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ color: T.ink4 }}>Uitgaven</span>
-          <span style={{ fontWeight: 600, color: T.red, ...TAB }}>{fmt(totals.uitgaven)}</span>
-        </div>
-
-        <div style={{
-          padding: '6px 14px', background: T.card, borderRadius: 8,
-          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ color: T.ink4 }}>Inkomsten</span>
-          <span style={{ fontWeight: 600, color: T.green, ...TAB }}>{fmt(totals.inkomsten)}</span>
-        </div>
-
-        <div style={{
-          padding: '6px 14px', background: T.card, borderRadius: 8,
-          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ color: T.ink4 }}>Saldo</span>
-          <span style={{ fontWeight: 600, color: totals.saldo >= 0 ? T.green : T.red, ...TAB }}>
-            {totals.saldo >= 0 ? '+' : ''}{fmt(totals.saldo)}
-          </span>
-        </div>
+        {/* Jaar — custom dropdown (dynamisch op basis van oudste transactie) */}
+        <CustomDropdown
+          label="Jaar"
+          value={filters.jaar}
+          allLabel="Alle jaren"
+          options={(() => {
+            const huidigJaar = new Date().getFullYear()
+            const jaren = []
+            for (let j = huidigJaar; j >= eersteJaar; j--) {
+              jaren.push({ value: String(j), label: String(j) })
+            }
+            return jaren
+          })()}
+          onChange={v => updateFilter('jaar', v)}
+        />
       </div>
     </div>
   )
