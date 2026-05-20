@@ -11,7 +11,7 @@ const MONTHS_NL = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep'
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
-  return `${d.getDate()} ${MONTHS_NL[d.getMonth()]}`
+  return `${d.getDate()} ${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}`
 }
 
 function SortHeader({ label, field, sort, onSort }) {
@@ -94,7 +94,18 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
                 onMouseLeave={e => e.currentTarget.querySelector('.del-btn').style.opacity = 0}
               >
                 <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}`, whiteSpace: 'nowrap', color: T.ink3 }}>
-                  {formatDate(tx.datum)}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {formatDate(tx.datum)}
+                    {tx.bron === 'auto' && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
+                        borderRadius: 4, background: T.violetSoft, color: T.violet,
+                        letterSpacing: 0.3,
+                      }}>
+                        AUTO
+                      </span>
+                    )}
+                  </span>
                 </td>
                 <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}`, whiteSpace: 'nowrap', fontWeight: 600, color: T.ink, ...TAB }}>
                   <span style={{ color: tx.type === 'Inkomst' ? T.green : T.ink4, marginRight: 4, fontSize: 11 }}>

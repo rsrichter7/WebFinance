@@ -301,40 +301,9 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
   )
 }
 
-export default function TransactionFilters({ filters, updateFilter, totals, eersteJaar }) {
+export default function TransactionFilters({ filters, updateFilter, eersteJaar }) {
   return (
     <div style={{ padding: '0 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Totalen badges */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{
-          padding: '6px 14px', background: T.card, borderRadius: 8,
-          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ color: T.ink4 }}>Uitgaven</span>
-          <span style={{ fontWeight: 600, color: T.red, ...TAB }}>{fmt(totals.uitgaven)}</span>
-        </div>
-
-        <div style={{
-          padding: '6px 14px', background: T.card, borderRadius: 8,
-          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ color: T.ink4 }}>Inkomsten</span>
-          <span style={{ fontWeight: 600, color: T.green, ...TAB }}>{fmt(totals.inkomsten)}</span>
-        </div>
-
-        <div style={{
-          padding: '6px 14px', background: T.card, borderRadius: 8,
-          border: `1px solid ${T.border}`, fontSize: 13, boxShadow: T.shadow,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ color: T.ink4 }}>Balans</span>
-          <span style={{ fontWeight: 600, color: totals.balans >= 0 ? T.green : T.red, ...TAB }}>
-            {totals.balans >= 0 ? '+' : ''}{fmt(totals.balans)}
-          </span>
-        </div>
-      </div>
 
       {/* Zoekbalk + filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -356,7 +325,7 @@ export default function TransactionFilters({ filters, updateFilter, totals, eers
           />
         </div>
 
-        {/* Type — custom dropdown */}
+        {/* Type */}
         <CustomDropdown
           label="Type"
           value={filters.type}
@@ -368,7 +337,7 @@ export default function TransactionFilters({ filters, updateFilter, totals, eers
           onChange={v => updateFilter('type', v)}
         />
 
-        {/* Categorie — twee-staps dropdown */}
+        {/* Categorie */}
         <CategoryDropdown
           categorie={filters.categorie}
           subcategorie={filters.subcategorie}
@@ -376,7 +345,7 @@ export default function TransactionFilters({ filters, updateFilter, totals, eers
           onSubChange={v => updateFilter('subcategorie', v)}
         />
 
-        {/* Soort — custom dropdown */}
+        {/* Soort */}
         <CustomDropdown
           label="Soort"
           value={filters.soort}
@@ -385,7 +354,7 @@ export default function TransactionFilters({ filters, updateFilter, totals, eers
           onChange={v => updateFilter('soort', v)}
         />
 
-        {/* Wie — custom dropdown */}
+        {/* Wie */}
         <CustomDropdown
           label="Wie"
           value={filters.wie}
@@ -394,7 +363,7 @@ export default function TransactionFilters({ filters, updateFilter, totals, eers
           onChange={v => updateFilter('wie', v)}
         />
 
-{/* Maand — custom dropdown */}
+        {/* Maand */}
         <CustomDropdown
           label="Maand"
           value={filters.maand}
@@ -403,7 +372,7 @@ export default function TransactionFilters({ filters, updateFilter, totals, eers
           onChange={v => updateFilter('maand', v)}
         />
 
-        {/* Jaar — custom dropdown (dynamisch op basis van oudste transactie) */}
+        {/* Jaar */}
         <CustomDropdown
           label="Jaar"
           value={filters.jaar}

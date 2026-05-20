@@ -49,8 +49,8 @@ const [filters, setFilters] = useState({
   const [sort, setSort] = useState({ field: 'datum', dir: 'desc' })
 
   // ─── Transactie toevoegen ───
-  const addTransaction = useCallback((tx) => {
-    const newTx = { ...tx, id: nextId() }
+const addTransaction = useCallback((tx) => {
+    const newTx = { ...tx, id: nextId(), bron: tx.bron || 'handmatig' }
     setTransactions(prev => {
       const updated = [newTx, ...prev]
       saveTransactions(updated)

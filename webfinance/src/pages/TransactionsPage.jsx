@@ -7,9 +7,11 @@ import TransactionTopBar from '../components/transactions/TransactionTopBar'
 import TransactionFilters from '../components/transactions/TransactionFilters'
 import TransactionTable from '../components/transactions/TransactionTable'
 import TransactionForm from '../components/transactions/TransactionForm'
+import { StatCard } from '../components/ui/Card'
+import { T } from '../tokens'
 
 export default function TransactionsPage() {
-const {
+  const {
     transactions,
     totals,
     transactionCount,
@@ -29,10 +31,32 @@ const {
       <TransactionTopBar onNewClick={() => setFormOpen(true)} />
 
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Totalen als StatCards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, padding: '0 28px' }}>
+          <StatCard
+            label="Uitgaven"
+            value={totals.uitgaven}
+            color={T.red}
+            accent={T.red}
+          />
+          <StatCard
+            label="Inkomsten"
+            value={totals.inkomsten}
+            color={T.green}
+            accent={T.green}
+          />
+          <StatCard
+            label="Balans"
+            value={totals.balans}
+            color={totals.balans >= 0 ? T.green : T.red}
+            accent={T.blue}
+          />
+        </div>
+
         <TransactionFilters
           filters={filters}
           updateFilter={updateFilter}
-          totals={totals}
           eersteJaar={eersteJaar}
         />
 
