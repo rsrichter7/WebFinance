@@ -24,7 +24,7 @@ export const CATEGORIES = [
   },
   {
     name: 'Financieel',
-    subs: ['Salaris / Inkomsten', 'Leningen', 'Sparen', 'Onvoorzien / Buffer', 'Belastingteruggave'],
+    subs: ['Salaris / Inkomsten', 'Leningen', 'Sparen / Beleggen', 'Onvoorzien / Buffer', 'Belastingteruggave'],
   },
   {
     name: 'Overig',

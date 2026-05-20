@@ -34,7 +34,7 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
 
 ## Huidige status
 
-### Afgerond
+### ✅ Afgerond
 - Mappenstructuur opgezet
 - Design tokens (src/tokens.js)
 - Gedeelde componenten (Card, Icons)
@@ -50,7 +50,7 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
   - LocalStorage persistentie (key: "webfinance_transactions")
   - Totalen badges (uitgaven, inkomsten, saldo)
 
-### Nog te bouwen (in deze volgorde)
+### 🔲 Nog te bouwen (in deze volgorde)
 1. Vaste Lasten pagina
 2. Budgetten pagina (met 50/30/20 regel)
 3. Analytics pagina
@@ -58,7 +58,7 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
 5. Kalender pagina (premium)
 6. Dashboard pagina (als laatste — samenvatting van alles)
 
-### Later (niet nu)
+### 🔮 Later (niet nu)
 - Bewerken van transacties (edit modal)
 - Paginering in tabellen
 - Dark mode

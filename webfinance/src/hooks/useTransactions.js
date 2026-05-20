@@ -153,7 +153,8 @@ const addTransaction = useCallback((tx) => {
 
       if (va < vb) return sort.dir === 'asc' ? -1 : 1
       if (va > vb) return sort.dir === 'asc' ? 1 : -1
-      return 0
+      // Bij gelijke waarden: nieuwste (hoogste id) eerst
+      return b.id - a.id
     })
 
     return result
