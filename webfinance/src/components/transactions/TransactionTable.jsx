@@ -5,7 +5,7 @@
 import React from 'react'
 import { T, TAB, fmt, fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
-import { PERSONEN } from '../../data/categories'
+import useProfiles from '../../hooks/useProfiles'
 
 function SortHeader({ label, field, sort, onSort }) {
   const active = sort.field === field
@@ -44,12 +44,13 @@ function SoortBadge({ soort }) {
 }
 
 function WieAvatar({ initials }) {
-  const person = PERSONEN.find(p => p.initials === initials)
-  const color = person ? person.color : { bg: T.rule, fg: T.ink3 }
+  const { getByInitialen } = useProfiles()
+  const p = getByInitialen(initials)
+  const kleur = p ? p.kleur : { bg: T.rule, fg: T.ink3 }
   return (
     <div style={{
       width: 26, height: 26, borderRadius: '50%',
-      background: color.bg, color: color.fg,
+      background: kleur.bg, color: kleur.fg,
       display: 'grid', placeItems: 'center',
       fontSize: 10, fontWeight: 600, flexShrink: 0,
     }}>

@@ -15,8 +15,6 @@ import DashboardSavingsGoals from '../components/dashboard/DashboardSavingsGoals
 import DashboardRecentTx from '../components/dashboard/DashboardRecentTx'
 import DashboardCostSplit from '../components/dashboard/DashboardCostSplit'
 import DashboardRuleScore from '../components/dashboard/DashboardRuleScore'
-import { CATEGORY_CONFIG } from '../data/categoryConfig'
-
 const now = new Date()
 
 export default function DashboardPage() {
@@ -85,22 +83,6 @@ export default function DashboardPage() {
       .slice(0, 5)
   }, [allTransactions])
 
-  // ─── Kostenverdeling (inkomsten per wie) ───
-  const costSplit = useMemo(() => {
-    const inkTx = monthTx.filter(t => t.type === 'Inkomst')
-    return {
-      rr: inkTx.filter(t => t.wie === 'RR').reduce((s, t) => s + t.bedrag, 0),
-      am: inkTx.filter(t => t.wie === 'AM').reduce((s, t) => s + t.bedrag, 0),
-    }
-  }, [monthTx])
-
-  // ─── Gemiddelde uitgaven over maanden met data in geselecteerd jaar ───
-  const gemUitgaven = useMemo(() => {
-    const maandenMetData = yearData.filter(m => m.uitgaven > 0)
-    if (maandenMetData.length === 0) return null
-    return maandenMetData.reduce((s, m) => s + m.uitgaven, 0) / maandenMetData.length
-  }, [yearData])
-
   // ─── 50/30/20 score ───
   const ruleData = useMemo(() => {
     const v = actieveVerdeling
@@ -131,7 +113,7 @@ export default function DashboardPage() {
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <DashboardCategoryDonut categoryTotals={categoryTotals} maand={maand} />
+          <DashboardCostSplit allTransactions={allTransactions} />
           <DashboardYearChart yearData={yearData} jaar={jaar} />
         </div>
 
@@ -144,7 +126,7 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <DashboardCostSplit costSplit={costSplit} gemUitgaven={gemUitgaven} />
+          <DashboardCategoryDonut categoryTotals={categoryTotals} maand={maand} />
           <DashboardRuleScore ruleData={ruleData} inkomsten={inkomsten} />
         </div>
       </div>

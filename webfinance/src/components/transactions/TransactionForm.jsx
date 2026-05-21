@@ -5,10 +5,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-import { CATEGORIES, getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
+import { CATEGORIES, getMergedCategories, SOORTEN } from '../../data/categories'
+import useProfiles from '../../hooks/useProfiles'
 import DatePicker from '../ui/DatePicker'
 
-const EMPTY_FORM = {
+const FORM_BASE = {
   type: 'Uitgave',
   bedrag: '',
   datum: new Date().toISOString().split('T')[0],
@@ -17,16 +18,23 @@ const EMPTY_FORM = {
   sub: CATEGORIES[0].subs[0],
   winkel: '',
   soort: 'Noodzaak',
-  wie: PERSONEN[0].initials,
+  wie: '',
   notitie: '',
 }
 
 export default function TransactionForm({ open, onClose, onSave, initialDate }) {
-  const [form, setForm] = useState(EMPTY_FORM)
+  const { profiles } = useProfiles()
+
+  function emptyForm() {
+    const defaultWie = profiles.find(p => !p.isGezamenlijk)?.initialen || 'GZ'
+    return { ...FORM_BASE, wie: defaultWie }
+  }
+
+  const [form, setForm] = useState(emptyForm)
 
   // Reset formulier wanneer paneel opent; gebruik initialDate indien meegegeven
   useEffect(() => {
-    if (open) setForm({ ...EMPTY_FORM, datum: initialDate || new Date().toISOString().split('T')[0] })
+    if (open) setForm({ ...emptyForm(), datum: initialDate || new Date().toISOString().split('T')[0] })
   }, [open])
 
   const allCats = getMergedCategories()
@@ -228,29 +236,29 @@ export default function TransactionForm({ open, onClose, onSave, initialDate }) 
           {/* Wie */}
           <div>
             <label style={labelStyle}>Wie *</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {PERSONEN.map(p => (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {profiles.map(p => (
                 <button
-                  key={p.initials}
-                  onClick={() => update('wie', p.initials)}
+                  key={p.initialen}
+                  onClick={() => update('wie', p.initialen)}
                   style={{
-                    flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                    flex: 1, minWidth: 80, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    border: `1.5px solid ${form.wie === p.initials ? T.blue : T.border}`,
-                    background: form.wie === p.initials ? T.blueSoft : T.card,
-                    color: form.wie === p.initials ? T.blueText : T.ink3,
+                    border: `1.5px solid ${form.wie === p.initialen ? T.blue : T.border}`,
+                    background: form.wie === p.initialen ? T.blueSoft : T.card,
+                    color: form.wie === p.initialen ? T.blueText : T.ink3,
                     display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
                   }}
                 >
                   <div style={{
                     width: 22, height: 22, borderRadius: '50%',
-                    background: p.color.bg, color: p.color.fg,
+                    background: p.kleur.bg, color: p.kleur.fg,
                     display: 'grid', placeItems: 'center',
-                    fontSize: 9, fontWeight: 600,
+                    fontSize: 9, fontWeight: 600, flexShrink: 0,
                   }}>
-                    {p.initials}
+                    {p.initialen}
                   </div>
-                  {p.name.split(' ')[0]}
+                  {p.naam.split(' ')[0]}
                 </button>
               ))}
             </div>

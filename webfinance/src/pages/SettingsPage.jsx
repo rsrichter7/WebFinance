@@ -6,6 +6,7 @@ import { T } from '../tokens'
 import SettingsTopBar         from '../components/settings/SettingsTopBar'
 import SettingsSidebar        from '../components/settings/SettingsSidebar'
 import SettingsProfile        from '../components/settings/SettingsProfile'
+import SettingsHousehold      from '../components/settings/SettingsHousehold'
 import SettingsPreferences    from '../components/settings/SettingsPreferences'
 import SettingsCategories     from '../components/settings/SettingsCategories'
 import SettingsDataManagement from '../components/settings/SettingsDataManagement'
@@ -33,6 +34,7 @@ export default function SettingsPage() {
 
   const CONTENT = {
     profiel:      <SettingsProfile />,
+    huishouden:   <SettingsHousehold />,
     voorkeuren:   <SettingsPreferences />,
     categorieen:  <SettingsCategories />,
     data:         <SettingsDataManagement />,

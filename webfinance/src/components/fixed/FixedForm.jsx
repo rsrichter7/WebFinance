@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-import { getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
+import { getMergedCategories, SOORTEN } from '../../data/categories'
+import useProfiles from '../../hooks/useProfiles'
 import DatePicker from '../ui/DatePicker'
 
 const HERHALINGEN = ['Wekelijks', 'Maandelijks', 'Jaarlijks']
@@ -20,10 +21,11 @@ const EMPTY_FORM = {
   winkel: '',
   herhaling: 'Maandelijks',
   soort: 'Noodzaak',
-  wie: PERSONEN[2].initials,
+  wie: 'GZ',
 }
 
 export default function FixedForm({ open, editingItem, onClose, onSave }) {
+  const { profiles } = useProfiles()
   const [form, setForm] = useState(EMPTY_FORM)
 
   useEffect(() => {
@@ -205,20 +207,20 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
           {/* Wie */}
           <div>
             <label style={L}>Wie *</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {PERSONEN.map(p => (
-                <button key={p.initials} onClick={() => update('wie', p.initials)} style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {profiles.map(p => (
+                <button key={p.initialen} onClick={() => update('wie', p.initialen)} style={{
+                  flex: 1, minWidth: 80, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'inherit',
-                  border: `1.5px solid ${form.wie === p.initials ? T.blue : T.border}`,
-                  background: form.wie === p.initials ? T.blueSoft : T.card,
-                  color: form.wie === p.initials ? T.blueText : T.ink3,
+                  border: `1.5px solid ${form.wie === p.initialen ? T.blue : T.border}`,
+                  background: form.wie === p.initialen ? T.blueSoft : T.card,
+                  color: form.wie === p.initialen ? T.blueText : T.ink3,
                   display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
                 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.color.bg, color: p.color.fg, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 600 }}>
-                    {p.initials}
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.kleur.bg, color: p.kleur.fg, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 600, flexShrink: 0 }}>
+                    {p.initialen}
                   </div>
-                  {p.name.split(' ')[0]}
+                  {p.naam.split(' ')[0]}
                 </button>
               ))}
             </div>

@@ -5,7 +5,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { T, TAB, fmt } from '../../tokens'
 import { ICONS } from '../ui/Icons'
-import { getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
+import { getMergedCategories, SOORTEN } from '../../data/categories'
+import useProfiles from '../../hooks/useProfiles'
 
 const MAANDEN = [
   { value: '0', label: 'Januari' }, { value: '1', label: 'Februari' },
@@ -304,6 +305,7 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
 }
 
 export default function TransactionFilters({ filters, updateFilter, eersteJaar }) {
+  const { profiles } = useProfiles()
   return (
     <div style={{ padding: '0 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
@@ -361,7 +363,7 @@ export default function TransactionFilters({ filters, updateFilter, eersteJaar }
           label="Wie"
           value={filters.wie}
           allLabel="Wie: Iedereen"
-          options={PERSONEN.map(p => ({ value: p.initials, label: p.name }))}
+          options={profiles.map(p => ({ value: p.initialen, label: p.naam }))}
           onChange={v => updateFilter('wie', v)}
         />
 

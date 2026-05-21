@@ -4,16 +4,12 @@
 import React from 'react'
 import { T, fmt, fmtDate } from '../../tokens'
 import { Card, CardTitle } from '../ui/Card'
-
-// Avatar kleuren per wie-code
-const AVATAR = {
-  RR: { bg: '#E0E7FF', fg: '#3730A3' },
-  AM: { bg: '#FCE7F3', fg: '#9D174D' },
-  GZ: { bg: '#F0FDFA', fg: '#0D9488' },
-}
+import useProfiles from '../../hooks/useProfiles'
 
 function Avatar({ wie }) {
-  const colors = AVATAR[wie] || { bg: T.rule, fg: T.ink3 }
+  const { getByInitialen } = useProfiles()
+  const p = getByInitialen(wie)
+  const colors = p ? p.kleur : { bg: T.rule, fg: T.ink3 }
   return (
     <div style={{
       width: 34, height: 34, borderRadius: '50%', flexShrink: 0,

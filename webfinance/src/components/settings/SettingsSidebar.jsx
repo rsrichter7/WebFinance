@@ -6,12 +6,13 @@ import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 
 const SECTIONS = [
-  { k: 'profiel',      label: 'Profiel',         icon: ICONS.user },
+  { k: 'profiel',      label: 'Profiel',         icon: ICONS.user    },
+  { k: 'huishouden',   label: 'Huishouden',       icon: ICONS.users   },
   { k: 'voorkeuren',   label: 'Voorkeuren',       icon: ICONS.sliders },
-  { k: 'categorieen',  label: 'Categorieën',      icon: ICONS.folder },
-  { k: 'data',         label: 'Data beheer',      icon: ICONS.database },
-  { k: 'notificaties', label: 'Notificaties',     icon: ICONS.bell },
-  { k: 'over',         label: 'Over Webfinance',  icon: ICONS.info },
+  { k: 'categorieen',  label: 'Categorieën',      icon: ICONS.folder  },
+  { k: 'data',         label: 'Data beheer',      icon: ICONS.database},
+  { k: 'notificaties', label: 'Notificaties',     icon: ICONS.bell    },
+  { k: 'over',         label: 'Over Webfinance',  icon: ICONS.info    },
 ]
 
 export default function SettingsSidebar({ active, onSelect, adminUnlocked }) {
