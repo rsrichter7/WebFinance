@@ -44,18 +44,27 @@ src/
 │   │   ├── FixedCategoryGroup.jsx   (gegroepeerde tabel per categorie)
 │   │   ├── FixedForm.jsx            (slide-in formulier, gebruikt createPortal)
 │   │   └── FixedLoanSection.jsx     (placeholder)
-│   └── budgets/                → Budget componenten
-│       ├── BudgetTopBar.jsx         (titel + maandselector)
-│       ├── BudgetStats.jsx          (3 StatCards)
-│       ├── BudgetRuleSection.jsx    (50/30/20 kaarten + modus-toggle)
-│       ├── BudgetCategoryTable.jsx  (inline bewerken, overflow: 'visible')
-│       ├── BudgetSavingsGoals.jsx   (spaardoelen met storten)
-│       └── BudgetForm.jsx           (niet actief in gebruik)
+│   ├── budgets/                → Budget componenten
+│   │   ├── BudgetTopBar.jsx         (titel + maandselector)
+│   │   ├── BudgetStats.jsx          (3 StatCards)
+│   │   ├── BudgetRuleSection.jsx    (50/30/20 kaarten + modus-toggle)
+│   │   ├── BudgetCategoryTable.jsx  (inline bewerken, overflow: 'visible')
+│   │   ├── BudgetSavingsGoals.jsx   (spaardoelen met storten)
+│   │   └── BudgetForm.jsx           (niet actief in gebruik)
+│   └── analytics/              → Analyse componenten
+│       ├── AnalyticsTopBar.jsx      (titel "Analyse", geen subtitel)
+│       ├── AnalyticsPeriodFilter.jsx (herbruikbare Maand/Kwartaal/Jaar pills + pijltjes)
+│       ├── AnalyticsChartCard.jsx   (Card wrapper + periode-filter + drag handle)
+│       ├── AnalyticsTopCategories.jsx   (horizontale bars per categorie)
+│       ├── AnalyticsTopSubcategories.jsx (top 10 subcategorieën)
+│       ├── AnalyticsSoortDonut.jsx  (donut Noodzaak/Wens/Sparen + 50/30/20 doellijnen)
+│       ├── AnalyticsIncomeExpense.jsx   (twee-lijnen SVG: inkomsten vs uitgaven)
+│       └── AnalyticsPremiumSection.jsx  (ghost widgets + blur/lock overlay)
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
 │   ├── DashboardPage.jsx       (placeholder)
 │   ├── TransactionsPage.jsx    (werkend)
-│   ├── AnalyticsPage.jsx       (placeholder)
+│   ├── AnalyticsPage.jsx       (werkend)
 │   ├── BudgetsPage.jsx         (werkend)
 │   ├── FixedPage.jsx           (werkend)
 │   ├── CalendarPage.jsx        (placeholder)
@@ -139,6 +148,13 @@ Elke transactie heeft een `bron` veld:
 ### Sorteerlogica transacties
 Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 
+### Zichtbare namen vs. code-namen
+- Sidebar label **"Analyse"** — route, mapnamen en bestandsnamen blijven `analytics`
+- Subtitels zijn verwijderd op alle pagina's — TopBars tonen alleen de paginatitel
+
+### IS_PREMIUM vlag (tijdelijk)
+`IS_PREMIUM = false` bovenaan `AnalyticsPage.jsx` regelt drag-and-drop van grafieken. Bij het bouwen van de **Instellingen pagina** wordt dit vervangen door een centrale `usePremium` hook die app-breed werkt.
+
 ---
 
 ## 6. LocalStorage keys
@@ -151,6 +167,7 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 | `"webfinance_spaardoelen"` | Spaardoelen (zonder huidigBedrag) |
 | `"webfinance_budget_modus"` | `'50/30/20'` of `'handmatig'` |
 | `"webfinance_budget_verdeling"` | Aangepaste percentages `{ noodzaak, wens, sparen }` |
+| `"webfinance_analytics_order"` | Volgorde van de vier grafiek-cards op de Analyse pagina |
 
 ---
 
@@ -175,12 +192,22 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
 - **Transacties pagina** — volledig werkend (zoeken, filteren, sorteren, toevoegen, verwijderen, auto-badge)
 - **Vaste Lasten pagina** — volledig werkend (CRUD, auto-transacties, donut chart, leningen placeholder)
 - **Budgetten pagina** — volledig werkend (50/30/20, handmatige modus, categorie-tabel, spaardoelen)
+- **Analyse pagina** — volledig werkend:
+  - Vier grafieken in versleepbaar 2×2 grid (volgorde opgeslagen in localStorage)
+  - Elke grafiek heeft eigen Maand/Kwartaal/Jaar periode-filter met navigatie-pijltjes
+  - Grafiek 1: Top categorieën (horizontale bars, alle 7, kleur+icoon via categoryConfig)
+  - Grafiek 2: Top subcategorieën (top 10, kleur erft van hoofdcategorie)
+  - Grafiek 3: Noodzaak/Wens/Sparen donut met 50/30/20 doellijnen en afwijkingspercentage
+  - Grafiek 4: Inkomsten vs Uitgaven twee-lijnen SVG grafiek
+  - Premium sectie onderaan met ghost widgets en blur/lock overlay
+  - Drag handle zichtbaar voor alle gebruikers; alleen Premium kan slepen (IS_PREMIUM vlag in AnalyticsPage)
+  - Sidebar label is "Analyse" (bestandsnamen en route blijven `analytics`)
+  - Subtitels verwijderd op alle pagina's (ook BudgetTopBar)
 
 ### 🔲 Nog te bouwen (in volgorde)
-1. Analytics pagina
-2. Instellingen pagina
-3. Kalender pagina (premium)
-4. Dashboard pagina (als laatste — samenvatting van alles)
+1. Instellingen pagina
+2. Kalender pagina (premium)
+3. Dashboard pagina (als laatste — samenvatting van alles)
 
 ### 🔮 Later
 Bewerken transacties, leningen, paginering, dark mode, Supabase, login, bankimport, AI-categorisering, Vercel hosting.
