@@ -32,7 +32,7 @@ src/
 │   ├── ui/Card.jsx             → Herbruikbare UI (Card, StatCard, Badge, Toggle, ProgressBar, PctBadge, etc.)
 │   ├── ui/Icons.jsx            → Alle iconen (Lucide-stijl, ICONS object)
 │   ├── ui/DatePicker.jsx       → Custom datumkiezer (kalenderweergave)
-│   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar)
+│   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust)
 │   ├── transactions/           → Transactie componenten
 │   │   ├── TransactionTopBar.jsx
 │   │   ├── TransactionFilters.jsx   (bevat CustomDropdown + CategoryDropdown)
@@ -60,6 +60,24 @@ src/
 │   │   ├── AnalyticsSoortDonut.jsx  (donut Noodzaak/Wens/Sparen + 50/30/20 doellijnen)
 │   │   ├── AnalyticsIncomeExpense.jsx   (twee-lijnen SVG: inkomsten vs uitgaven)
 │   │   └── AnalyticsPremiumSection.jsx  (ghost widgets + blur/lock overlay)
+│   ├── calendar/               → Kalender componenten (premium pagina)
+│   │   ├── CalendarTopBar.jsx       (maand/week toggle + view-filter pills)
+│   │   ├── CalendarMonthNav.jsx     (pijltjes + maandlabel, gecentreerd boven grid)
+│   │   ├── CalendarGrid.jsx         (7-koloms maandgrid + buildDayMap export)
+│   │   ├── CalendarDayCell.jsx      (dagcel met kleurcodering)
+│   │   ├── CalendarWeekView.jsx     (weekweergave dag-voor-dag + getMondayOfWeek export)
+│   │   ├── CalendarDayDetail.jsx    (detailpaneel 280px: verwacht + werkelijk per dag)
+│   │   ├── CalendarStats.jsx        (3 StatCards: verwacht/werkelijk/verschil)
+│   │   └── CalendarLegend.jsx       (legenda rechts)
+│   ├── dashboard/              → Dashboard componenten (landingspagina)
+│   │   ├── DashboardTopBar.jsx      (dynamische begroeting + maandselector + transactie-knop)
+│   │   ├── DashboardStatCards.jsx   (4 kaarten: saldo/inkomsten/uitgaven/resterend + trends)
+│   │   ├── DashboardCategoryDonut.jsx (donut chart uitgaven per categorie + legenda)
+│   │   ├── DashboardYearChart.jsx   (staafdiagram inkomsten vs uitgaven, filtert op jaar)
+│   │   ├── DashboardSavingsGoals.jsx (spaardoelen met voortgangsbalken)
+│   │   ├── DashboardRecentTx.jsx    (laatste 5 transacties, altijd ongefilterd op maand)
+│   │   ├── DashboardCostSplit.jsx   (kostenverdeling Ronald vs Anne)
+│   │   └── DashboardRuleScore.jsx   (50/30/20 voortgangsbalken)
 │   └── settings/               → Instellingen componenten
 │       ├── SettingsTopBar.jsx       (paginatitel)
 │       ├── SettingsSidebar.jsx      (eigen sidebar met secties)
@@ -72,13 +90,13 @@ src/
 │       └── SettingsAdmin.jsx        (verborgen sectie: premium toggle, diagnostiek)
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
-│   ├── DashboardPage.jsx       (placeholder)
+│   ├── DashboardPage.jsx       (werkend — landingspagina)
 │   ├── TransactionsPage.jsx    (werkend)
 │   ├── AnalyticsPage.jsx       (werkend)
 │   ├── BudgetsPage.jsx         (werkend)
 │   ├── FixedPage.jsx           (werkend)
 │   ├── SettingsPage.jsx        (werkend)
-│   └── CalendarPage.jsx        (placeholder)
+│   └── CalendarPage.jsx        (werkend — premium only)
 │
 ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 ├── hooks/
@@ -155,7 +173,7 @@ Elke transactie heeft een `bron` veld:
 - `'import'` — later, voor bankimport
 
 ### Spaardoelen
-`huidigBedrag` wordt **berekend** uit transacties met `spaardoelId` — niet opgeslagen op het spaardoel zelf. Stortingen zijn transacties (categorie: 'Financieel', sub: 'Sparen / Beleggen', soort: 'Sparen', bron: 'auto').
+`huidigBedrag` wordt **berekend** uit transacties met `spaardoelId` — niet opgeslagen op het spaardoel zelf. Stortingen zijn transacties (categorie: 'Financieel', sub: 'Sparen / Beleggen', soort: 'Sparen', bron: 'auto'). Bij gebruik in componenten altijd fallback naar `0` als `huidigBedrag` undefined is.
 
 ### Sorteerlogica transacties
 Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
@@ -163,6 +181,7 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 ### Zichtbare namen vs. code-namen
 - Sidebar label **"Analyse"** — route, mapnamen en bestandsnamen blijven `analytics`
 - Subtitels zijn verwijderd op alle pagina's — TopBars tonen alleen de paginatitel
+- Dashboard TopBar toont een dynamische begroeting in plaats van een paginatitel
 
 ### usePremium hook (centrale premium-status)
 `usePremium()` is de enige plek voor premium-status in de hele app. Geëxporteerd vanuit `src/hooks/usePremium.js`. De voormalige `IS_PREMIUM = false` vlag in `AnalyticsPage.jsx` is vervangen — `AnalyticsPage` gebruikt nu `usePremium()`. Inschakelen via de Admin-sectie in Instellingen.
@@ -177,6 +196,18 @@ Gebruik `fmtDate` overal waar een datum getoond wordt aan de gebruiker. Nooit ze
 
 ### getMergedCategories — gecombineerde categorieën
 `getMergedCategories()` in `src/data/categories.js` geeft de standaard categorieën + eigen categorieën en subcategorieën uit localStorage (`webfinance_custom_categories`) samengevoegd terug. Gebruik dit overal waar categorieën getoond of gekozen worden (`TransactionForm`, `TransactionFilters`, `FixedForm`).
+
+### Dashboard architectuur
+Dashboard is de landingspagina (`/`). Alle berekeningen (maand-filter, trend, categoryTotals, yearData, ruleData, costSplit) worden als `useMemo` in `DashboardPage.jsx` gedaan en als props doorgegeven aan de 8 dashboard-componenten. De maandselector in de TopBar stuurt alle widgets tegelijk bij. Het staafdiagram filtert op het geselecteerde **jaar** (niet maand). Recente transacties zijn altijd ongefilterd op maand.
+
+### Kalender architectuur
+`CalendarPage.jsx` is premium-only: niet-premium gebruikers zien een blur/lock overlay. De pagina combineert `useTransactions` (`allTransactions`) en `useFixedExpenses` voor verwachte vs. werkelijke items. `buildDayMap` en `getMondayOfWeek` zijn named exports uit hun respectieve componenten en worden hergebruikt in `CalendarPage`. Maandnavigatie staat gecentreerd boven het kalender grid.
+
+### Sidebar premium-logica
+De sidebar reageert op `usePremium()`:
+- PREMIUM badge bij Kalender verborgen als `isPremium === true`
+- "Upgrade naar Premium" blok verborgen als `isPremium === true`
+- Profiel-chip toont "PREMIUM" (blauw) of "GRATIS" (grijs) op basis van `isPremium`
 
 ---
 
@@ -241,13 +272,46 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - **Over Webfinance** — credits + easter egg: 5x klikken op versienummer ontgrendelt Admin-sectie
   - **Admin** (verborgen) — Premium aan/uit via `usePremium()` hook, diagnostiek, admin vergrendelen
   - `usePremium.js` hook is de centrale app-brede premium-status
+- **Kalender pagina** — volledig werkend (premium-only):
+  - Blur/lock overlay voor niet-premium gebruikers (via `usePremium()`)
+  - Maandweergave: 7-koloms grid (ma-zo), kleurcodering dagcellen (rood bij hoge uitgaven, groen bij inkomsten)
+  - Weekweergave: dag-voor-dag detailkaarten, toggle via pills in TopBar
+  - View-filter pills: Verwacht / Werkelijk / Beide
+  - Detailpaneel rechts (280px): verwachte + werkelijke items per dag + "+ Toevoegen" knop
+  - "+ Toevoegen" opent bestaand `TransactionForm` met datum vooringevuld (via `createPortal`)
+  - Verwachte items: vaste lasten uit `useFixedExpenses`, geprojecteerd op de juiste dag (ook toekomstige maanden)
+  - Werkelijke items: alle transacties uit `useTransactions` (`allTransactions`)
+  - Matching: vinkje bij verwachte items die betaald zijn (vasteLast ID match)
+  - StatCards onderaan: Verwachte uitgaven, Werkelijke uitgaven, Verschil
+  - Legenda-paneel rechts
+  - Maandnavigatie met pijltjes, gecentreerd boven kalender grid
+  - Componenten in `src/components/calendar/` (8 bestanden)
+- **Dashboard pagina** — volledig werkend (landingspagina):
+  - Dynamische begroeting in TopBar op basis van tijdstip (Goedemorgen/Goedemiddag/Goedenavond, Ronald)
+  - Maandselector met pijltjes in TopBar (rechts) — alle widgets filteren mee op geselecteerde maand
+  - "+ Transactie" knop opent `TransactionForm` slide-in via `createPortal`
+  - 4 StatCards: Totaal saldo, Inkomsten, Uitgaven, Budget resterend — met trend vs vorige maand
+  - Uitgaven per categorie: donut chart (SVG) + legenda rechts (live data uit transacties)
+  - Maandoverzicht: staafdiagram inkomsten (teal) vs uitgaven (rood) per maand — filtert op **jaar**
+  - Spaardoelen: voortgangsbalken, `huidigBedrag` berekend uit transacties, "+ Doel" navigeert naar `/budgetten`
+  - Recente transacties: laatste 5, altijd ongefilterd op geselecteerde maand
+  - Kostenverdeling: Ronald vs Anne op basis van inkomsttransacties per `wie`-veld
+  - 50/30/20 score: Noodzaak/Wens/Sparen voortgangsbalken, respecteert handmatige modus via `actieveVerdeling`
+  - Componenten in `src/components/dashboard/` (8 bestanden)
+- **Premium sidebar logica** — volledig werkend:
+  - PREMIUM badge bij Kalender verborgen voor premium gebruikers
+  - "Upgrade naar Premium" blok verborgen voor premium gebruikers
+  - Profiel-chip toont "PREMIUM" (blauw) of "GRATIS" (grijs) op basis van `isPremium`
 
-### 🔲 Nog te bouwen (in volgorde)
-1. Kalender pagina (premium)
-2. Dashboard pagina (als laatste — samenvatting van alles)
-
-### 🔮 Later
-Bewerken transacties, leningen, paginering, dark mode, Supabase, login, bankimport, AI-categorisering, Vercel hosting.
+### 🔮 Later (niet nu)
+- Kostenverdeling pop-up: netto inkomen instellen + methode ratio / 50-50
+- Profielensysteem: meerdere personen, dynamisch `wie`-veld
+- Bewerken transacties, leningen, paginering
+- Dark mode (thema-toggle bestaat al, styling nog niet actief)
+- Supabase backend, login, bankimport, AI-categorisering
+- Vercel hosting
+- Data beheer: export/import/wissen knoppen (UI bestaat al, functionaliteit ontbreekt)
+- Notificaties (vereist account)
 
 ---
 

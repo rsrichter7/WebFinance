@@ -1,28 +1,162 @@
 // ─── Dashboard pagina ───
-// Wordt als laatste volledig uitgewerkt.
+// Financieel overzicht: StatCards, donut, staafdiagram, spaardoelen, recente tx, kostenverdeling, 50/30/20.
 
-import React from 'react'
-import { T } from '../tokens'
+import React, { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
+import useTransactions from '../hooks/useTransactions'
+import useBudgets from '../hooks/useBudgets'
+import TransactionForm from '../components/transactions/TransactionForm'
+import DashboardTopBar from '../components/dashboard/DashboardTopBar'
+import DashboardStatCards from '../components/dashboard/DashboardStatCards'
+import DashboardCategoryDonut from '../components/dashboard/DashboardCategoryDonut'
+import DashboardYearChart from '../components/dashboard/DashboardYearChart'
+import DashboardSavingsGoals from '../components/dashboard/DashboardSavingsGoals'
+import DashboardRecentTx from '../components/dashboard/DashboardRecentTx'
+import DashboardCostSplit from '../components/dashboard/DashboardCostSplit'
+import DashboardRuleScore from '../components/dashboard/DashboardRuleScore'
+import { CATEGORY_CONFIG } from '../data/categoryConfig'
+
+const now = new Date()
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
+  const { allTransactions, addTransaction } = useTransactions()
+  const { spaardoelen, actieveVerdeling } = useBudgets()
+
+  const [maand, setMaand] = useState(now.getMonth() + 1)
+  const [jaar, setJaar]   = useState(now.getFullYear())
+  const [showForm, setShowForm] = useState(false)
+
+  function onMaandWijzig({ maand: m, jaar: j }) { setMaand(m); setJaar(j) }
+
+  // ─── Gefilterde transacties voor geselecteerde maand ───
+  const monthTx = useMemo(() => allTransactions.filter(t => {
+    const d = new Date(t.datum)
+    return d.getMonth() + 1 === maand && d.getFullYear() === jaar
+  }), [allTransactions, maand, jaar])
+
+  // ─── Vorige maand ───
+  const prevMaand = maand === 1 ? 12 : maand - 1
+  const prevJaar  = maand === 1 ? jaar - 1 : jaar
+  const prevMonthTx = useMemo(() => allTransactions.filter(t => {
+    const d = new Date(t.datum)
+    return d.getMonth() + 1 === prevMaand && d.getFullYear() === prevJaar
+  }), [allTransactions, prevMaand, prevJaar])
+
+  // ─── StatCard waarden ───
+  const inkomsten     = useMemo(() => monthTx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0), [monthTx])
+  const uitgaven      = useMemo(() => monthTx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0), [monthTx])
+  const prevInkomsten = useMemo(() => prevMonthTx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0), [prevMonthTx])
+  const prevUitgaven  = useMemo(() => prevMonthTx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0), [prevMonthTx])
+
+  // ─── Categorie totalen voor donut ───
+  const categoryTotals = useMemo(() => {
+    const uitg = monthTx.filter(t => t.type === 'Uitgave')
+    const map = {}
+    for (const t of uitg) {
+      map[t.categorie] = (map[t.categorie] || 0) + t.bedrag
+    }
+    return Object.entries(map).map(([cat, bedrag]) => ({ cat, bedrag }))
+  }, [monthTx])
+
+  // ─── Jaardata voor staafdiagram ───
+  const yearData = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1
+      const mTx = allTransactions.filter(t => {
+        const d = new Date(t.datum)
+        return d.getMonth() + 1 === m && d.getFullYear() === jaar
+      })
+      return {
+        inkomsten: mTx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0),
+        uitgaven:  mTx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0),
+      }
+    })
+  }, [allTransactions, jaar])
+
+  // ─── Recente 5 transacties (ongefilterd op maand) ───
+  const recentTx = useMemo(() => {
+    return [...allTransactions]
+      .sort((a, b) => {
+        if (b.datum !== a.datum) return b.datum.localeCompare(a.datum)
+        return b.id - a.id
+      })
+      .slice(0, 5)
+  }, [allTransactions])
+
+  // ─── Kostenverdeling (inkomsten per wie) ───
+  const costSplit = useMemo(() => {
+    const inkTx = monthTx.filter(t => t.type === 'Inkomst')
+    return {
+      rr: inkTx.filter(t => t.wie === 'RR').reduce((s, t) => s + t.bedrag, 0),
+      am: inkTx.filter(t => t.wie === 'AM').reduce((s, t) => s + t.bedrag, 0),
+    }
+  }, [monthTx])
+
+  // ─── Gemiddelde uitgaven over maanden met data in geselecteerd jaar ───
+  const gemUitgaven = useMemo(() => {
+    const maandenMetData = yearData.filter(m => m.uitgaven > 0)
+    if (maandenMetData.length === 0) return null
+    return maandenMetData.reduce((s, m) => s + m.uitgaven, 0) / maandenMetData.length
+  }, [yearData])
+
+  // ─── 50/30/20 score ───
+  const ruleData = useMemo(() => {
+    const v = actieveVerdeling
+    const uitg = monthTx.filter(t => t.type === 'Uitgave')
+    const soorten = ['noodzaak', 'wens', 'sparen']
+    const result = {}
+    for (const s of soorten) {
+      const budget  = inkomsten * (v[s] / 100)
+      const besteed = uitg.filter(t => t.soort?.toLowerCase() === s).reduce((sum, t) => sum + t.bedrag, 0)
+      result[s] = { budget, besteed, pct: budget > 0 ? (besteed / budget) * 100 : 0 }
+    }
+    return result
+  }, [monthTx, inkomsten, actieveVerdeling])
+
   return (
     <>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card,
-      }}>
-        <div>
-          <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Goedemiddag, Ronald</div>
-          <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}>Hier is je financieel overzicht voor mei 2026</div>
+      <DashboardTopBar
+        maand={maand} jaar={jaar}
+        onMaandWijzig={onMaandWijzig}
+        onAddTx={() => setShowForm(true)}
+      />
+
+      <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <DashboardStatCards
+          maand={maand} jaar={jaar}
+          inkomsten={inkomsten} uitgaven={uitgaven}
+          prevInkomsten={prevInkomsten} prevUitgaven={prevUitgaven}
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <DashboardCategoryDonut categoryTotals={categoryTotals} maand={maand} />
+          <DashboardYearChart yearData={yearData} jaar={jaar} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <DashboardSavingsGoals
+            spaardoelen={spaardoelen}
+            onNaarBudgetten={() => navigate('/budgetten')}
+          />
+          <DashboardRecentTx recentTx={recentTx} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <DashboardCostSplit costSplit={costSplit} gemUitgaven={gemUitgaven} />
+          <DashboardRuleScore ruleData={ruleData} inkomsten={inkomsten} />
         </div>
       </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: T.ink3 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, marginBottom: 8 }}>Dashboard</div>
-          <div style={{ fontSize: 14 }}>Wordt als laatste uitgewerkt — eerst de andere pagina's bouwen</div>
-        </div>
-      </div>
+
+      {showForm && createPortal(
+        <TransactionForm
+          open={showForm}
+          onClose={() => setShowForm(false)}
+          onSave={(tx) => { addTransaction(tx); setShowForm(false) }}
+        />,
+        document.body
+      )}
     </>
   )
 }
