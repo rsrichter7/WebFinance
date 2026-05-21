@@ -32,9 +32,6 @@ export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
         <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
           Budgetten
         </div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}>
-          Beheer je budgetten en spaardoelen
-        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button onClick={vorige} style={{

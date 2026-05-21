@@ -10,7 +10,7 @@ import { ICONS } from '../ui/Icons'
 const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
   { to: '/transacties',  label: 'Transacties',  icon: ICONS.tx },
-  { to: '/analytics',    label: 'Analytics',    icon: ICONS.analytics },
+  { to: '/analytics',    label: 'Analyse',      icon: ICONS.analytics },
   { to: '/budgetten',    label: 'Budgetten',    icon: ICONS.budget },
   { to: '/vaste-lasten', label: 'Vaste lasten', icon: ICONS.fixed },
   { to: '/kalender',     label: 'Kalender',     icon: ICONS.cal, premium: true },

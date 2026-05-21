@@ -181,6 +181,7 @@ const addTransaction = useCallback((tx) => {
   return {
     // Data
     transactions: filtered,
+    allTransactions: transactions,
     totals,
     transactionCount: filtered.length,
     eersteJaar,
