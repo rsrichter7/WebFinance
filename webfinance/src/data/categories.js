@@ -32,6 +32,24 @@ export const CATEGORIES = [
   },
 ]
 
+// Gecombineerde categorieën: standaard + eigen uit instellingen
+export function getMergedCategories() {
+  let custom = { customSubs: {}, customCats: [] }
+  try { custom = { ...custom, ...JSON.parse(localStorage.getItem('webfinance_custom_categories')) } } catch {}
+
+  const merged = CATEGORIES.map(cat => ({
+    ...cat,
+    subs: [...cat.subs, ...(custom.customSubs[cat.name] || [])],
+  }))
+
+  const customCats = (custom.customCats || []).map(c => ({
+    name: c.name,
+    subs: custom.customSubs[c.name] || [],
+  }))
+
+  return [...merged, ...customCats]
+}
+
 // Soort-indeling (vervangt Vast/Variabel)
 export const SOORTEN = ['Noodzaak', 'Wens', 'Sparen']
 

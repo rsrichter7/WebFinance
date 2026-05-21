@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-import { CATEGORIES, SOORTEN, PERSONEN } from '../../data/categories'
+import { getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
 import DatePicker from '../ui/DatePicker'
 
 const HERHALINGEN = ['Wekelijks', 'Maandelijks', 'Jaarlijks']
@@ -44,7 +44,8 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
     }
   }, [open, editingItem])
 
-  const currentCat = CATEGORIES.find(c => c.name === form.categorie)
+  const allCats = getMergedCategories()
+  const currentCat = allCats.find(c => c.name === form.categorie)
   const subs = currentCat ? currentCat.subs : []
   const isEdit = !!editingItem
 
@@ -52,7 +53,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
     setForm(prev => {
       const next = { ...prev, [field]: value }
       if (field === 'categorie') {
-        const cat = CATEGORIES.find(c => c.name === value)
+        const cat = allCats.find(c => c.name === value)
         next.sub = cat ? cat.subs[0] : ''
       }
       return next
@@ -149,7 +150,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
             <div>
               <label style={L}>Categorie *</label>
               <select value={form.categorie} onChange={e => update('categorie', e.target.value)} style={I}>
-                {CATEGORIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                {allCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>

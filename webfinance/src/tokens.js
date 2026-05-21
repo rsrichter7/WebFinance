@@ -1,6 +1,6 @@
 // ─── Design Tokens ───
 // Alle kleuren, schaduwen en formatting op één plek.
-// Importeer dit in elk component: import { T, TAB, fmt } from '../../tokens'
+// Importeer dit in elk component: import { T, TAB, fmt, fmtDate } from '../../tokens'
 
 export const T = {
   bg:        '#F8F9FA',
@@ -44,3 +44,16 @@ export const fmt = (n) =>
 
 export const fmtShort = (n) =>
   '€' + Math.round(n).toLocaleString('nl-NL')
+
+// Datumformattering — leest voorkeur uit localStorage (key: webfinance_datumformaat)
+const MONTHS_NL = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
+
+export function fmtDate(dateStr) {
+  const d = new Date(dateStr)
+  const format = localStorage.getItem('webfinance_datumformaat') || 'long'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  if (format === 'dmy') return `${dd}-${mm}-${d.getFullYear()}`
+  if (format === 'iso') return `${d.getFullYear()}-${mm}-${dd}`
+  return `${d.getDate()} ${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}`
+}

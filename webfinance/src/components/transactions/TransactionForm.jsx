@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-import { CATEGORIES, SOORTEN, PERSONEN } from '../../data/categories'
+import { getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
 import DatePicker from '../ui/DatePicker'
 
 const EMPTY_FORM = {
@@ -29,8 +29,10 @@ export default function TransactionForm({ open, onClose, onSave }) {
     if (open) setForm({ ...EMPTY_FORM, datum: new Date().toISOString().split('T')[0] })
   }, [open])
 
+  const allCats = getMergedCategories()
+
   // Subcategorieën op basis van gekozen hoofdcategorie
-  const currentCat = CATEGORIES.find(c => c.name === form.categorie)
+  const currentCat = allCats.find(c => c.name === form.categorie)
   const subs = currentCat ? currentCat.subs : []
 
   // Update een veld
@@ -39,7 +41,7 @@ export default function TransactionForm({ open, onClose, onSave }) {
       const next = { ...prev, [field]: value }
       // Reset subcategorie als hoofdcategorie wijzigt
       if (field === 'categorie') {
-        const cat = CATEGORIES.find(c => c.name === value)
+        const cat = allCats.find(c => c.name === value)
         next.sub = cat ? cat.subs[0] : ''
       }
       return next
@@ -178,7 +180,7 @@ export default function TransactionForm({ open, onClose, onSave }) {
             <div>
               <label style={labelStyle}>Categorie *</label>
               <select value={form.categorie} onChange={e => update('categorie', e.target.value)} style={inputStyle}>
-                {CATEGORIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                {allCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>

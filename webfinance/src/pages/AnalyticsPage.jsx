@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react'
 import useTransactions from '../hooks/useTransactions'
+import usePremium from '../hooks/usePremium'
 import AnalyticsTopBar         from '../components/analytics/AnalyticsTopBar'
 import AnalyticsChartCard      from '../components/analytics/AnalyticsChartCard'
 import AnalyticsTopCategories  from '../components/analytics/AnalyticsTopCategories'
@@ -10,9 +11,6 @@ import AnalyticsTopSubcategories from '../components/analytics/AnalyticsTopSubca
 import AnalyticsSoortDonut     from '../components/analytics/AnalyticsSoortDonut'
 import AnalyticsIncomeExpense  from '../components/analytics/AnalyticsIncomeExpense'
 import AnalyticsPremiumSection from '../components/analytics/AnalyticsPremiumSection'
-
-// Zet op true zodra premium-auth beschikbaar is
-const IS_PREMIUM = false
 
 const ORDER_KEY     = 'webfinance_analytics_order'
 const DEFAULT_ORDER = ['categories', 'subcategories', 'soort', 'inkexp']
@@ -37,6 +35,7 @@ function loadOrder() {
 
 export default function AnalyticsPage() {
   const { allTransactions } = useTransactions()
+  const { isPremium } = usePremium()
 
   const [order,  setOrder]  = useState(loadOrder)
   const [dragId, setDragId] = useState(null)
@@ -73,7 +72,7 @@ export default function AnalyticsPage() {
               <AnalyticsChartCard
                 key={id}
                 title={title}
-                isPremium={IS_PREMIUM}
+                isPremium={isPremium}
                 isDragging={dragId === id}
                 isOver={overId === id && dragId !== id}
                 onDragStart={() => setDragId(id)}

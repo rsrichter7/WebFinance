@@ -5,7 +5,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { T, TAB, fmt } from '../../tokens'
 import { ICONS } from '../ui/Icons'
-import { CATEGORIES, SOORTEN, PERSONEN } from '../../data/categories'
+import { getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
 
 const MAANDEN = [
   { value: '0', label: 'Januari' }, { value: '1', label: 'Februari' },
@@ -126,8 +126,10 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  const allCats = getMergedCategories()
+
   // Huidige geselecteerde categorie-object
-  const activeCat = CATEGORIES.find(c => c.name === categorie)
+  const activeCat = allCats.find(c => c.name === categorie)
 
   // Label voor de knop
   const buttonLabel = subcategorie
@@ -169,7 +171,7 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
   }
 
   // Welke categorie wordt getoond in submenu?
-  const subCat = CATEGORIES.find(c => c.name === view)
+  const subCat = allCats.find(c => c.name === view)
 
   const itemStyle = (isActive) => ({
     padding: '8px 14px',
@@ -231,7 +233,7 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
               <div style={{ height: 1, background: T.rule, margin: '4px 0' }} />
 
               {/* Categorieën */}
-              {CATEGORIES.map(c => (
+              {allCats.map(c => (
                 <div
                   key={c.name}
                   onClick={() => selectCategory(c.name)}

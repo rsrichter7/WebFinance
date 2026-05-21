@@ -51,15 +51,25 @@ src/
 │   │   ├── BudgetCategoryTable.jsx  (inline bewerken, overflow: 'visible')
 │   │   ├── BudgetSavingsGoals.jsx   (spaardoelen met storten)
 │   │   └── BudgetForm.jsx           (niet actief in gebruik)
-│   └── analytics/              → Analyse componenten
-│       ├── AnalyticsTopBar.jsx      (titel "Analyse", geen subtitel)
-│       ├── AnalyticsPeriodFilter.jsx (herbruikbare Maand/Kwartaal/Jaar pills + pijltjes)
-│       ├── AnalyticsChartCard.jsx   (Card wrapper + periode-filter + drag handle)
-│       ├── AnalyticsTopCategories.jsx   (horizontale bars per categorie)
-│       ├── AnalyticsTopSubcategories.jsx (top 10 subcategorieën)
-│       ├── AnalyticsSoortDonut.jsx  (donut Noodzaak/Wens/Sparen + 50/30/20 doellijnen)
-│       ├── AnalyticsIncomeExpense.jsx   (twee-lijnen SVG: inkomsten vs uitgaven)
-│       └── AnalyticsPremiumSection.jsx  (ghost widgets + blur/lock overlay)
+│   ├── analytics/              → Analyse componenten
+│   │   ├── AnalyticsTopBar.jsx      (titel "Analyse", geen subtitel)
+│   │   ├── AnalyticsPeriodFilter.jsx (herbruikbare Maand/Kwartaal/Jaar pills + pijltjes)
+│   │   ├── AnalyticsChartCard.jsx   (Card wrapper + periode-filter + drag handle)
+│   │   ├── AnalyticsTopCategories.jsx   (horizontale bars per categorie)
+│   │   ├── AnalyticsTopSubcategories.jsx (top 10 subcategorieën)
+│   │   ├── AnalyticsSoortDonut.jsx  (donut Noodzaak/Wens/Sparen + 50/30/20 doellijnen)
+│   │   ├── AnalyticsIncomeExpense.jsx   (twee-lijnen SVG: inkomsten vs uitgaven)
+│   │   └── AnalyticsPremiumSection.jsx  (ghost widgets + blur/lock overlay)
+│   └── settings/               → Instellingen componenten
+│       ├── SettingsTopBar.jsx       (paginatitel)
+│       ├── SettingsSidebar.jsx      (eigen sidebar met secties)
+│       ├── SettingsProfile.jsx      (profielgegevens — lokaal opgeslagen)
+│       ├── SettingsPreferences.jsx  (datumformaat, thema — werkend opgeslagen)
+│       ├── SettingsCategories.jsx   (categorieën toevoegen/verwijderen — werkend)
+│       ├── SettingsDataManagement.jsx (export/import/wissen)
+│       ├── SettingsNotifications.jsx  (placeholder — vereist account)
+│       ├── SettingsAbout.jsx        (over Webfinance + easter egg voor admin)
+│       └── SettingsAdmin.jsx        (verborgen sectie: premium toggle, diagnostiek)
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
 │   ├── DashboardPage.jsx       (placeholder)
@@ -67,24 +77,25 @@ src/
 │   ├── AnalyticsPage.jsx       (werkend)
 │   ├── BudgetsPage.jsx         (werkend)
 │   ├── FixedPage.jsx           (werkend)
-│   ├── CalendarPage.jsx        (placeholder)
-│   └── SettingsPage.jsx        (placeholder)
+│   ├── SettingsPage.jsx        (werkend)
+│   └── CalendarPage.jsx        (placeholder)
 │
 ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 ├── hooks/
 │   ├── useTransactions.js      → Alle transactie state & logica
 │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica
-│   └── useBudgets.js           → Alle budget state & logica
+│   ├── useBudgets.js           → Alle budget state & logica
+│   └── usePremium.js           → Centrale premium-status (leest/schrijft webfinance_premium)
 │
 ├── data/
-│   ├── categories.js           → Categorieën, subcategorieën, soorten, personen
+│   ├── categories.js           → Categorieën + getMergedCategories() (merged met custom)
 │   ├── categoryConfig.js       → Icoon- en kleurkoppeling per categorie (voor UI)
 │   ├── transactions.js         → Sample transacties
 │   ├── fixed.js                → Sample vaste lasten
 │   └── budgets.js              → Sample budgetten en spaardoelen
 │
 ├── styles/index.css            → Basis CSS
-├── tokens.js                   → Design tokens (kleuren, formatting)
+├── tokens.js                   → Design tokens + fmt() + fmtShort() + fmtDate()
 └── App.jsx                     → Routing
 ```
 
@@ -127,6 +138,7 @@ Elke domein heeft zijn eigen hook die de **enige** plek is voor state en logica:
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, verwijderen)
 - `useFixedExpenses.js` — vaste lasten (CRUD, auto-transacties aanmaken)
 - `useBudgets.js` — budgetten en spaardoelen (berekeningen, CRUD, maand/jaar filter)
+- `usePremium.js` — centrale premium-status app-breed (leest/schrijft `webfinance_premium`)
 
 Componenten en pagina's bevatten **geen** eigen dataloading of businesslogica.
 
@@ -152,8 +164,19 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 - Sidebar label **"Analyse"** — route, mapnamen en bestandsnamen blijven `analytics`
 - Subtitels zijn verwijderd op alle pagina's — TopBars tonen alleen de paginatitel
 
-### IS_PREMIUM vlag (tijdelijk)
-`IS_PREMIUM = false` bovenaan `AnalyticsPage.jsx` regelt drag-and-drop van grafieken. Bij het bouwen van de **Instellingen pagina** wordt dit vervangen door een centrale `usePremium` hook die app-breed werkt.
+### usePremium hook (centrale premium-status)
+`usePremium()` is de enige plek voor premium-status in de hele app. Geëxporteerd vanuit `src/hooks/usePremium.js`. De voormalige `IS_PREMIUM = false` vlag in `AnalyticsPage.jsx` is vervangen — `AnalyticsPage` gebruikt nu `usePremium()`. Inschakelen via de Admin-sectie in Instellingen.
+
+### fmtDate — datum formatteren
+`fmtDate(dateStr)` in `tokens.js` formatteert datums op basis van de instelling in `webfinance_datumformaat`:
+- `'long'` → `8 mei 2026` (standaard)
+- `'dmy'`  → `08-05-2026`
+- `'iso'`  → `2026-05-08`
+
+Gebruik `fmtDate` overal waar een datum getoond wordt aan de gebruiker. Nooit zelf formatteren.
+
+### getMergedCategories — gecombineerde categorieën
+`getMergedCategories()` in `src/data/categories.js` geeft de standaard categorieën + eigen categorieën en subcategorieën uit localStorage (`webfinance_custom_categories`) samengevoegd terug. Gebruik dit overal waar categorieën getoond of gekozen worden (`TransactionForm`, `TransactionFilters`, `FixedForm`).
 
 ---
 
@@ -168,6 +191,12 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 | `"webfinance_budget_modus"` | `'50/30/20'` of `'handmatig'` |
 | `"webfinance_budget_verdeling"` | Aangepaste percentages `{ noodzaak, wens, sparen }` |
 | `"webfinance_analytics_order"` | Volgorde van de vier grafiek-cards op de Analyse pagina |
+| `"webfinance_premium"` | Boolean — premium-status (beheerd via `usePremium` hook) |
+| `"webfinance_datumformaat"` | `'long'` \| `'dmy'` \| `'iso'` — datumweergave app-breed |
+| `"webfinance_custom_categories"` | `{ customSubs: {}, customCats: [] }` — eigen categorieën |
+| `"webfinance_taal"` | Taalvoorkeur (nu alleen `'nl'`) |
+| `"webfinance_theme"` | `'light'` \| `'dark'` (dark mode styling nog niet actief) |
+| `"webfinance_admin_unlocked"` | Boolean — admin-sectie ontgrendeld via easter egg |
 
 ---
 
@@ -200,14 +229,22 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - Grafiek 3: Noodzaak/Wens/Sparen donut met 50/30/20 doellijnen en afwijkingspercentage
   - Grafiek 4: Inkomsten vs Uitgaven twee-lijnen SVG grafiek
   - Premium sectie onderaan met ghost widgets en blur/lock overlay
-  - Drag handle zichtbaar voor alle gebruikers; alleen Premium kan slepen (IS_PREMIUM vlag in AnalyticsPage)
+  - Drag handle zichtbaar voor alle gebruikers; alleen Premium kan daadwerkelijk slepen (via `usePremium`)
   - Sidebar label is "Analyse" (bestandsnamen en route blijven `analytics`)
   - Subtitels verwijderd op alle pagina's (ook BudgetTopBar)
+- **Instellingen pagina** — volledig werkend:
+  - Eigen sidebar met 6 secties + verborgen Admin-sectie
+  - **Voorkeuren** — datumformaat (3 opties), thema-toggle; opgeslagen in localStorage; `fmtDate()` in `tokens.js` past dit app-breed toe in `TransactionTable`
+  - **Categorieën** — eigen subcategorieën toevoegen aan standaard categorieën; eigen hoofdcategorieën aanmaken en verwijderen; opgeslagen in `webfinance_custom_categories`; `getMergedCategories()` in `categories.js` maakt custom categorieën beschikbaar in `TransactionForm`, `TransactionFilters` en `FixedForm`
+  - **Data beheer** — export/import/wissen UI (knoppen nog niet functioneel)
+  - **Notificaties** — placeholder (vereist account)
+  - **Over Webfinance** — credits + easter egg: 5x klikken op versienummer ontgrendelt Admin-sectie
+  - **Admin** (verborgen) — Premium aan/uit via `usePremium()` hook, diagnostiek, admin vergrendelen
+  - `usePremium.js` hook is de centrale app-brede premium-status
 
 ### 🔲 Nog te bouwen (in volgorde)
-1. Instellingen pagina
-2. Kalender pagina (premium)
-3. Dashboard pagina (als laatste — samenvatting van alles)
+1. Kalender pagina (premium)
+2. Dashboard pagina (als laatste — samenvatting van alles)
 
 ### 🔮 Later
 Bewerken transacties, leningen, paginering, dark mode, Supabase, login, bankimport, AI-categorisering, Vercel hosting.

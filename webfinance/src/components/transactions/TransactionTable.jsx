@@ -3,16 +3,9 @@
 // Dit component ontvangt alleen data en callbacks via props.
 
 import React from 'react'
-import { T, TAB, fmt } from '../../tokens'
+import { T, TAB, fmt, fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import { PERSONEN } from '../../data/categories'
-
-const MONTHS_NL = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr)
-  return `${d.getDate()} ${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}`
-}
 
 function SortHeader({ label, field, sort, onSort }) {
   const active = sort.field === field
@@ -95,7 +88,7 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
               >
                 <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}`, whiteSpace: 'nowrap', color: T.ink3 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {formatDate(tx.datum)}
+                    {fmtDate(tx.datum)}
                     {tx.bron === 'auto' && (
                       <span style={{
                         fontSize: 10, fontWeight: 600, padding: '1px 6px',
