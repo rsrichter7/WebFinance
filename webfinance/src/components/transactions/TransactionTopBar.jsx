@@ -5,8 +5,10 @@ import React from 'react'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import { Badge } from '../ui/Card'
+import usePremium from '../../hooks/usePremium'
 
 export default function TransactionTopBar({ onNewClick }) {
+  const { isPremium } = usePremium()
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -19,16 +21,30 @@ export default function TransactionTopBar({ onNewClick }) {
         <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}></div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Importeren knop (Premium placeholder) */}
-        <button style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '8px 14px', borderRadius: 8,
-          border: `1px solid ${T.border}`, background: T.card,
-          fontSize: 13, fontWeight: 500, color: T.ink3, cursor: 'pointer',
-        }}>
-          Importeren
-          <Badge color={T.amber} bg={T.amberSoft}>PREMIUM</Badge>
-        </button>
+        {/* Importeren knop: actief voor premium, grayed-out met badge voor niet-premium */}
+        {isPremium ? (
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8,
+            border: `1px solid ${T.border}`, background: T.card,
+            fontSize: 13, fontWeight: 500, color: T.ink2, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}>
+            <span style={{ display: 'inline-flex' }}>{ICONS.upload}</span>
+            Importeren
+          </button>
+        ) : (
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8,
+            border: `1px solid ${T.border}`, background: T.card,
+            fontSize: 13, fontWeight: 500, color: T.ink3, cursor: 'default',
+            fontFamily: 'inherit',
+          }}>
+            Importeren
+            <Badge color={T.amber} bg={T.amberSoft}>PREMIUM</Badge>
+          </button>
+        )}
 
         {/* Nieuwe transactie knop */}
         <button

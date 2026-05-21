@@ -8,13 +8,15 @@ import DatePicker from '../ui/DatePicker'
 
 const HERHALINGEN = ['Wekelijks', 'Maandelijks', 'Jaarlijks']
 
+const CATS = getMergedCategories()
+
 const EMPTY_FORM = {
   type: 'Uitgave',
   bedrag: '',
   startdatum: new Date().toISOString().split('T')[0],
   omschrijving: '',
-  categorie: CATEGORIES[0].name,
-  sub: CATEGORIES[0].subs[0],
+  categorie: CATS[0].name,
+  sub: CATS[0].subs[0],
   winkel: '',
   herhaling: 'Maandelijks',
   soort: 'Noodzaak',

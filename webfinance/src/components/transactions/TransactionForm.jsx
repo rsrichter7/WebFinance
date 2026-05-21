@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-import { getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
+import { CATEGORIES, getMergedCategories, SOORTEN, PERSONEN } from '../../data/categories'
 import DatePicker from '../ui/DatePicker'
 
 const EMPTY_FORM = {
@@ -21,12 +21,12 @@ const EMPTY_FORM = {
   notitie: '',
 }
 
-export default function TransactionForm({ open, onClose, onSave }) {
+export default function TransactionForm({ open, onClose, onSave, initialDate }) {
   const [form, setForm] = useState(EMPTY_FORM)
 
-  // Reset formulier wanneer paneel opent
+  // Reset formulier wanneer paneel opent; gebruik initialDate indien meegegeven
   useEffect(() => {
-    if (open) setForm({ ...EMPTY_FORM, datum: new Date().toISOString().split('T')[0] })
+    if (open) setForm({ ...EMPTY_FORM, datum: initialDate || new Date().toISOString().split('T')[0] })
   }, [open])
 
   const allCats = getMergedCategories()

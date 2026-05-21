@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
+import usePremium from '../../hooks/usePremium'
 
 const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
+  const { isPremium } = usePremium()
   const w = collapsed ? 64 : 240
 
   return (
@@ -65,7 +67,7 @@ export default function Sidebar() {
               <>
                 <span style={{ color: isActive ? T.blue : T.ink3, display: 'inline-flex' }}>{item.icon}</span>
                 {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                {!collapsed && item.premium && (
+                {!collapsed && item.premium && !isPremium && (
                   <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.3, padding: '2px 6px', borderRadius: 4, background: T.amberSoft, color: T.amber }}>PREMIUM</span>
                 )}
                 {isActive && <span style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 2, background: T.blue, borderRadius: 2 }} />}
@@ -77,8 +79,8 @@ export default function Sidebar() {
 
       <div style={{ flex: 1 }} />
 
-      {/* Upgrade banner */}
-      {!collapsed && (
+      {/* Upgrade banner — alleen voor niet-premium gebruikers */}
+      {!collapsed && !isPremium && (
         <div style={{ margin: '12px 4px', padding: 12, border: `1px solid ${T.border}`, borderRadius: 10, background: T.bg }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <span style={{ color: T.amber, display: 'inline-flex' }}>{ICONS.lock}</span>
@@ -96,7 +98,10 @@ export default function Sidebar() {
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Ronald Richter</div>
-              <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.bg, color: T.ink3, border: `1px solid ${T.border}`, letterSpacing: 0.3 }}>GRATIS</span>
+              {isPremium
+                ? <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.blueSoft, color: T.blueText, border: `1px solid ${T.blue}33`, letterSpacing: 0.3 }}>PREMIUM</span>
+                : <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.bg, color: T.ink3, border: `1px solid ${T.border}`, letterSpacing: 0.3 }}>GRATIS</span>
+              }
             </div>
             <div style={{ fontSize: 11, color: T.ink3 }}>ronald@webfin.nl</div>
           </div>
