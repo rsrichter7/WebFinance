@@ -72,6 +72,7 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
               <SortHeader label="Datum" field="datum" sort={sort} onSort={onSort} />
               <SortHeader label="Bedrag" field="bedrag" sort={sort} onSort={onSort} />
               <SortHeader label="Omschrijving" field="beschrijving" sort={sort} onSort={onSort} />
+              <th style={{ padding: '11px 16px', fontSize: 11, fontWeight: 600, color: T.ink4, background: T.cardAlt, textAlign: 'left', letterSpacing: 0.3, textTransform: 'uppercase', borderBottom: `1px solid ${T.border}` }}>Winkel / Bron</th>
               <th style={{ padding: '11px 16px', fontSize: 11, fontWeight: 600, color: T.ink4, background: T.cardAlt, textAlign: 'left', letterSpacing: 0.3, textTransform: 'uppercase', borderBottom: `1px solid ${T.border}` }}>Categorie</th>
               <th style={{ padding: '11px 16px', fontSize: 11, fontWeight: 600, color: T.ink4, background: T.cardAlt, textAlign: 'left', letterSpacing: 0.3, textTransform: 'uppercase', borderBottom: `1px solid ${T.border}` }}>Soort</th>
               <th style={{ padding: '11px 16px', fontSize: 11, fontWeight: 600, color: T.ink4, background: T.cardAlt, textAlign: 'left', letterSpacing: 0.3, textTransform: 'uppercase', borderBottom: `1px solid ${T.border}` }}>Wie</th>
@@ -108,6 +109,9 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
                 </td>
                 <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}`, fontWeight: 500, color: T.ink }}>
                   {tx.beschrijving}
+                </td>
+                <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}`, color: T.ink3 }}>
+                  {tx.winkel || '—'}
                 </td>
                 <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}` }}>
                   <div style={{ color: T.ink2 }}>{tx.categorie}</div>

@@ -14,6 +14,7 @@ const FORM_BASE = {
   bedrag: '',
   datum: new Date().toISOString().split('T')[0],
   beschrijving: '',
+  winkel: '',
   categorie: CATEGORIES[0].name,
   subcategorie: CATEGORIES[0].subs[0],
   soort: 'Noodzaak',
@@ -40,6 +41,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
         bedrag: editingTransaction.bedrag || '',
         datum: editingTransaction.datum || new Date().toISOString().split('T')[0],
         beschrijving: editingTransaction.beschrijving || '',
+        winkel: editingTransaction.winkel || '',
         categorie: editingTransaction.categorie || CATEGORIES[0].name,
         subcategorie: editingTransaction.subcategorie || CATEGORIES[0].subs[0],
         soort: editingTransaction.soort || 'Noodzaak',
@@ -79,6 +81,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
       datum: form.datum,
       bedrag,
       beschrijving: form.beschrijving.trim(),
+      winkel: form.winkel.trim(),
       type: form.type,
       categorie: form.categorie,
       subcategorie: form.subcategorie,
@@ -199,6 +202,18 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
               placeholder="Bijv. Boodschappen Albert Heijn"
               value={form.beschrijving}
               onChange={e => update('beschrijving', e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Winkel / Bron */}
+          <div>
+            <label style={labelStyle}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
+            <input
+              type="text"
+              placeholder="bijv. Albert Heijn"
+              value={form.winkel}
+              onChange={e => update('winkel', e.target.value)}
               style={inputStyle}
             />
           </div>

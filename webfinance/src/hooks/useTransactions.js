@@ -7,7 +7,7 @@ import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
 
 // Kolommen die we ophalen uit Supabase
-const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, bron, vaste_last_id, spaardoel_id, created_at'
+const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, bron, vaste_last_id, spaardoel_id, created_at'
 
 // snake_case (database) → camelCase (frontend)
 function dbNaarFrontend(row) {
@@ -21,6 +21,7 @@ function dbNaarFrontend(row) {
     subcategorie: row.subcategorie ?? '',
     soort:       row.soort ?? '',
     wie:         row.wie ?? '',
+    winkel:      row.winkel ?? '',
     bron:        row.bron ?? 'handmatig',
     vasteLast:   row.vaste_last_id ?? null,
     spaardoelId: row.spaardoel_id ?? null,
@@ -39,6 +40,7 @@ function frontendNaarDb(tx) {
     subcategorie: tx.subcategorie ?? '',
     soort:        tx.soort ?? '',
     wie:          tx.wie ?? '',
+    winkel:       tx.winkel ?? '',
     bron:         tx.bron ?? 'handmatig',
     vaste_last_id: tx.vasteLast ?? null,
     spaardoel_id:  tx.spaardoelId ?? null,
@@ -142,7 +144,8 @@ export default function useTransactions() {
     if (filters.search) {
       const q = filters.search.toLowerCase()
       result = result.filter(t =>
-        t.beschrijving.toLowerCase().includes(q)
+        t.beschrijving.toLowerCase().includes(q) ||
+        t.winkel.toLowerCase().includes(q)
       )
     }
 
