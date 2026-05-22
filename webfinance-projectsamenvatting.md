@@ -50,9 +50,9 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
 - `useTransactions` hook — enige bron van transactie-logica
 - Zoeken, filteren (Type, Categorie, Soort, Wie, Maand, Jaar), sorteren
 - Toevoegen via slide-in formulier met custom DatePicker
-- Verwijderen (nog geen bewerken)
+- Verwijderen, **bewerken** via potlood-icoon per rij — opent TransactionForm in bewerk-modus
 - AUTO badge voor transacties vanuit vaste lasten
-- Bron-veld: `'handmatig'` / `'auto'` / `'import'`
+- Bron-veld: `'handmatig'` / `'auto'` / `'import'` — bewerken forceert altijd `'handmatig'`
 - Sorteerlogica: bij gelijke datum nieuwste (hoogste id) eerst
 
 **Vaste Lasten pagina volledig werkend:**
@@ -80,11 +80,13 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
 - Sidebar label "Analyse" — bestandsnamen/route blijven `analytics`
 
 **Instellingen pagina volledig werkend:**
-- Eigen sidebar met 7 secties + verborgen Admin-sectie
+- Eigen sidebar met 8 secties + verborgen Admin-sectie
+- **Profiel** — naam en e-mail, lokaal opgeslagen
 - **Huishouden** — profielen toevoegen/bewerken/verwijderen, kleurpicker (8 presets), `genInitialen` auto-initialen, GZ kan niet verwijderd worden
+- **Saldo** — startsaldo instellen met peildatum; `webfinance_startsaldo`; Dashboard berekent huidig saldo relatief aan de peildatum
 - **Voorkeuren** — datumformaat (3 opties), thema-toggle; `fmtDate()` past dit app-breed toe
 - **Categorieën** — eigen sub- en hoofdcategorieën; `getMergedCategories()` app-breed beschikbaar
-- **Data beheer** — UI aanwezig (knoppen nog niet functioneel)
+- **Data beheer** — export JSON, export CSV (transacties), import JSON, wis alles (bevestiging vereist) — volledig werkend
 - **Notificaties** — placeholder (vereist account)
 - **Over Webfinance** — easter egg: 5× klikken op versienummer → Admin-sectie
 - **Admin** (verborgen) — Premium aan/uit, diagnostiek, Admin vergrendelen
@@ -105,7 +107,8 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
 - Dynamische begroeting op basis van tijdstip (Goedemorgen/middag/avond, Ronald)
 - Maandselector in TopBar — alle widgets filteren mee
 - "+ Transactie" knop opent TransactionForm via createPortal
-- 4 StatCards: Totaal saldo, Inkomsten, Uitgaven, Budget resterend + trends vs vorige maand
+- 3 StatCards: Inkomsten (groen), Uitgaven (rood), Huidig Saldo (blauw) + trends vs vorige maand
+- Huidig saldo = startsaldo + inkomsten − uitgaven vanaf peildatum (maand-onafhankelijk)
 - Kostenverdeling: gemKosten / bijdrage / betaald / verschil per persoon; inkomen via modal; ratio of 50/50
 - Maandoverzicht: staafdiagram per maand filtert op geselecteerd jaar
 - Spaardoelen: voortgangsbalken
@@ -125,15 +128,17 @@ Ronald Richter — bouwt dit samen met Claude. Ronald beslist, Claude voert uit.
 - "Upgrade naar Premium" blok verborgen voor premium gebruikers
 - Profiel-chip toont "PREMIUM" (blauw) of "GRATIS" (grijs)
 
+### 🔮 Volgende stap
+
+- **Supabase migratie** — database (PostgreSQL), authenticatie (email/wachtwoord), multi-user ondersteuning; vervangt LocalStorage als persistence laag
+
 ### 🔮 Later (niet nu)
 
-- Bewerken van transacties (edit modal)
 - Leningen sectie werkend maken
 - Paginering in tabellen
 - Dark mode (toggle bestaat al, styling niet actief)
-- Data beheer: export/import/wissen (UI bestaat, functionaliteit ontbreekt)
 - Notificaties (vereist account)
-- Supabase backend, authenticatie, bankimport, AI-categorisering
+- Bankimport, AI-categorisering
 - Hosting op Vercel
 
 ---
@@ -153,7 +158,7 @@ src/
 │   ├── analytics/              → AnalyticsTopBar, AnalyticsPeriodFilter, AnalyticsChartCard, AnalyticsTopCategories, AnalyticsTopSubcategories, AnalyticsSoortDonut, AnalyticsIncomeExpense, AnalyticsPremiumSection
 │   ├── calendar/               → CalendarTopBar, CalendarMonthNav, CalendarGrid, CalendarDayCell, CalendarWeekView, CalendarDayDetail, CalendarStats, CalendarLegend
 │   ├── dashboard/              → DashboardTopBar, DashboardStatCards, DashboardCategoryDonut, DashboardYearChart, DashboardSavingsGoals, DashboardRecentTx, DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore
-│   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold, SettingsProfile, SettingsPreferences, SettingsCategories, SettingsDataManagement, SettingsNotifications, SettingsAbout, SettingsAdmin
+│   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold, SettingsProfile, SettingsSaldo, SettingsPreferences, SettingsCategories, SettingsDataManagement, SettingsNotifications, SettingsAbout, SettingsAdmin
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
 │   ├── DashboardPage.jsx       (werkend — landingspagina)
@@ -218,8 +223,10 @@ src/
 | `"webfinance_theme"` | `'light'` / `'dark'` (dark styling nog niet actief) |
 | `"webfinance_admin_unlocked"` | Boolean — admin-sectie ontgrendeld |
 | `"webfinance_profielen"` | Array van profielobjecten (via `useProfiles`) |
-| `"webfinance_netto_inkomen"` | `{ [initialen]: number }` — netto maandinkomen per persoon |
+| `"webfinance_kostenverdeeld_inkomen"` | `{ [initialen]: number }` — netto maandinkomen per persoon |
 | `"webfinance_verdeel_methode"` | `'ratio'` / `'50/50'` — kostenverdeling methode |
+| `"webfinance_startsaldo"` | `{ bedrag: number, datum: 'YYYY-MM-DD' }` — peildatum + beginsaldo voor saldo-berekening |
+| `"webfinance_profiel"` | `{ naam, email }` — profielgegevens (SettingsProfile) |
 
 ---
 
