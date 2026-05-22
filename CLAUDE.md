@@ -35,14 +35,14 @@ src/
 │   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust)
 │   ├── transactions/           → Transactie componenten
 │   │   ├── TransactionTopBar.jsx
-│   │   ├── TransactionFilters.jsx   (bevat CustomDropdown + CategoryDropdown)
-│   │   ├── TransactionTable.jsx
-│   │   └── TransactionForm.jsx
+│   │   ├── TransactionFilters.jsx   (bevat CustomDropdown + CategoryDropdown; gebruikt useProfiles)
+│   │   ├── TransactionTable.jsx     (WieAvatar gebruikt useProfiles voor kleuren)
+│   │   └── TransactionForm.jsx      (wie-knoppen dynamisch via useProfiles)
 │   ├── fixed/                  → Vaste lasten componenten
 │   │   ├── FixedTopBar.jsx
 │   │   ├── FixedStats.jsx           (StatCards + MiniDonut)
 │   │   ├── FixedCategoryGroup.jsx   (gegroepeerde tabel per categorie)
-│   │   ├── FixedForm.jsx            (slide-in formulier, gebruikt createPortal)
+│   │   ├── FixedForm.jsx            (slide-in formulier, createPortal; wie-knoppen via useProfiles)
 │   │   └── FixedLoanSection.jsx     (placeholder)
 │   ├── budgets/                → Budget componenten
 │   │   ├── BudgetTopBar.jsx         (titel + maandselector)
@@ -75,12 +75,14 @@ src/
 │   │   ├── DashboardCategoryDonut.jsx (donut chart uitgaven per categorie + legenda)
 │   │   ├── DashboardYearChart.jsx   (staafdiagram inkomsten vs uitgaven, filtert op jaar)
 │   │   ├── DashboardSavingsGoals.jsx (spaardoelen met voortgangsbalken)
-│   │   ├── DashboardRecentTx.jsx    (laatste 5 transacties, altijd ongefilterd op maand)
-│   │   ├── DashboardCostSplit.jsx   (kostenverdeling Ronald vs Anne)
+│   │   ├── DashboardRecentTx.jsx    (laatste 5 transacties; Avatar gebruikt useProfiles)
+│   │   ├── DashboardCostSplit.jsx   (kostenverdeling: gemKosten, bijdrage, betaald, verschil + ratio/50-50 toggle)
+│   │   ├── DashboardIncomeModal.jsx (pop-up modal voor netto inkomen per persoon; exporteert loadNettoInkomen)
 │   │   └── DashboardRuleScore.jsx   (50/30/20 voortgangsbalken)
 │   └── settings/               → Instellingen componenten
 │       ├── SettingsTopBar.jsx       (paginatitel)
-│       ├── SettingsSidebar.jsx      (eigen sidebar met secties)
+│       ├── SettingsSidebar.jsx      (eigen sidebar met secties incl. Huishouden)
+│       ├── SettingsHousehold.jsx    (profielbeheer: toevoegen/bewerken/verwijderen; kleurpicker)
 │       ├── SettingsProfile.jsx      (profielgegevens — lokaal opgeslagen)
 │       ├── SettingsPreferences.jsx  (datumformaat, thema — werkend opgeslagen)
 │       ├── SettingsCategories.jsx   (categorieën toevoegen/verwijderen — werkend)
@@ -103,10 +105,11 @@ src/
 │   ├── useTransactions.js      → Alle transactie state & logica
 │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica
 │   ├── useBudgets.js           → Alle budget state & logica
-│   └── usePremium.js           → Centrale premium-status (leest/schrijft webfinance_premium)
+│   ├── usePremium.js           → Centrale premium-status (leest/schrijft webfinance_premium)
+│   └── useProfiles.js          → Centrale profielen hook (CRUD + helpers)
 │
 ├── data/
-│   ├── categories.js           → Categorieën + getMergedCategories() (merged met custom)
+│   ├── categories.js           → Categorieën + getMergedCategories() + SOORTEN (geen PERSONEN meer)
 │   ├── categoryConfig.js       → Icoon- en kleurkoppeling per categorie (voor UI)
 │   ├── transactions.js         → Sample transacties
 │   ├── fixed.js                → Sample vaste lasten
@@ -157,6 +160,7 @@ Elke domein heeft zijn eigen hook die de **enige** plek is voor state en logica:
 - `useFixedExpenses.js` — vaste lasten (CRUD, auto-transacties aanmaken)
 - `useBudgets.js` — budgetten en spaardoelen (berekeningen, CRUD, maand/jaar filter)
 - `usePremium.js` — centrale premium-status app-breed (leest/schrijft `webfinance_premium`)
+- `useProfiles.js` — centrale profielen app-breed (leest/schrijft `webfinance_profielen`)
 
 Componenten en pagina's bevatten **geen** eigen dataloading of businesslogica.
 
@@ -184,7 +188,40 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 - Dashboard TopBar toont een dynamische begroeting in plaats van een paginatitel
 
 ### usePremium hook (centrale premium-status)
-`usePremium()` is de enige plek voor premium-status in de hele app. Geëxporteerd vanuit `src/hooks/usePremium.js`. De voormalige `IS_PREMIUM = false` vlag in `AnalyticsPage.jsx` is vervangen — `AnalyticsPage` gebruikt nu `usePremium()`. Inschakelen via de Admin-sectie in Instellingen.
+`usePremium()` is de enige plek voor premium-status in de hele app. Geëxporteerd vanuit `src/hooks/usePremium.js`. Inschakelen via de Admin-sectie in Instellingen.
+
+### useProfiles hook (centrale profielen)
+`useProfiles()` is de enige plek voor persoonprofielen in de hele app. Geëxporteerd vanuit `src/hooks/useProfiles.js`.
+
+**Wat het exporteert:**
+- `profiles` — alle profielen inclusief GZ (Gezamenlijk)
+- `persons` — alleen niet-gezamenlijke profielen (voor kostenverdeling, wie-knoppen)
+- `addProfile(naam, kleur)` — voegt profiel toe met automatisch gegenereerde initialen
+- `updateProfile(id, wijzigingen)` — past bestaand profiel aan
+- `removeProfile(id)` — verwijdert profiel (GZ kan niet verwijderd worden)
+- `getByInitialen(initialen)` — zoekt profiel op initialen, geeft `undefined` terug als niet gevonden
+
+**Standaard profielen (bij lege localStorage):**
+```javascript
+{ id: 'prof_1', naam: 'Ronald Richter', initialen: 'RR', kleur: { bg: '#E0E7FF', fg: '#3730A3' }, isGezamenlijk: false }
+{ id: 'prof_gz', naam: 'Gezamenlijk',   initialen: 'GZ', kleur: { bg: '#F3F4F6', fg: '#6B7280' }, isGezamenlijk: true }
+```
+
+**`genInitialen(naam)`** — genereert initialen automatisch: eerste letter voornaam + eerste letter achternaam, tussenvoegsels (de/van/der/den/ten/ter) worden overgeslagen. Maximaal 2 tekens, altijd hoofdletters.
+
+**`PROFIEL_KLEUREN`** — 8 preset kleurobjecten `{ bg, fg }` voor de kleurpicker in `SettingsHousehold`. Kleuren zijn passen-bij-het-T-token palet (indigo, blue, teal, green, amber, orange, red, pink).
+
+**GZ-splitsing in kostenverdeling:** Transacties met `wie === 'GZ'` worden gelijk verdeeld over alle `persons`. Dit geldt zowel in `DashboardCostSplit` (betaaldMap) als in toekomstige berekeningen.
+
+**Gebruik in componenten:**
+- `TransactionForm` — wie-knoppen via `profiles.map(...)`, initiële wie = eerste `persons[0]`
+- `TransactionFilters` — wie dropdown via `profiles.map(...)`
+- `TransactionTable` (WieAvatar) — kleur opzoeken via `getByInitialen`, grijs als niet gevonden
+- `FixedForm` — wie-knoppen via `profiles.map(...)`, standaard wie = `'GZ'`
+- `DashboardRecentTx` (Avatar) — kleur opzoeken via `getByInitialen`
+- `DashboardCostSplit` — persoonblokken via `persons`
+- `DashboardIncomeModal` — inkomensvelden via `persons`
+- `SettingsHousehold` — volledig CRUD-beheer van profielen
 
 ### fmtDate — datum formatteren
 `fmtDate(dateStr)` in `tokens.js` formatteert datums op basis van de instelling in `webfinance_datumformaat`:
@@ -197,8 +234,26 @@ Gebruik `fmtDate` overal waar een datum getoond wordt aan de gebruiker. Nooit ze
 ### getMergedCategories — gecombineerde categorieën
 `getMergedCategories()` in `src/data/categories.js` geeft de standaard categorieën + eigen categorieën en subcategorieën uit localStorage (`webfinance_custom_categories`) samengevoegd terug. Gebruik dit overal waar categorieën getoond of gekozen worden (`TransactionForm`, `TransactionFilters`, `FixedForm`).
 
+**Let op:** `PERSONEN` is volledig verwijderd uit `categories.js`. Dit bestand exporteert nu alleen `CATEGORIES`, `getMergedCategories` en `SOORTEN`.
+
 ### Dashboard architectuur
-Dashboard is de landingspagina (`/`). Alle berekeningen (maand-filter, trend, categoryTotals, yearData, ruleData, costSplit) worden als `useMemo` in `DashboardPage.jsx` gedaan en als props doorgegeven aan de 8 dashboard-componenten. De maandselector in de TopBar stuurt alle widgets tegelijk bij. Het staafdiagram filtert op het geselecteerde **jaar** (niet maand). Recente transacties zijn altijd ongefilterd op maand.
+Dashboard is de landingspagina (`/`). `DashboardPage.jsx` roept hooks aan en berekent maand-gefilterde data als `useMemo`. De widgets staan in twee kolommen, drie rijen:
+- Rij 1: `DashboardCostSplit` | `DashboardYearChart`
+- Rij 2: `DashboardSavingsGoals` | `DashboardRecentTx`
+- Rij 3: `DashboardCategoryDonut` | `DashboardRuleScore`
+
+De maandselector in de TopBar stuurt alle widgets tegelijk bij. Het staafdiagram filtert op het geselecteerde **jaar** (niet maand). Recente transacties zijn altijd ongefilterd op maand.
+
+`DashboardCostSplit` is volledig zelfvoorzienend: het leest eigen localStorage-state (`webfinance_netto_inkomen`, `webfinance_verdeel_methode`) en accepteert alleen `allTransactions` als prop. De inkomen-modal en methode-toggle zijn intern beheerd.
+
+### Kostenverdeling widget
+`DashboardCostSplit` berekent per persoon:
+- **Gemiddelde maandkosten** — totale uitgaven / unieke maanden met minstens 1 uitgave
+- **Bijdrage** — aandeel op basis van inkomenratio (methode=`ratio`) of gelijke verdeling (methode=`50/50`)
+- **Betaald** — gemiddeld per maand betaald, GZ-transacties gelijk gesplitst over `persons`
+- **Verschil** — betaald − bijdrage; badge toont `▲ te veel` (rood) of `▼ te weinig` (groen)
+
+Inkomen per persoon wordt opgeslagen in `webfinance_netto_inkomen` via `DashboardIncomeModal`. Als er geen inkomen ingesteld is, toont de widget een lege state met "Inkomen instellen" knop.
 
 ### Kalender architectuur
 `CalendarPage.jsx` is premium-only: niet-premium gebruikers zien een blur/lock overlay. De pagina combineert `useTransactions` (`allTransactions`) en `useFixedExpenses` voor verwachte vs. werkelijke items. `buildDayMap` en `getMondayOfWeek` zijn named exports uit hun respectieve componenten en worden hergebruikt in `CalendarPage`. Maandnavigatie staat gecentreerd boven het kalender grid.
@@ -228,6 +283,9 @@ De sidebar reageert op `usePremium()`:
 | `"webfinance_taal"` | Taalvoorkeur (nu alleen `'nl'`) |
 | `"webfinance_theme"` | `'light'` \| `'dark'` (dark mode styling nog niet actief) |
 | `"webfinance_admin_unlocked"` | Boolean — admin-sectie ontgrendeld via easter egg |
+| `"webfinance_profielen"` | Array van profielobjecten — beheerd via `useProfiles` hook |
+| `"webfinance_netto_inkomen"` | `{ [initialen]: number }` — netto maandinkomen per persoon |
+| `"webfinance_verdeel_methode"` | `'ratio'` \| `'50/50'` — methode voor kostenverdeling |
 
 ---
 
@@ -264,14 +322,14 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - Sidebar label is "Analyse" (bestandsnamen en route blijven `analytics`)
   - Subtitels verwijderd op alle pagina's (ook BudgetTopBar)
 - **Instellingen pagina** — volledig werkend:
-  - Eigen sidebar met 6 secties + verborgen Admin-sectie
-  - **Voorkeuren** — datumformaat (3 opties), thema-toggle; opgeslagen in localStorage; `fmtDate()` in `tokens.js` past dit app-breed toe in `TransactionTable`
-  - **Categorieën** — eigen subcategorieën toevoegen aan standaard categorieën; eigen hoofdcategorieën aanmaken en verwijderen; opgeslagen in `webfinance_custom_categories`; `getMergedCategories()` in `categories.js` maakt custom categorieën beschikbaar in `TransactionForm`, `TransactionFilters` en `FixedForm`
+  - Eigen sidebar met 7 secties (incl. Huishouden) + verborgen Admin-sectie
+  - **Huishouden** — profielen toevoegen/bewerken/verwijderen; kleurpicker (8 presets); `genInitialen` voor auto-initialen; GZ-profiel kan niet verwijderd worden
+  - **Voorkeuren** — datumformaat (3 opties), thema-toggle; opgeslagen in localStorage; `fmtDate()` in `tokens.js` past dit app-breed toe
+  - **Categorieën** — eigen subcategorieën toevoegen aan standaard categorieën; eigen hoofdcategorieën aanmaken en verwijderen; opgeslagen in `webfinance_custom_categories`; `getMergedCategories()` maakt custom categorieën beschikbaar app-breed
   - **Data beheer** — export/import/wissen UI (knoppen nog niet functioneel)
   - **Notificaties** — placeholder (vereist account)
   - **Over Webfinance** — credits + easter egg: 5x klikken op versienummer ontgrendelt Admin-sectie
   - **Admin** (verborgen) — Premium aan/uit via `usePremium()` hook, diagnostiek, admin vergrendelen
-  - `usePremium.js` hook is de centrale app-brede premium-status
 - **Kalender pagina** — volledig werkend (premium-only):
   - Blur/lock overlay voor niet-premium gebruikers (via `usePremium()`)
   - Maandweergave: 7-koloms grid (ma-zo), kleurcodering dagcellen (rood bij hoge uitgaven, groen bij inkomsten)
@@ -279,39 +337,44 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - View-filter pills: Verwacht / Werkelijk / Beide
   - Detailpaneel rechts (280px): verwachte + werkelijke items per dag + "+ Toevoegen" knop
   - "+ Toevoegen" opent bestaand `TransactionForm` met datum vooringevuld (via `createPortal`)
-  - Verwachte items: vaste lasten uit `useFixedExpenses`, geprojecteerd op de juiste dag (ook toekomstige maanden)
+  - Verwachte items: vaste lasten uit `useFixedExpenses`, geprojecteerd op de juiste dag
   - Werkelijke items: alle transacties uit `useTransactions` (`allTransactions`)
   - Matching: vinkje bij verwachte items die betaald zijn (vasteLast ID match)
   - StatCards onderaan: Verwachte uitgaven, Werkelijke uitgaven, Verschil
-  - Legenda-paneel rechts
-  - Maandnavigatie met pijltjes, gecentreerd boven kalender grid
+  - Legenda-paneel rechts; maandnavigatie gecentreerd boven grid
   - Componenten in `src/components/calendar/` (8 bestanden)
 - **Dashboard pagina** — volledig werkend (landingspagina):
   - Dynamische begroeting in TopBar op basis van tijdstip (Goedemorgen/Goedemiddag/Goedenavond, Ronald)
-  - Maandselector met pijltjes in TopBar (rechts) — alle widgets filteren mee op geselecteerde maand
+  - Maandselector met pijltjes in TopBar — alle widgets filteren mee op geselecteerde maand
   - "+ Transactie" knop opent `TransactionForm` slide-in via `createPortal`
   - 4 StatCards: Totaal saldo, Inkomsten, Uitgaven, Budget resterend — met trend vs vorige maand
-  - Uitgaven per categorie: donut chart (SVG) + legenda rechts (live data uit transacties)
+  - Kostenverdeling: uitgebreide widget met gemKosten, bijdrage per persoon, betaald, verschil; inkomen instellen via modal; methode toggle (ratio / 50-50)
   - Maandoverzicht: staafdiagram inkomsten (teal) vs uitgaven (rood) per maand — filtert op **jaar**
   - Spaardoelen: voortgangsbalken, `huidigBedrag` berekend uit transacties, "+ Doel" navigeert naar `/budgetten`
   - Recente transacties: laatste 5, altijd ongefilterd op geselecteerde maand
-  - Kostenverdeling: Ronald vs Anne op basis van inkomsttransacties per `wie`-veld
+  - Uitgaven per categorie: donut chart (SVG) + legenda rechts
   - 50/30/20 score: Noodzaak/Wens/Sparen voortgangsbalken, respecteert handmatige modus via `actieveVerdeling`
-  - Componenten in `src/components/dashboard/` (8 bestanden)
+  - Componenten in `src/components/dashboard/` (9 bestanden incl. DashboardIncomeModal)
+- **Profielensysteem** — volledig werkend:
+  - `useProfiles` hook als centrale single source of truth voor alle profielen
+  - `PERSONEN` hardcoded array volledig verwijderd uit het systeem (was in `categories.js`)
+  - Dynamische wie-knoppen in `TransactionForm`, `TransactionFilters`, `FixedForm`
+  - WieAvatar in `TransactionTable` en `DashboardRecentTx` dynamisch op kleur
+  - Profielbeheer in `SettingsHousehold` (secties in `SettingsSidebar`)
 - **Premium sidebar logica** — volledig werkend:
   - PREMIUM badge bij Kalender verborgen voor premium gebruikers
   - "Upgrade naar Premium" blok verborgen voor premium gebruikers
   - Profiel-chip toont "PREMIUM" (blauw) of "GRATIS" (grijs) op basis van `isPremium`
 
 ### 🔮 Later (niet nu)
-- Kostenverdeling pop-up: netto inkomen instellen + methode ratio / 50-50
-- Profielensysteem: meerdere personen, dynamisch `wie`-veld
-- Bewerken transacties, leningen, paginering
+- Bewerken transacties
+- Leningen (placeholder bestaat al in FixedLoanSection)
+- Paginering in transactietabel
 - Dark mode (thema-toggle bestaat al, styling nog niet actief)
-- Supabase backend, login, bankimport, AI-categorisering
-- Vercel hosting
 - Data beheer: export/import/wissen knoppen (UI bestaat al, functionaliteit ontbreekt)
 - Notificaties (vereist account)
+- Supabase backend, login, bankimport, AI-categorisering
+- Vercel hosting
 
 ---
 
