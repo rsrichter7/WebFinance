@@ -34,7 +34,7 @@ function loadOrder() {
 }
 
 export default function AnalyticsPage() {
-  const { allTransactions } = useTransactions()
+  const { allTransactions, loading } = useTransactions()
   const { isPremium } = usePremium()
 
   const [order,  setOrder]  = useState(loadOrder)
@@ -55,6 +55,14 @@ export default function AnalyticsPage() {
   function endDrag() {
     setDragId(null)
     setOverId(null)
+  }
+
+  if (loading) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: 14, fontFamily: "'Inter', sans-serif" }}>
+        Analyse laden…
+      </div>
+    )
   }
 
   return (

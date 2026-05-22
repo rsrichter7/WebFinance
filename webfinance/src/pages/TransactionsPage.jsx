@@ -16,6 +16,7 @@ export default function TransactionsPage() {
     totals,
     transactionCount,
     eersteJaar,
+    loading,
     addTransaction,
     removeTransaction,
     updateTransaction,
@@ -28,6 +29,14 @@ export default function TransactionsPage() {
   } = useTransactions()
 
   const [editingTx, setEditingTx] = useState(null)
+
+  if (loading) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.ink3, fontSize: 14, fontFamily: "'Inter', sans-serif" }}>
+        Transacties laden…
+      </div>
+    )
+  }
 
   return (
     <>

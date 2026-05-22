@@ -1,92 +1,130 @@
 // ─── useTransactions Hook ───
 // Enige plek waar transactiedata en logica leeft.
-// Componenten gebruiken deze hook en hebben GEEN eigen transactie-state.
+// Data komt uit Supabase (transactions tabel, gefilterd op household_id).
 
-import { useState, useMemo, useCallback } from 'react'
-import { SAMPLE_TRANSACTIONS } from '../data/transactions'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { supabase } from '../supabaseClient'
+import { useHousehold } from './useHousehold'
 
-const STORAGE_KEY = 'webfinance_transactions'
+// Kolommen die we ophalen uit Supabase
+const KOLOMMEN = 'id, datum, omschrijving, winkel, bedrag, type, categorie, sub, soort, wie, bron, vaste_last_id, spaardoel_id, created_at'
 
-// Unieke id generator
-let idCounter = Date.now()
-const nextId = () => ++idCounter
-
-// Lees uit LocalStorage, of gebruik sample data
-function loadTransactions() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    }
-  } catch {}
-  return SAMPLE_TRANSACTIONS
+// snake_case (database) → camelCase (frontend)
+function dbNaarFrontend(row) {
+  return {
+    id:          row.id,
+    datum:       row.datum,
+    omschrijving: row.omschrijving,
+    winkel:      row.winkel ?? '',
+    bedrag:      row.bedrag,
+    type:        row.type,
+    categorie:   row.categorie,
+    sub:         row.sub ?? '',
+    soort:       row.soort ?? '',
+    wie:         row.wie ?? '',
+    bron:        row.bron ?? 'handmatig',
+    vasteLast:   row.vaste_last_id ?? null,
+    spaardoelId: row.spaardoel_id ?? null,
+    createdAt:   row.created_at,
+  }
 }
 
-// Sla op naar LocalStorage
-function saveTransactions(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch {}
+// camelCase (frontend) → snake_case (database)
+function frontendNaarDb(tx) {
+  const row = {
+    datum:        tx.datum,
+    omschrijving: tx.omschrijving,
+    winkel:       tx.winkel ?? '',
+    bedrag:       tx.bedrag,
+    type:         tx.type,
+    categorie:    tx.categorie,
+    sub:          tx.sub ?? '',
+    soort:        tx.soort ?? '',
+    wie:          tx.wie ?? '',
+    bron:         tx.bron ?? 'handmatig',
+    vaste_last_id: tx.vasteLast ?? null,
+    spaardoel_id:  tx.spaardoelId ?? null,
+  }
+  return row
 }
 
 export default function useTransactions() {
-  // ─── State ───
-  const [transactions, setTransactions] = useState(loadTransactions)
-  const [formOpen, setFormOpen] = useState(false)
+  const { householdId, loading: householdLoading } = useHousehold()
 
-const [filters, setFilters] = useState({
-    search: '',
-    type: '',
-    categorie: '',
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState(null)
+  const [formOpen, setFormOpen]         = useState(false)
+
+  const [filters, setFilters] = useState({
+    search:       '',
+    type:         '',
+    categorie:    '',
     subcategorie: '',
-    soort: '',
-    wie: '',
-    maand: '',
-    jaar: String(new Date().getFullYear()),
+    soort:        '',
+    wie:          '',
+    maand:        '',
+    jaar:         String(new Date().getFullYear()),
   })
 
   const [sort, setSort] = useState({ field: 'datum', dir: 'desc' })
 
+  // ─── Data ophalen uit Supabase ───
+  const fetchTransactions = useCallback(async () => {
+    if (!householdId) return
+    setLoading(true)
+    setError(null)
+
+    const { data, error: err } = await supabase
+      .from('transactions')
+      .select(KOLOMMEN)
+      .eq('household_id', householdId)
+      .order('datum', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (err) {
+      setError(err.message)
+    } else {
+      setTransactions((data ?? []).map(dbNaarFrontend))
+    }
+    setLoading(false)
+  }, [householdId])
+
+  useEffect(() => {
+    if (!householdLoading) {
+      fetchTransactions()
+    }
+  }, [fetchTransactions, householdLoading])
+
   // ─── Transactie toevoegen ───
-const addTransaction = useCallback((tx) => {
-    const newTx = { ...tx, id: nextId(), bron: tx.bron || 'handmatig' }
-    setTransactions(prev => {
-      const updated = [newTx, ...prev]
-      saveTransactions(updated)
-      return updated
-    })
-  }, [])
+  const addTransaction = useCallback(async (tx) => {
+    if (!householdId) return
+    const row = { ...frontendNaarDb(tx), household_id: householdId }
+    const { error: err } = await supabase.from('transactions').insert(row)
+    if (!err) fetchTransactions()
+  }, [householdId, fetchTransactions])
 
   // ─── Transactie verwijderen ───
-  const removeTransaction = useCallback((id) => {
-    setTransactions(prev => {
-      const updated = prev.filter(t => t.id !== id)
-      saveTransactions(updated)
-      return updated
-    })
-  }, [])
+  const removeTransaction = useCallback(async (id) => {
+    const { error: err } = await supabase.from('transactions').delete().eq('id', id)
+    if (!err) fetchTransactions()
+  }, [fetchTransactions])
 
   // ─── Transactie bewerken ───
-  // Bron wordt altijd 'handmatig' na bewerking (ook auto/import)
-  const updateTransaction = useCallback((id, updatedFields) => {
-    setTransactions(prev => {
-      const updated = prev.map(t =>
-        t.id === id ? { ...t, ...updatedFields, bron: 'handmatig' } : t
-      )
-      saveTransactions(updated)
-      return updated
-    })
-  }, [])
+  // Bron wordt altijd 'handmatig' na bewerking; vasteLast (vaste_last_id) blijft behouden
+  const updateTransaction = useCallback(async (id, updatedFields) => {
+    const dbFields = frontendNaarDb({ ...updatedFields, bron: 'handmatig' })
+    // Behoud vasteLast-koppeling als niet meegestuurd
+    if (updatedFields.vasteLast === undefined) delete dbFields.vaste_last_id
+    const { error: err } = await supabase.from('transactions').update(dbFields).eq('id', id)
+    if (!err) fetchTransactions()
+  }, [fetchTransactions])
 
   // ─── Filter updaten ───
-  // Bij wijziging hoofdcategorie: subcategorie automatisch resetten
   const updateFilter = useCallback((key, value) => {
     setFilters(prev => {
       const next = { ...prev, [key]: value }
-      if (key === 'categorie') {
-        next.subcategorie = ''
-      }
+      if (key === 'categorie') next.subcategorie = ''
       return next
     })
   }, [])
@@ -103,7 +141,6 @@ const addTransaction = useCallback((tx) => {
   const filtered = useMemo(() => {
     let result = [...transactions]
 
-    // Zoeken
     if (filters.search) {
       const q = filters.search.toLowerCase()
       result = result.filter(t =>
@@ -112,74 +149,41 @@ const addTransaction = useCallback((tx) => {
       )
     }
 
-    // Type filter
-    if (filters.type) {
-      result = result.filter(t => t.type === filters.type)
-    }
+    if (filters.type)         result = result.filter(t => t.type === filters.type)
+    if (filters.categorie)    result = result.filter(t => t.categorie === filters.categorie)
+    if (filters.subcategorie) result = result.filter(t => t.sub === filters.subcategorie)
+    if (filters.soort)        result = result.filter(t => t.soort === filters.soort)
+    if (filters.wie)          result = result.filter(t => t.wie === filters.wie)
 
-    // Categorie filter
-    if (filters.categorie) {
-      result = result.filter(t => t.categorie === filters.categorie)
-    }
-
-    // Subcategorie filter
-    if (filters.subcategorie) {
-      result = result.filter(t => t.sub === filters.subcategorie)
-    }
-
-    // Soort filter
-    if (filters.soort) {
-      result = result.filter(t => t.soort === filters.soort)
-    }
-
-    // Wie filter
-    if (filters.wie) {
-      result = result.filter(t => t.wie === filters.wie)
-    }
-
-    // Maand filter
     if (filters.maand) {
-      result = result.filter(t => {
-        const month = new Date(t.datum).getMonth()
-        return month === parseInt(filters.maand)
-      })
+      result = result.filter(t => new Date(t.datum).getMonth() === parseInt(filters.maand))
     }
 
-    // Jaar filter
     if (filters.jaar) {
-      result = result.filter(t => {
-        const year = new Date(t.datum).getFullYear()
-        return year === parseInt(filters.jaar)
-      })
+      result = result.filter(t => new Date(t.datum).getFullYear() === parseInt(filters.jaar))
     }
 
-    // Sorteren
     result.sort((a, b) => {
       let va = a[sort.field]
       let vb = b[sort.field]
-
-      if (sort.field === 'bedrag') {
-        va = a.bedrag
-        vb = b.bedrag
-      }
-
+      if (sort.field === 'bedrag') { va = a.bedrag; vb = b.bedrag }
       if (va < vb) return sort.dir === 'asc' ? -1 : 1
       if (va > vb) return sort.dir === 'asc' ? 1 : -1
-      // Bij gelijke waarden: nieuwste (hoogste id) eerst
-      return b.id - a.id
+      // Bij gelijke datum: nieuwste createdAt eerst
+      return new Date(b.createdAt) - new Date(a.createdAt)
     })
 
     return result
   }, [transactions, filters, sort])
 
-  // ─── Totalen berekenen ───
+  // ─── Totalen ───
   const totals = useMemo(() => {
-    const uitgaven = filtered.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
+    const uitgaven  = filtered.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
     const inkomsten = filtered.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
     return { uitgaven, inkomsten, balans: inkomsten - uitgaven }
   }, [filtered])
 
-// Oudste jaar bepalen op basis van eerste transactie
+  // ─── Oudste jaar ───
   const eersteJaar = useMemo(() => {
     if (transactions.length === 0) return new Date().getFullYear()
     let min = Infinity
@@ -197,6 +201,8 @@ const addTransaction = useCallback((tx) => {
     totals,
     transactionCount: filtered.length,
     eersteJaar,
+    loading,
+    error,
 
     // Acties
     addTransaction,
@@ -214,7 +220,5 @@ const addTransaction = useCallback((tx) => {
     // Formulier
     formOpen,
     setFormOpen,
-
-    
   }
 }
