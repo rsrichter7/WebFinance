@@ -1,12 +1,77 @@
 // ─── FixedCategoryGroup ───
 // Gegroepeerde tabel per hoofdcategorie voor vaste lasten.
+// Kolomstructuur gelijk aan TransactionTable.
 
 import React from 'react'
-import { T, TAB, fmt } from '../../tokens'
+import { T, TAB, fmt, fmtDate } from '../../tokens'
 import { Card } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
+import useProfiles from '../../hooks/useProfiles'
 
-const COLS = '1.4fr 120px 110px 1fr 100px 70px'
+const FREQ_LABEL = {
+  Maandelijks: '/ maand',
+  Wekelijks:   '/ week',
+  Jaarlijks:   '/ jaar',
+  Kwartaal:    '/ kwartaal',
+}
+
+function pad(n) { return String(n).padStart(2, '0') }
+
+// Eerstvolgende afschrijvingsdatum: als dag al geweest is, volgende maand
+function volgendeDatum(afschrijfdag) {
+  const now  = new Date()
+  const dag  = afschrijfdag ?? 1
+  let year   = now.getFullYear()
+  let month  = now.getMonth()
+  if (now.getDate() >= dag) {
+    month += 1
+    if (month > 11) { month = 0; year += 1 }
+  }
+  const maxDay = new Date(year, month + 1, 0).getDate()
+  return `${year}-${pad(month + 1)}-${pad(Math.min(dag, maxDay))}`
+}
+
+function SoortBadge({ soort }) {
+  const STIJLEN = {
+    Noodzaak: { bg: T.rule,      color: T.ink3 },
+    Wens:     { bg: T.blueSoft,  color: T.blueText },
+    Sparen:   { bg: T.greenSoft, color: T.greenText },
+  }
+  const s = STIJLEN[soort] || STIJLEN.Noodzaak
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600, padding: '2px 8px',
+      borderRadius: 4, background: s.bg, color: s.color,
+    }}>
+      {soort}
+    </span>
+  )
+}
+
+function WieAvatar({ initials }) {
+  const { getByInitialen } = useProfiles()
+  const p = getByInitialen(initials)
+  const kleur = p ? p.kleur : { bg: T.rule, fg: T.ink3 }
+  return (
+    <div style={{
+      width: 26, height: 26, borderRadius: '50%',
+      background: kleur.bg, color: kleur.fg,
+      display: 'grid', placeItems: 'center',
+      fontSize: 10, fontWeight: 600,
+    }}>
+      {initials}
+    </div>
+  )
+}
+
+const TH = {
+  padding: '11px 16px', fontSize: 11, fontWeight: 600,
+  color: T.ink4, background: T.cardAlt, textAlign: 'left',
+  letterSpacing: 0.3, textTransform: 'uppercase',
+  borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap',
+}
+
+const TD = { padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}` }
 
 export default function FixedCategoryGroup({ icon, title, color, colorSoft, items, subtotal, onEdit, onRemove }) {
   const ico = ICONS[icon] || ICONS.grip
@@ -33,57 +98,93 @@ export default function FixedCategoryGroup({ icon, title, color, colorSoft, item
         </div>
       </div>
 
-      {/* Kolomkoppen */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: COLS,
-        padding: '10px 18px', borderBottom: `1px solid ${T.rule}`,
-        fontSize: 11, fontWeight: 500, color: T.ink4, letterSpacing: 0.3, textTransform: 'uppercase',
-      }}>
-        <div>Omschrijving</div>
-        <div style={{ textAlign: 'right' }}>Bedrag</div>
-        <div>Herhaling</div>
-        <div>Subcategorie</div>
-        <div>Winkel / Bron</div>
-        <div />
+      {/* Tabel */}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={TH}>Volgende afschrijving</th>
+              <th style={TH}>Bedrag</th>
+              <th style={TH}>Omschrijving</th>
+              <th style={TH}>Winkel / Bron</th>
+              <th style={TH}>Categorie</th>
+              <th style={TH}>Soort</th>
+              <th style={TH}>Wie</th>
+              <th style={{ ...TH, width: 50 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, i) => (
+              <tr
+                key={item.id}
+                style={{ background: i % 2 === 1 ? T.cardAlt : T.card }}
+                onMouseEnter={e => e.currentTarget.querySelectorAll('.row-action').forEach(b => b.style.opacity = 1)}
+                onMouseLeave={e => e.currentTarget.querySelectorAll('.row-action').forEach(b => b.style.opacity = 0)}
+              >
+                <td style={{ ...TD, color: T.ink3, whiteSpace: 'nowrap' }}>
+                  {fmtDate(volgendeDatum(item.afschrijfdag))}
+                </td>
+                <td style={{ ...TD, fontWeight: 600, color: T.ink, whiteSpace: 'nowrap', ...TAB }}>
+                  <span style={{ color: item.type === 'Inkomst' ? T.green : T.ink4, marginRight: 4, fontSize: 11 }}>
+                    {item.type === 'Inkomst' ? '↑' : '↓'}
+                  </span>
+                  {fmt(item.bedrag)}
+                  <span style={{ fontSize: 11, fontWeight: 400, color: T.ink3, marginLeft: 4 }}>
+                    {FREQ_LABEL[item.herhaling] || ''}
+                  </span>
+                </td>
+                <td style={{ ...TD, fontWeight: 500, color: T.ink }}>
+                  {item.omschrijving}
+                </td>
+                <td style={{ ...TD, color: T.ink3 }}>
+                  {item.winkel || '—'}
+                </td>
+                <td style={{ ...TD, color: T.ink2 }}>
+                  {item.sub || '—'}
+                </td>
+                <td style={TD}>
+                  <SoortBadge soort={item.soort} />
+                </td>
+                <td style={TD}>
+                  <WieAvatar initials={item.wie} />
+                </td>
+                <td style={TD}>
+                  <div style={{ display: 'inline-flex', gap: 4 }}>
+                    <button
+                      className="row-action"
+                      onClick={() => onEdit(item)}
+                      style={{
+                        border: 'none', background: 'transparent',
+                        padding: 5, borderRadius: 6, cursor: 'pointer',
+                        color: T.ink4, display: 'inline-flex', opacity: 0,
+                        transition: 'opacity 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.color = T.ink2}
+                      onMouseLeave={e => e.currentTarget.style.color = T.ink4}
+                    >
+                      {ICONS.edit}
+                    </button>
+                    <button
+                      className="row-action"
+                      onClick={() => onRemove(item.id)}
+                      style={{
+                        border: 'none', background: 'transparent',
+                        padding: 5, borderRadius: 6, cursor: 'pointer',
+                        color: T.ink4, display: 'inline-flex', opacity: 0,
+                        transition: 'opacity 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.color = T.red}
+                      onMouseLeave={e => e.currentTarget.style.color = T.ink4}
+                    >
+                      {ICONS.trash}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      {/* Rijen met zebra-striping */}
-      {items.map((item, i) => (
-        <div key={item.id} style={{
-          display: 'grid', gridTemplateColumns: COLS,
-          padding: '12px 18px', alignItems: 'center',
-          background: i % 2 === 1 ? T.cardAlt : T.card,
-          borderBottom: i === items.length - 1 ? 'none' : `1px solid ${T.rule}`,
-          fontSize: 13.5,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: item.type === 'Inkomst' ? T.green : T.ink4, display: 'inline-flex' }}>
-              {item.type === 'Inkomst' ? ICONS.arrUp : ICONS.arrDown}
-            </span>
-            <span style={{ fontWeight: 500, color: T.ink }}>{item.omschrijving}</span>
-          </div>
-          <div style={{ textAlign: 'right', fontWeight: 500, color: T.ink, ...TAB }}>
-            {item.type === 'Inkomst' ? '+' : '−'} {fmt(item.bedrag)}
-          </div>
-          <div style={{ color: T.ink3, fontSize: 12.5 }}>{item.herhaling}</div>
-          <div style={{ color: T.ink3, fontSize: 12.5 }}>{item.sub}</div>
-          <div style={{ color: T.ink4, fontSize: 12.5 }}>{item.winkel || '—'}</div>
-          <div style={{ display: 'inline-flex', gap: 4, justifyContent: 'flex-end', color: T.ink4 }}>
-            <button
-              onClick={() => onEdit(item)}
-              style={{ border: 'none', background: 'transparent', padding: 5, borderRadius: 6, cursor: 'pointer', color: 'inherit', display: 'inline-flex' }}
-            >
-              {ICONS.edit}
-            </button>
-            <button
-              onClick={() => onRemove(item.id)}
-              style={{ border: 'none', background: 'transparent', padding: 5, borderRadius: 6, cursor: 'pointer', color: 'inherit', display: 'inline-flex' }}
-            >
-              {ICONS.trash}
-            </button>
-          </div>
-        </div>
-      ))}
     </Card>
   )
 }
