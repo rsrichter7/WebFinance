@@ -13,10 +13,9 @@ const FORM_BASE = {
   type: 'Uitgave',
   bedrag: '',
   datum: new Date().toISOString().split('T')[0],
-  omschrijving: '',
+  beschrijving: '',
   categorie: CATEGORIES[0].name,
-  sub: CATEGORIES[0].subs[0],
-  winkel: '',
+  subcategorie: CATEGORIES[0].subs[0],
   soort: 'Noodzaak',
   wie: '',
   notitie: '',
@@ -40,10 +39,9 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
         type: editingTransaction.type || 'Uitgave',
         bedrag: editingTransaction.bedrag || '',
         datum: editingTransaction.datum || new Date().toISOString().split('T')[0],
-        omschrijving: editingTransaction.omschrijving || '',
+        beschrijving: editingTransaction.beschrijving || '',
         categorie: editingTransaction.categorie || CATEGORIES[0].name,
-        sub: editingTransaction.sub || CATEGORIES[0].subs[0],
-        winkel: editingTransaction.winkel || '',
+        subcategorie: editingTransaction.subcategorie || CATEGORIES[0].subs[0],
         soort: editingTransaction.soort || 'Noodzaak',
         wie: editingTransaction.wie || '',
         notitie: editingTransaction.notitie || '',
@@ -66,7 +64,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
       // Reset subcategorie als hoofdcategorie wijzigt
       if (field === 'categorie') {
         const cat = allCats.find(c => c.name === value)
-        next.sub = cat ? cat.subs[0] : ''
+        next.subcategorie = cat ? cat.subs[0] : ''
       }
       return next
     })
@@ -75,16 +73,15 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
   // Opslaan
   function handleSave(keepOpen) {
     const bedrag = parseFloat(form.bedrag)
-    if (!bedrag || !form.omschrijving.trim()) return
+    if (!bedrag || !form.beschrijving.trim()) return
 
     const velden = {
       datum: form.datum,
       bedrag,
-      omschrijving: form.omschrijving.trim(),
+      beschrijving: form.beschrijving.trim(),
       type: form.type,
       categorie: form.categorie,
-      sub: form.sub,
-      winkel: form.winkel.trim(),
+      subcategorie: form.subcategorie,
       soort: form.soort,
       wie: form.wie,
       notitie: form.notitie.trim(),
@@ -194,14 +191,14 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
             </div>
           </div>
 
-          {/* Omschrijving */}
+          {/* Beschrijving */}
           <div>
             <label style={labelStyle}>Omschrijving *</label>
             <input
               type="text"
               placeholder="Bijv. Boodschappen Albert Heijn"
-              value={form.omschrijving}
-              onChange={e => update('omschrijving', e.target.value)}
+              value={form.beschrijving}
+              onChange={e => update('beschrijving', e.target.value)}
               style={inputStyle}
             />
           </div>
@@ -216,22 +213,10 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
             </div>
             <div>
               <label style={labelStyle}>Subcategorie</label>
-              <select value={form.sub} onChange={e => update('sub', e.target.value)} style={inputStyle}>
+              <select value={form.subcategorie} onChange={e => update('subcategorie', e.target.value)} style={inputStyle}>
                 {subs.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-          </div>
-
-          {/* Winkel / Bron */}
-          <div>
-            <label style={labelStyle}>Winkel / Bron</label>
-            <input
-              type="text"
-              placeholder="Bijv. Albert Heijn"
-              value={form.winkel}
-              onChange={e => update('winkel', e.target.value)}
-              style={inputStyle}
-            />
           </div>
 
           {/* Soort */}

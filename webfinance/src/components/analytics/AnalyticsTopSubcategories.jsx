@@ -30,7 +30,7 @@ export default function AnalyticsTopSubcategories({ allTransactions, period }) {
 
   const subtotals = {}
   for (const t of filtered) {
-    subtotals[t.sub] = (subtotals[t.sub] || 0) + t.bedrag
+    subtotals[t.subcategorie] = (subtotals[t.subcategorie] || 0) + t.bedrag
   }
 
   const sorted = Object.entries(subtotals)

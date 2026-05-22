@@ -50,7 +50,7 @@ export function buildDayMap(allTransactions, items, year, month) {
       if (!map[day]) map[day] = { expected: [], actual: [] }
       map[day].actual.push({
         id: tx.id, vasteLast: tx.vasteLast,
-        name: tx.omschrijving, amount: tx.bedrag,
+        name: tx.beschrijving, amount: tx.bedrag,
         income: tx.type === 'Inkomst',
       })
     }

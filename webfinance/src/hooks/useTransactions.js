@@ -7,19 +7,18 @@ import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
 
 // Kolommen die we ophalen uit Supabase
-const KOLOMMEN = 'id, datum, omschrijving, winkel, bedrag, type, categorie, sub, soort, wie, bron, vaste_last_id, spaardoel_id, created_at'
+const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, bron, vaste_last_id, spaardoel_id, created_at'
 
 // snake_case (database) → camelCase (frontend)
 function dbNaarFrontend(row) {
   return {
     id:          row.id,
     datum:       row.datum,
-    omschrijving: row.omschrijving,
-    winkel:      row.winkel ?? '',
+    beschrijving: row.beschrijving,
     bedrag:      row.bedrag,
     type:        row.type,
     categorie:   row.categorie,
-    sub:         row.sub ?? '',
+    subcategorie: row.subcategorie ?? '',
     soort:       row.soort ?? '',
     wie:         row.wie ?? '',
     bron:        row.bron ?? 'handmatig',
@@ -33,12 +32,11 @@ function dbNaarFrontend(row) {
 function frontendNaarDb(tx) {
   const row = {
     datum:        tx.datum,
-    omschrijving: tx.omschrijving,
-    winkel:       tx.winkel ?? '',
+    beschrijving: tx.beschrijving,
     bedrag:       tx.bedrag,
     type:         tx.type,
     categorie:    tx.categorie,
-    sub:          tx.sub ?? '',
+    subcategorie: tx.subcategorie ?? '',
     soort:        tx.soort ?? '',
     wie:          tx.wie ?? '',
     bron:         tx.bron ?? 'handmatig',
@@ -144,14 +142,13 @@ export default function useTransactions() {
     if (filters.search) {
       const q = filters.search.toLowerCase()
       result = result.filter(t =>
-        t.omschrijving.toLowerCase().includes(q) ||
-        t.winkel.toLowerCase().includes(q)
+        t.beschrijving.toLowerCase().includes(q)
       )
     }
 
     if (filters.type)         result = result.filter(t => t.type === filters.type)
     if (filters.categorie)    result = result.filter(t => t.categorie === filters.categorie)
-    if (filters.subcategorie) result = result.filter(t => t.sub === filters.subcategorie)
+    if (filters.subcategorie) result = result.filter(t => t.subcategorie === filters.subcategorie)
     if (filters.soort)        result = result.filter(t => t.soort === filters.soort)
     if (filters.wie)          result = result.filter(t => t.wie === filters.wie)
 

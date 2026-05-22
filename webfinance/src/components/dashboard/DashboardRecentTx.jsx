@@ -44,10 +44,10 @@ export default function DashboardRecentTx({ recentTx }) {
               <Avatar wie={tx.wie} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {tx.omschrijving}
+                  {tx.beschrijving}
                 </div>
                 <div style={{ fontSize: 11, color: T.ink3, marginTop: 1 }}>
-                  {tx.sub} · {fmtDate(tx.datum)}
+                  {tx.subcategorie} · {fmtDate(tx.datum)}
                 </div>
               </div>
               <div style={{
