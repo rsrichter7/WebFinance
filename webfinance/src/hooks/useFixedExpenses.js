@@ -1,167 +1,213 @@
 // ─── useFixedExpenses Hook ───
 // Beheer van vaste lasten: CRUD, groepering, totalen en auto-transacties.
+// Data komt uit Supabase (fixed_expenses tabel, gefilterd op household_id).
 
-import { useState, useMemo, useCallback } from 'react'
-import { SAMPLE_VASTE_LASTEN } from '../data/fixed'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { supabase } from '../supabaseClient'
+import { useHousehold } from './useHousehold'
 import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
 
-const STORAGE_KEY = 'webfinance_fixed'
-const TX_KEY = 'webfinance_transactions'
+const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, created_at'
 
-let idCounter = Date.now()
-const nextId = () => ++idCounter
+function pad(n) { return String(n).padStart(2, '0') }
 
-// Bereken volgende datum op basis van herhaling
-function advanceDate(dateStr, herhaling) {
-  const d = new Date(dateStr)
-  if (herhaling === 'Wekelijks')        d.setDate(d.getDate() + 7)
-  else if (herhaling === 'Maandelijks') d.setMonth(d.getMonth() + 1)
-  else if (herhaling === 'Jaarlijks')   d.setFullYear(d.getFullYear() + 1)
-  return d.toISOString().split('T')[0]
+// Reconstrueer startdatum vanuit created_at en afschrijfdag
+function maakStartdatum(createdAt, afschrijfdag) {
+  const d = new Date(createdAt || new Date())
+  const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+  const dag = Math.min(afschrijfdag || 1, maxDay)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(dag)}`
 }
 
-// Vooruit springen naar de eerstvolgende toekomstige datum
-function nextFutureDate(dateStr, herhaling) {
-  const today = new Date().toISOString().split('T')[0]
-  let next = dateStr
-  let safety = 0
-  while (next <= today && safety < 1000) {
-    next = advanceDate(next, herhaling)
-    safety++
+// DB (snake_case) → frontend (legacy veldnamen voor componentcompatibiliteit)
+function dbNaarFrontend(row) {
+  return {
+    id:           row.id,
+    omschrijving: row.naam,
+    bedrag:       row.bedrag,
+    herhaling:    row.frequentie,
+    categorie:    row.categorie,
+    sub:          row.subcategorie ?? '',
+    soort:        row.soort ?? 'Noodzaak',
+    wie:          row.wie ?? 'GZ',
+    afschrijfdag: row.afschrijfdag ?? 1,
+    actief:       row.actief ?? true,
+    type:         'Uitgave', // niet in DB, default voor componentcompatibiliteit
+    winkel:       '',        // niet in DB
+    startdatum:   maakStartdatum(row.created_at, row.afschrijfdag),
+    createdAt:    row.created_at,
   }
-  return next
 }
 
-// Bereken de vroegste datum waarvoor we transacties aanmaken (max 1 maand terug)
+// Frontend → DB (alleen kolommen die bestaan in de tabel)
+function frontendNaarDb(item) {
+  const dag = item.startdatum
+    ? parseInt(item.startdatum.split('-')[2], 10)
+    : (item.afschrijfdag ?? new Date().getDate())
+  return {
+    naam:         item.omschrijving,
+    bedrag:       item.bedrag,
+    frequentie:   item.herhaling,
+    categorie:    item.categorie,
+    subcategorie: item.sub ?? '',
+    soort:        item.soort ?? 'Noodzaak',
+    wie:          item.wie ?? 'GZ',
+    afschrijfdag: dag,
+    actief:       item.actief !== false,
+  }
+}
+
+// Normaliseer bedrag naar maandbedrag voor statistieken
+function toMonthly(item) {
+  if (item.herhaling === 'Wekelijks')  return item.bedrag * 52 / 12
+  if (item.herhaling === 'Jaarlijks')  return item.bedrag / 12
+  if (item.herhaling === 'Kwartaal')   return item.bedrag / 3
+  return item.bedrag
+}
+
+// Vroegste datum waarvoor we auto-transacties aanmaken (max 1 maand terug)
 function earliestAutoDate() {
   const d = new Date()
   d.setMonth(d.getMonth() - 1)
   return d.toISOString().split('T')[0]
 }
 
-// Normaliseer bedrag naar maandbedrag voor statistieken
-function toMonthly(item) {
-  if (item.herhaling === 'Wekelijks') return item.bedrag * 52 / 12
-  if (item.herhaling === 'Jaarlijks') return item.bedrag / 12
-  return item.bedrag
-}
+// Genereer verwachte datums voor een vaste last binnen [minDate, today]
+function berekenVerwachteDatums(item, minDate, today) {
+  const dates = []
+  const dag = item.afschrijfdag ?? 1
+  const now = new Date()
 
-// Schrijf gemiste auto-transacties naar webfinance_transactions
-function processAutoTransactions(items, isNewItem = false) {
-  const today = new Date().toISOString().split('T')[0]
-  const minDate = isNewItem ? earliestAutoDate() : null
-  const newTx = []
-
-  const processed = items.map(item => {
-    let next = item.nextDatum || item.startdatum
+  if (item.herhaling === 'Maandelijks') {
+    for (let offset = -1; offset <= 0; offset++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+      const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
+      if (dateStr >= minDate && dateStr <= today) dates.push(dateStr)
+    }
+  } else if (item.herhaling === 'Kwartaal') {
+    for (let offset = -3; offset <= 0; offset += 3) {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+      const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
+      if (dateStr >= minDate && dateStr <= today) dates.push(dateStr)
+    }
+  } else if (item.herhaling === 'Jaarlijks') {
+    const base = new Date(item.createdAt || now)
+    const maxDay = new Date(now.getFullYear(), base.getMonth() + 1, 0).getDate()
+    const dateStr = `${now.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
+    if (dateStr >= minDate && dateStr <= today) dates.push(dateStr)
+  } else if (item.herhaling === 'Wekelijks') {
+    let cur = new Date(item.startdatum || item.createdAt || minDate)
     let safety = 0
-    while (next <= today && safety < 1000) {
-      // Bij nieuw toegevoegde vaste lasten: max 1 maand terug
-      const shouldCreate = !minDate || next >= minDate
-      if (shouldCreate) {
-        newTx.push({
-          id: nextId(),
-          datum: next,
-          bedrag: item.bedrag,
-          omschrijving: item.omschrijving,
-          type: item.type,
-          categorie: item.categorie,
-          sub: item.sub,
-          winkel: item.winkel || '',
-          soort: item.soort || 'Noodzaak',
-          wie: item.wie || 'GZ',
-          notitie: '',
-          vasteLast: item.id,
-          bron: 'auto',
-        })
-      }
-      next = advanceDate(next, item.herhaling)
+    while (cur.toISOString().split('T')[0] <= today && safety < 10) {
+      const dateStr = cur.toISOString().split('T')[0]
+      if (dateStr >= minDate) dates.push(dateStr)
+      cur.setDate(cur.getDate() + 7)
       safety++
     }
-    return { ...item, nextDatum: next }
-  })
-
-  if (newTx.length > 0) {
-    try {
-      const existingStr = localStorage.getItem(TX_KEY)
-      const existing = existingStr ? JSON.parse(existingStr) : []
-      const keys = new Set(existing.filter(t => t.vasteLast).map(t => `${t.vasteLast}_${t.datum}`))
-      const toAdd = newTx.filter(t => !keys.has(`${t.vasteLast}_${t.datum}`))
-      if (toAdd.length > 0) {
-        localStorage.setItem(TX_KEY, JSON.stringify([...toAdd, ...existing]))
-      }
-    } catch {}
   }
 
-  return processed
-}
-
-function saveItems(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
-}
-
-// Laad data uit LocalStorage of gebruik sample data
-function loadAndProcess() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const processed = processAutoTransactions(parsed)
-        saveItems(processed)
-        return processed
-      }
-    }
-  } catch {}
-
-  // Geen geldige data — initialiseer vanuit sample
-  const init = SAMPLE_VASTE_LASTEN.map(i => ({
-    ...i,
-    nextDatum: nextFutureDate(i.startdatum, i.herhaling),
-  }))
-  saveItems(init)
-  return init
+  return dates
 }
 
 export default function useFixedExpenses() {
-  const [items, setItems] = useState(loadAndProcess)
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState(null)
+  const { householdId, loading: householdLoading } = useHousehold()
 
-  // Vaste last toevoegen — maakt direct auto-transacties aan (max 1 maand terug)
-  const addItem = useCallback((item) => {
-    const newItem = {
-      ...item,
-      id: nextId(),
-      bron: 'auto',
-      nextDatum: item.startdatum,
+  const [items, setItems]               = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState(null)
+  const [formOpen, setFormOpen]         = useState(false)
+  const [editingItem, setEditingItem]   = useState(null)
+
+  // ─── Auto-transacties aanmaken voor gemiste periodes ───
+  const verwerkAutoTransacties = useCallback(async (fixedItems) => {
+    if (!householdId || fixedItems.length === 0) return
+    const today = new Date().toISOString().split('T')[0]
+    const minDate = earliestAutoDate()
+
+    for (const item of fixedItems) {
+      if (!item.actief) continue
+      const dates = berekenVerwachteDatums(item, minDate, today)
+
+      for (const datum of dates) {
+        const { data: existing } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('vaste_last_id', item.id)
+          .eq('datum', datum)
+
+        if (!existing || existing.length === 0) {
+          await supabase.from('transactions').insert({
+            household_id:  householdId,
+            datum,
+            beschrijving:  item.omschrijving,
+            bedrag:        item.bedrag,
+            type:          'Uitgave',
+            categorie:     item.categorie,
+            subcategorie:  item.sub ?? '',
+            soort:         item.soort ?? 'Noodzaak',
+            wie:           item.wie ?? 'GZ',
+            bron:          'auto',
+            vaste_last_id: item.id,
+          })
+        }
+      }
     }
-    setItems(prev => {
-      // Verwerk auto-transacties alleen voor het nieuwe item
-      const processed = processAutoTransactions([newItem], true)
-      const updated = [...prev, ...processed]
-      saveItems(updated)
-      return updated
-    })
-  }, [])
+  }, [householdId])
 
-  const removeItem = useCallback((id) => {
-    setItems(prev => {
-      const updated = prev.filter(i => i.id !== id)
-      saveItems(updated)
-      return updated
-    })
-  }, [])
+  // ─── Data ophalen uit Supabase ───
+  const fetchItems = useCallback(async () => {
+    if (!householdId) return
+    setLoading(true)
+    setError(null)
 
-  const updateItem = useCallback((id, changes) => {
-    setItems(prev => {
-      const updated = prev.map(i => i.id === id ? { ...i, ...changes } : i)
-      saveItems(updated)
-      return updated
-    })
-  }, [])
+    const { data, error: err } = await supabase
+      .from('fixed_expenses')
+      .select(KOLOMMEN)
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: true })
+
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+      return
+    }
+
+    const mapped = (data ?? []).map(dbNaarFrontend)
+    setItems(mapped)
+    setLoading(false)
+    await verwerkAutoTransacties(mapped)
+  }, [householdId, verwerkAutoTransacties])
+
+  useEffect(() => {
+    if (!householdLoading) {
+      fetchItems()
+    }
+  }, [fetchItems, householdLoading])
+
+  // ─── Vaste last toevoegen ───
+  const addItem = useCallback(async (item) => {
+    if (!householdId) return
+    const row = { ...frontendNaarDb(item), household_id: householdId }
+    const { error: err } = await supabase.from('fixed_expenses').insert(row)
+    if (!err) fetchItems()
+  }, [householdId, fetchItems])
+
+  // ─── Vaste last verwijderen ───
+  const removeItem = useCallback(async (id) => {
+    const { error: err } = await supabase.from('fixed_expenses').delete().eq('id', id)
+    if (!err) fetchItems()
+  }, [fetchItems])
+
+  // ─── Vaste last bewerken ───
+  const updateItem = useCallback(async (id, changes) => {
+    const dbFields = frontendNaarDb(changes)
+    const { error: err } = await supabase.from('fixed_expenses').update(dbFields).eq('id', id)
+    if (!err) fetchItems()
+  }, [fetchItems])
 
   const openEdit = useCallback((item) => {
     setEditingItem(item)
@@ -173,7 +219,7 @@ export default function useFixedExpenses() {
     setEditingItem(null)
   }, [])
 
-  // Groepeer per categorie
+  // ─── Groepeer per categorie ───
   const grouped = useMemo(() => {
     if (!items || items.length === 0) return []
 
@@ -191,24 +237,24 @@ export default function useFixedExpenses() {
         const cfg = CATEGORY_CONFIG[cat.name] || { icon: 'grip', colorKey: 'ink3', softKey: 'rule' }
         const catItems = map[cat.name]
         return {
-          name: cat.name,
-          items: catItems,
-          icon: cfg.icon,
-          color: T[cfg.colorKey] || T.ink3,
+          name:      cat.name,
+          items:     catItems,
+          icon:      cfg.icon,
+          color:     T[cfg.colorKey] || T.ink3,
           colorSoft: T[cfg.softKey] || T.rule,
-          subtotal: catItems.reduce((s, i) => s + toMonthly(i), 0),
+          subtotal:  catItems.reduce((s, i) => s + toMonthly(i), 0),
         }
       })
   }, [items])
 
-  // Totalen
+  // ─── Totalen ───
   const totals = useMemo(() => {
-    const uitgaven = items.filter(i => i.type === 'Uitgave').reduce((s, i) => s + toMonthly(i), 0)
+    const uitgaven  = items.filter(i => i.type === 'Uitgave').reduce((s, i) => s + toMonthly(i), 0)
     const inkomsten = items.filter(i => i.type === 'Inkomst').reduce((s, i) => s + toMonthly(i), 0)
     return { uitgaven, inkomsten, restant: inkomsten - uitgaven }
   }, [items])
 
-  // Donut data (alleen uitgaven)
+  // ─── Donut data (alleen uitgaven) ───
   const donutData = useMemo(() => {
     const map = {}
     for (const i of items.filter(i => i.type === 'Uitgave')) {
@@ -233,5 +279,7 @@ export default function useFixedExpenses() {
     editingItem,
     openEdit,
     closeForm,
+    loading,
+    error,
   }
 }

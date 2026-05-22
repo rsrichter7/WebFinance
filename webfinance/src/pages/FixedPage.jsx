@@ -18,6 +18,7 @@ export default function FixedPage() {
     addItem, removeItem, updateItem,
     formOpen, setFormOpen,
     editingItem, openEdit, closeForm,
+    loading,
   } = useFixedExpenses()
 
   function handleSave(data, isEdit) {
@@ -33,7 +34,11 @@ export default function FixedPage() {
       <FixedTopBar onAdd={() => setFormOpen(true)} />
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: T.ink3, fontSize: 14 }}>
+            Laden...
+          </div>
+        ) : items.length === 0 ? (
           <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 56, gap: 12 }}>
             <div style={{
               width: 52, height: 52, borderRadius: 14,
