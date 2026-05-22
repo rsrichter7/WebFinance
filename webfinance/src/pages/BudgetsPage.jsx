@@ -9,6 +9,7 @@ import BudgetRuleSection from '../components/budgets/BudgetRuleSection'
 import BudgetCategoryTable from '../components/budgets/BudgetCategoryTable'
 import BudgetSavingsGoals from '../components/budgets/BudgetSavingsGoals'
 import BudgetForm from '../components/budgets/BudgetForm'
+import { T } from '../tokens'
 
 export default function BudgetsPage() {
   const {
@@ -21,6 +22,7 @@ export default function BudgetsPage() {
     voegBudgetToe, wijzigBudget,
     voegSpaardoelToe, verwijderSpaardoel, stortOpSpaardoel,
     handmatigeVerdeling, setHandmatigeVerdeling, actieveVerdeling,
+    loading,
   } = useBudgets()
 
   const [formOpen, setFormOpen] = useState(false)
@@ -50,32 +52,40 @@ export default function BudgetsPage() {
         onMaandWijzig={setGeselecteerdeMaand}
       />
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <BudgetStats
-          totaalBudget={totaalBudget}
-          totaalBesteed={totaalBesteed}
-          totaalResterend={totaalResterend}
-        />
-        <BudgetRuleSection
-          regelVerdeling={regelVerdeling}
-          inkomen={inkomen}
-          budgetModus={budgetModus}
-          onModusWijzig={setBudgetModus}
-          actieveVerdeling={actieveVerdeling}
-          handmatigeVerdeling={handmatigeVerdeling}
-          onVerdelingWijzig={setHandmatigeVerdeling}
-        />
-        <BudgetCategoryTable
-          categorieOverzicht={categorieOverzicht}
-          onSave={handleCategorySave}
-          budgetLimiet={inkomen}
-          totaalCategorieBudget={totaalCategorieBudget}
-        />
-        <BudgetSavingsGoals
-          spaardoelen={spaardoelen}
-          onToevoegen={voegSpaardoelToe}
-          onStorten={stortOpSpaardoel}
-          onVerwijderen={verwijderSpaardoel}
-        />
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: T.ink3, fontSize: 14 }}>
+            Laden...
+          </div>
+        ) : (
+          <>
+            <BudgetStats
+              totaalBudget={totaalBudget}
+              totaalBesteed={totaalBesteed}
+              totaalResterend={totaalResterend}
+            />
+            <BudgetRuleSection
+              regelVerdeling={regelVerdeling}
+              inkomen={inkomen}
+              budgetModus={budgetModus}
+              onModusWijzig={setBudgetModus}
+              actieveVerdeling={actieveVerdeling}
+              handmatigeVerdeling={handmatigeVerdeling}
+              onVerdelingWijzig={setHandmatigeVerdeling}
+            />
+            <BudgetCategoryTable
+              categorieOverzicht={categorieOverzicht}
+              onSave={handleCategorySave}
+              budgetLimiet={inkomen}
+              totaalCategorieBudget={totaalCategorieBudget}
+            />
+            <BudgetSavingsGoals
+              spaardoelen={spaardoelen}
+              onToevoegen={voegSpaardoelToe}
+              onStorten={stortOpSpaardoel}
+              onVerwijderen={verwijderSpaardoel}
+            />
+          </>
+        )}
       </div>
 
       <BudgetForm

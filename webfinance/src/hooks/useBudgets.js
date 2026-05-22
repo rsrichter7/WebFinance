@@ -1,99 +1,129 @@
 // ─── useBudgets Hook ───
 // Enige plek voor budget state en logica.
-// LocalStorage keys: "webfinance_budgets", "webfinance_spaardoelen"
+// Data komt uit Supabase (budgets, savings_goals, transactions tabellen).
 
-import { useState, useMemo, useCallback } from 'react'
-import { SAMPLE_TRANSACTIONS } from '../data/transactions'
-import { sampleBudgets, sampleSpaardoelen } from '../data/budgets'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { supabase } from '../supabaseClient'
+import { useHousehold } from './useHousehold'
 import { CATEGORIES } from '../data/categories'
 
-const KEY_BUDGETS = 'webfinance_budgets'
-const KEY_DOELEN = 'webfinance_spaardoelen'
-const KEY_MODUS = 'webfinance_budget_modus'
-const KEY_VERDELING = 'webfinance_budget_verdeling'
 const STANDAARD_VERDELING = { noodzaak: 50, wens: 30, sparen: 20 }
-const KEY_TX = 'webfinance_transactions'
-
-function loadFromStorage(key, fallback) {
-  try {
-    const stored = localStorage.getItem(key)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    }
-  } catch {}
-  return fallback
-}
-
-function saveToStorage(key, data) {
-  try { localStorage.setItem(key, JSON.stringify(data)) } catch {}
-}
-
-let idCounter = Date.now()
-const nextId = () => `b_${++idCounter}`
 
 export default function useBudgets() {
+  const { householdId, loading: householdLoading } = useHousehold()
   const now = new Date()
 
-  const [budgetModusState, setBudgetModusState] = useState(
-    () => localStorage.getItem(KEY_MODUS) || '50/30/20'
-  )
-  const [handmatigeVerdeling, setHandmatigeVerdelingState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(KEY_VERDELING)
-      if (stored) return JSON.parse(stored)
-    } catch {}
-    return STANDAARD_VERDELING
-  })
-  const [categorieBudgetten, setCategorieBudgetten] = useState(
-    () => loadFromStorage(KEY_BUDGETS, sampleBudgets)
-  )
-  const [spaardoelen, setSpaardoelen] = useState(
-    () => loadFromStorage(KEY_DOELEN, sampleSpaardoelen)
-  )
-  const [geselecteerdeMaand, setGeselecteerdeMaand] = useState({
+  const [budgetModus, setBudgetModusState]               = useState('50/30/20')
+  const [handmatigeVerdeling, setHandmatigeVerdelingState] = useState(STANDAARD_VERDELING)
+  const [categorieBudgetten, setCategorieBudgetten]      = useState([])
+  const [spaardoelen, setSpaardoelen]                    = useState([])
+  const [allTransactions, setAllTransactions]            = useState([])
+  const [geselecteerdeMaand, setGeselecteerdeMaand]      = useState({
     maand: now.getMonth() + 1,
-    jaar: now.getFullYear(),
+    jaar:  now.getFullYear(),
   })
-  const [txVersion, setTxVersion] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(null)
 
-  // Transacties lezen uit localStorage (zelfde bron als useTransactions)
-  const [allTransactions] = useState(
-    () => loadFromStorage(KEY_TX, SAMPLE_TRANSACTIONS)
-  )
+  // ─── Alles ophalen uit Supabase ───
+  const fetchAll = useCallback(async () => {
+    if (!householdId) return
+    setLoading(true)
+    setError(null)
+
+    const [
+      { data: budgetData, error: budgetErr },
+      { data: goalData,   error: goalErr },
+      { data: txData,     error: txErr },
+    ] = await Promise.all([
+      supabase.from('budgets')
+        .select('id, categorie, bedrag, modus, verdeling')
+        .eq('household_id', householdId),
+      supabase.from('savings_goals')
+        .select('id, naam, doelbedrag, deadline, icoon')
+        .eq('household_id', householdId),
+      supabase.from('transactions')
+        .select('datum, bedrag, type, categorie, subcategorie, soort, spaardoel_id')
+        .eq('household_id', householdId),
+    ])
+
+    if (budgetErr || goalErr || txErr) {
+      setError(budgetErr?.message || goalErr?.message || txErr?.message)
+      setLoading(false)
+      return
+    }
+
+    // Budgetten mappen — subcategorieBudgetten niet in DB, leeg object als fallback
+    setCategorieBudgetten((budgetData ?? []).map(b => ({
+      id:                    b.id,
+      categorie:             b.categorie,
+      totaalBudget:          b.bedrag ?? 0,
+      subcategorieBudgetten: {},
+    })))
+
+    // Globale modus en verdeling uit eerste rij
+    const eerste = budgetData?.[0]
+    if (eerste?.modus)     setBudgetModusState(eerste.modus)
+    if (eerste?.verdeling) setHandmatigeVerdelingState(eerste.verdeling)
+
+    // Transacties mappen (veldnamen DB → frontend)
+    const txMapped = (txData ?? []).map(t => ({
+      datum:        t.datum,
+      bedrag:       t.bedrag,
+      type:         t.type,
+      categorie:    t.categorie,
+      subcategorie: t.subcategorie ?? '',
+      soort:        t.soort ?? '',
+      spaardoelId:  t.spaardoel_id ?? null,
+    }))
+    setAllTransactions(txMapped)
+
+    // Spaardoelen — huidigBedrag berekend uit transacties met spaardoel_id
+    setSpaardoelen((goalData ?? []).map(g => ({
+      id:          g.id,
+      naam:        g.naam,
+      doelbedrag:  g.doelbedrag,
+      deadline:    g.deadline ?? null,
+      icoon:       g.icoon ?? null,
+      huidigBedrag: txMapped
+        .filter(t => t.spaardoelId === g.id)
+        .reduce((s, t) => s + t.bedrag, 0),
+    })))
+
+    setLoading(false)
+  }, [householdId])
+
+  useEffect(() => {
+    if (!householdLoading) fetchAll()
+  }, [fetchAll, householdLoading])
 
   // ─── Gefilterde transacties voor geselecteerde maand ───
-  const maandTransacties = useMemo(() => {
-    return allTransactions.filter(t => {
+  const maandTransacties = useMemo(() =>
+    allTransactions.filter(t => {
       const d = new Date(t.datum)
-      return (
-        d.getMonth() + 1 === geselecteerdeMaand.maand &&
-        d.getFullYear() === geselecteerdeMaand.jaar
-      )
+      return d.getMonth() + 1 === geselecteerdeMaand.maand &&
+             d.getFullYear() === geselecteerdeMaand.jaar
     })
-  }, [allTransactions, geselecteerdeMaand])
+  , [allTransactions, geselecteerdeMaand])
 
-  // ─── Netto inkomen deze maand ───
   const inkomen = useMemo(() =>
-    maandTransacties
-      .filter(t => t.type === 'Inkomst')
-      .reduce((s, t) => s + t.bedrag, 0)
+    maandTransacties.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
   , [maandTransacties])
 
-  // ─── 50/30/20 verdeling ───
-  const actieveVerdeling = budgetModusState === 'handmatig' ? handmatigeVerdeling : STANDAARD_VERDELING
+  const actieveVerdeling = budgetModus === 'handmatig' ? handmatigeVerdeling : STANDAARD_VERDELING
 
+  // ─── 50/30/20 verdeling ───
   const regelVerdeling = useMemo(() => {
     const budgets = {
       noodzaak: inkomen * (actieveVerdeling.noodzaak / 100),
-      wens: inkomen * (actieveVerdeling.wens / 100),
-      sparen: inkomen * (actieveVerdeling.sparen / 100),
+      wens:     inkomen * (actieveVerdeling.wens / 100),
+      sparen:   inkomen * (actieveVerdeling.sparen / 100),
     }
     const uitgaven = maandTransacties.filter(t => t.type === 'Uitgave')
-    const besteed = {
+    const besteed  = {
       noodzaak: uitgaven.filter(t => t.soort === 'Noodzaak').reduce((s, t) => s + t.bedrag, 0),
-      wens: uitgaven.filter(t => t.soort === 'Wens').reduce((s, t) => s + t.bedrag, 0),
-      sparen: uitgaven.filter(t => t.soort === 'Sparen').reduce((s, t) => s + t.bedrag, 0),
+      wens:     uitgaven.filter(t => t.soort === 'Wens').reduce((s, t) => s + t.bedrag, 0),
+      sparen:   uitgaven.filter(t => t.soort === 'Sparen').reduce((s, t) => s + t.bedrag, 0),
     }
     const result = {}
     for (const k of ['noodzaak', 'wens', 'sparen']) {
@@ -107,27 +137,19 @@ export default function useBudgets() {
   const categorieOverzicht = useMemo(() => {
     const uitgaven = maandTransacties.filter(t => t.type === 'Uitgave')
     return CATEGORIES.map(cat => {
-      const catTx = uitgaven.filter(t => t.categorie === cat.name)
+      const catTx      = uitgaven.filter(t => t.categorie === cat.name)
       const catBesteed = catTx.reduce((s, t) => s + t.bedrag, 0)
-      const budgetSetting = categorieBudgetten.find(b => b.categorie === cat.name)
-      const catBudget = budgetSetting?.totaalBudget || 0
-      const pct = catBudget > 0 ? (catBesteed / catBudget) * 100 : 0
-      const subs = cat.subs
-        .map(sub => {
-          const subBesteed = catTx.filter(t => t.sub === sub).reduce((s, t) => s + t.bedrag, 0)
-          const subBudget = budgetSetting?.subcategorieBudgetten?.[sub] || 0
-          return {
-            naam: sub,
-            besteed: subBesteed,
-            budget: subBudget,
-            pct: subBudget > 0 ? (subBesteed / subBudget) * 100 : 0,
-          }
-        })
-      return { categorie: cat.name, budget: catBudget, besteed: catBesteed, pct, subs }
+      const setting    = categorieBudgetten.find(b => b.categorie === cat.name)
+      const catBudget  = setting?.totaalBudget || 0
+      const subs = cat.subs.map(sub => {
+        const subBesteed = catTx.filter(t => t.subcategorie === sub).reduce((s, t) => s + t.bedrag, 0)
+        const subBudget  = setting?.subcategorieBudgetten?.[sub] || 0
+        return { naam: sub, besteed: subBesteed, budget: subBudget, pct: subBudget > 0 ? (subBesteed / subBudget) * 100 : 0 }
+      })
+      return { categorie: cat.name, budget: catBudget, besteed: catBesteed, pct: catBudget > 0 ? (catBesteed / catBudget) * 100 : 0, subs }
     })
   }, [maandTransacties, categorieBudgetten])
 
-  // ─── Totalen ───
   const totaalCategorieBudget = useMemo(() =>
     categorieBudgetten.reduce((s, b) => s + b.totaalBudget, 0)
   , [categorieBudgetten])
@@ -136,126 +158,97 @@ export default function useBudgets() {
     maandTransacties.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
   , [maandTransacties])
 
-  // ─── Spaardoelen met huidigBedrag berekend uit transacties ───
-  const spaardoelenMetBedrag = useMemo(() => {
-    let txList = []
-    try {
-      const stored = localStorage.getItem(KEY_TX)
-      if (stored) txList = JSON.parse(stored)
-    } catch {}
-
-    return spaardoelen.map(doel => {
-      const stortingen = txList.filter(t => t.spaardoelId === doel.id)
-      const huidigBedrag = stortingen.reduce((s, t) => s + t.bedrag, 0)
-      return { ...doel, huidigBedrag }
-    })
-  }, [spaardoelen, txVersion])
-
   // ─── Budget acties ───
-  const voegBudgetToe = useCallback((budget) => {
-    setCategorieBudgetten(prev => {
-      const updated = [...prev, { ...budget, id: nextId() }]
-      saveToStorage(KEY_BUDGETS, updated)
-      return updated
-    })
-  }, [])
+  const voegBudgetToe = useCallback(async (budget) => {
+    if (!householdId) return
+    await supabase.from('budgets').upsert({
+      household_id: householdId,
+      categorie:    budget.categorie,
+      bedrag:       budget.totaalBudget ?? budget.bedrag ?? 0,
+      modus:        budgetModus,
+      verdeling:    handmatigeVerdeling,
+    }, { onConflict: 'household_id,categorie' })
+    fetchAll()
+  }, [householdId, budgetModus, handmatigeVerdeling, fetchAll])
 
-  const verwijderBudget = useCallback((id) => {
-    setCategorieBudgetten(prev => {
-      const updated = prev.filter(b => b.id !== id)
-      saveToStorage(KEY_BUDGETS, updated)
-      return updated
-    })
-  }, [])
+  const verwijderBudget = useCallback(async (id) => {
+    await supabase.from('budgets').delete().eq('id', id)
+    fetchAll()
+  }, [fetchAll])
 
-  const wijzigBudget = useCallback((id, data) => {
-    setCategorieBudgetten(prev => {
-      const updated = prev.map(b => b.id === id ? { ...b, ...data } : b)
-      saveToStorage(KEY_BUDGETS, updated)
-      return updated
-    })
-  }, [])
+  const wijzigBudget = useCallback(async (id, data) => {
+    const updates = {}
+    if (data.totaalBudget !== undefined) updates.bedrag = data.totaalBudget
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('budgets').update(updates).eq('id', id)
+    }
+    fetchAll()
+  }, [fetchAll])
 
   // ─── Spaardoel acties ───
-  const voegSpaardoelToe = useCallback((doel) => {
-    setSpaardoelen(prev => {
-      const updated = [...prev, { ...doel, id: nextId(), huidigBedrag: 0 }]
-      saveToStorage(KEY_DOELEN, updated)
-      return updated
+  const voegSpaardoelToe = useCallback(async (doel) => {
+    if (!householdId) return
+    await supabase.from('savings_goals').insert({
+      household_id: householdId,
+      naam:         doel.naam,
+      doelbedrag:   doel.doelbedrag,
+      deadline:     doel.deadline || null,
+      icoon:        doel.icoon || null,
     })
-  }, [])
+    fetchAll()
+  }, [householdId, fetchAll])
 
-  const verwijderSpaardoel = useCallback((id) => {
-    setSpaardoelen(prev => {
-      const updated = prev.filter(d => d.id !== id)
-      saveToStorage(KEY_DOELEN, updated)
-      return updated
-    })
-  }, [])
+  const verwijderSpaardoel = useCallback(async (id) => {
+    await supabase.from('savings_goals').delete().eq('id', id)
+    fetchAll()
+  }, [fetchAll])
 
-  const stortOpSpaardoel = useCallback((id, bedrag) => {
-    if (!bedrag || bedrag <= 0) return
-
-    // Doelnaam ophalen
-    let doelNaam = ''
-    setSpaardoelen(prev => {
-      const doel = prev.find(d => d.id === id)
-      if (doel) doelNaam = doel.naam
-      return [...prev]
-    })
-
-    // Transactie aanmaken
-    const today = new Date()
-    const datum = today.getFullYear() + '-' +
-      String(today.getMonth() + 1).padStart(2, '0') + '-' +
-      String(today.getDate()).padStart(2, '0')
-
-    const newTx = {
-      id: Date.now(),
-      datum,
+  const stortOpSpaardoel = useCallback(async (id, bedrag) => {
+    if (!bedrag || bedrag <= 0 || !householdId) return
+    const doel  = spaardoelen.find(d => d.id === id)
+    const today = new Date().toISOString().split('T')[0]
+    await supabase.from('transactions').insert({
+      household_id: householdId,
+      datum:         today,
       bedrag,
-      omschrijving: `Storting spaardoel: ${doelNaam}`,
-      type: 'Uitgave',
-      categorie: 'Financieel',
-      sub: 'Sparen / Beleggen',
-      winkel: 'Webfinance',
-      soort: 'Sparen',
-      wie: 'GZ',
-      bron: 'auto',
-      spaardoelId: id,
-    }
+      beschrijving:  `Storting spaardoel: ${doel?.naam || ''}`,
+      type:          'Uitgave',
+      categorie:     'Financieel',
+      subcategorie:  'Sparen / Beleggen',
+      soort:         'Sparen',
+      wie:           'GZ',
+      bron:          'auto',
+      spaardoel_id:  id,
+    })
+    fetchAll()
+  }, [householdId, spaardoelen, fetchAll])
 
-    try {
-      const stored = localStorage.getItem(KEY_TX)
-      const txList = stored ? JSON.parse(stored) : []
-      txList.push(newTx)
-      localStorage.setItem(KEY_TX, JSON.stringify(txList))
-    } catch {}
-
-    setTxVersion(v => v + 1)
-  }, [])
-
-  const setHandmatigeVerdeling = useCallback((verdeling) => {
-    setHandmatigeVerdelingState(verdeling)
-    try { localStorage.setItem(KEY_VERDELING, JSON.stringify(verdeling)) } catch {}
-  }, [])
-
-  const setBudgetModus = useCallback((modus) => {
+  // ─── Globale instellingen persisteren naar alle budget-rijen ───
+  const setBudgetModus = useCallback(async (modus) => {
     setBudgetModusState(modus)
-    try { localStorage.setItem(KEY_MODUS, modus) } catch {}
-  }, [])
+    if (householdId) {
+      await supabase.from('budgets').update({ modus }).eq('household_id', householdId)
+    }
+  }, [householdId])
+
+  const setHandmatigeVerdeling = useCallback(async (verdeling) => {
+    setHandmatigeVerdelingState(verdeling)
+    if (householdId) {
+      await supabase.from('budgets').update({ verdeling }).eq('household_id', householdId)
+    }
+  }, [householdId])
 
   return {
-    budgetModus: budgetModusState,
+    budgetModus,
     setBudgetModus,
     categorieBudgetten,
-    spaardoelen: spaardoelenMetBedrag,
+    spaardoelen,
     geselecteerdeMaand,
     setGeselecteerdeMaand,
     inkomen,
-    totaalBudget: inkomen,
+    totaalBudget:        inkomen,
     totaalBesteed,
-    totaalResterend: inkomen - totaalBesteed,
+    totaalResterend:     inkomen - totaalBesteed,
     totaalCategorieBudget,
     regelVerdeling,
     categorieOverzicht,
@@ -268,5 +261,7 @@ export default function useBudgets() {
     voegSpaardoelToe,
     verwijderSpaardoel,
     stortOpSpaardoel,
+    loading,
+    error,
   }
 }
