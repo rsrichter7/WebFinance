@@ -23,19 +23,19 @@ export default function CalendarStats({ totalExpected, totalActual }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
       <MiniCard label="Verwachte uitgaven">
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.blueText, ...TAB }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.green, ...TAB }}>
           {fmt(totalExpected)}
         </div>
       </MiniCard>
 
       <MiniCard label="Werkelijke uitgaven">
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, ...TAB }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.red, ...TAB }}>
           {fmt(totalActual)}
         </div>
       </MiniCard>
 
       <MiniCard label="Verschil">
-        <div style={{ fontSize: 18, fontWeight: 700, color: onderVerwachting ? T.green : T.red, ...TAB }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.blueText, ...TAB }}>
           {onderVerwachting ? '−' : '+'} {fmt(Math.abs(diff))}
         </div>
         <div style={{ fontSize: 11, color: T.ink4, marginTop: 2 }}>

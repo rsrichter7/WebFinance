@@ -22,7 +22,7 @@ const FORM_BASE = {
   notitie: '',
 }
 
-export default function TransactionForm({ open, onClose, onSave, initialDate }) {
+export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction }) {
   const { profiles } = useProfiles()
 
   function emptyForm() {
@@ -32,9 +32,25 @@ export default function TransactionForm({ open, onClose, onSave, initialDate }) 
 
   const [form, setForm] = useState(emptyForm)
 
-  // Reset formulier wanneer paneel opent; gebruik initialDate indien meegegeven
+  // Vul formulier bij openen: bewerk-modus gebruikt editingTransaction, anders leeg formulier
   useEffect(() => {
-    if (open) setForm({ ...emptyForm(), datum: initialDate || new Date().toISOString().split('T')[0] })
+    if (!open) return
+    if (editingTransaction) {
+      setForm({
+        type: editingTransaction.type || 'Uitgave',
+        bedrag: editingTransaction.bedrag || '',
+        datum: editingTransaction.datum || new Date().toISOString().split('T')[0],
+        omschrijving: editingTransaction.omschrijving || '',
+        categorie: editingTransaction.categorie || CATEGORIES[0].name,
+        sub: editingTransaction.sub || CATEGORIES[0].subs[0],
+        winkel: editingTransaction.winkel || '',
+        soort: editingTransaction.soort || 'Noodzaak',
+        wie: editingTransaction.wie || '',
+        notitie: editingTransaction.notitie || '',
+      })
+    } else {
+      setForm({ ...emptyForm(), datum: initialDate || new Date().toISOString().split('T')[0] })
+    }
   }, [open])
 
   const allCats = getMergedCategories()
@@ -61,7 +77,7 @@ export default function TransactionForm({ open, onClose, onSave, initialDate }) 
     const bedrag = parseFloat(form.bedrag)
     if (!bedrag || !form.omschrijving.trim()) return
 
-    onSave({
+    const velden = {
       datum: form.datum,
       bedrag,
       omschrijving: form.omschrijving.trim(),
@@ -72,13 +88,16 @@ export default function TransactionForm({ open, onClose, onSave, initialDate }) 
       soort: form.soort,
       wie: form.wie,
       notitie: form.notitie.trim(),
-    })
+    }
 
-    // Reset formulier
-    setForm({ ...EMPTY_FORM, datum: new Date().toISOString().split('T')[0] })
-
-    // Sluit paneel tenzij "Opslaan en volgende"
-    if (!keepOpen) onClose()
+    if (editingTransaction) {
+      onUpdate(editingTransaction.id, velden)
+      onClose()
+    } else {
+      onSave(velden)
+      setForm({ ...emptyForm(), datum: new Date().toISOString().split('T')[0] })
+      if (!keepOpen) onClose()
+    }
   }
 
   if (!open) return null
@@ -108,8 +127,12 @@ export default function TransactionForm({ open, onClose, onSave, initialDate }) 
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>Nieuwe transactie</div>
-            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Voeg een mutatie toe</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>
+              {editingTransaction ? 'Transactie bewerken' : 'Nieuwe transactie'}
+            </div>
+            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
+              {editingTransaction ? 'Pas de gegevens aan' : 'Voeg een mutatie toe'}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -292,17 +315,19 @@ export default function TransactionForm({ open, onClose, onSave, initialDate }) 
           >
             Opslaan
           </button>
-          <button
-            onClick={() => handleSave(true)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 8,
-              border: `1px solid ${T.border}`, background: T.card,
-              color: T.ink2, fontSize: 13, fontWeight: 500,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Opslaan en volgende
-          </button>
+          {!editingTransaction && (
+            <button
+              onClick={() => handleSave(true)}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 8,
+                border: `1px solid ${T.border}`, background: T.card,
+                color: T.ink2, fontSize: 13, fontWeight: 500,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Opslaan en volgende
+            </button>
+          )}
         </div>
       </div>
     </>

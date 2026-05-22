@@ -1,5 +1,5 @@
 // ─── DashboardStatCards ───
-// 4 overzichtskaarten: saldo, inkomsten, uitgaven, resterend — met trend vs vorige maand.
+// 3 overzichtskaarten: inkomsten, uitgaven, saldo — met trend vs vorige maand.
 
 import React from 'react'
 import { T, TAB, fmt } from '../../tokens'
@@ -46,33 +46,26 @@ function calcTrend(current, prev) {
   return ((current - prev) / prev) * 100
 }
 
-export default function DashboardStatCards({ maand, jaar, inkomsten, uitgaven, prevInkomsten, prevUitgaven }) {
-  const saldo     = inkomsten - uitgaven
-  const prevSaldo = prevInkomsten - prevUitgaven
-  const resterend = inkomsten - uitgaven
-
-  const vorigeMaandIdx = maand === 1 ? 11 : maand - 2
+export default function DashboardStatCards({ maand, jaar, inkomsten, uitgaven, prevInkomsten, prevUitgaven, huidigSaldo }) {
+  const vorigeMaandIdx  = maand === 1 ? 11 : maand - 2
   const vorigeMaandNaam = MAANDEN_KORT[vorigeMaandIdx]
 
-  const saldoTrend    = calcTrend(saldo, prevSaldo)
-  const uitgavenTrend = calcTrend(uitgaven, prevUitgaven)
+  const inkomstenTrend = calcTrend(inkomsten, prevInkomsten)
+  const uitgavenTrend  = calcTrend(uitgaven, prevUitgaven)
+
+  // Saldo: huidigSaldo indien beschikbaar, anders inkomsten − uitgaven over alle tx
+  const saldo = huidigSaldo !== undefined ? huidigSaldo : (inkomsten - uitgaven)
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-      <StatCard
-        label="Totaal saldo"
-        value={saldo}
-        color={saldo >= 0 ? T.blue : T.red}
-        accent={T.blue}
-        trend={saldoTrend}
-        trendGood="up"
-        vorigeMaandNaam={vorigeMaandNaam}
-      />
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
       <StatCard
         label="Inkomsten"
         value={inkomsten}
         color={T.green}
         accent={T.green}
+        trend={inkomstenTrend}
+        trendGood="up"
+        vorigeMaandNaam={vorigeMaandNaam}
       />
       <StatCard
         label="Uitgaven"
@@ -84,10 +77,10 @@ export default function DashboardStatCards({ maand, jaar, inkomsten, uitgaven, p
         vorigeMaandNaam={vorigeMaandNaam}
       />
       <StatCard
-        label="Budget resterend"
-        value={resterend}
-        color={resterend >= 0 ? T.amber : T.red}
-        accent={T.amber}
+        label="Huidig Saldo"
+        value={saldo}
+        color={T.blue}
+        accent={T.blue}
       />
     </div>
   )

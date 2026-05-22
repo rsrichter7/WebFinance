@@ -1,7 +1,7 @@
 // ─── Transacties pagina ───
 // Dunne pagina-component: roept useTransactions aan en geeft data door aan componenten.
 
-import React from 'react'
+import React, { useState } from 'react'
 import useTransactions from '../hooks/useTransactions'
 import TransactionTopBar from '../components/transactions/TransactionTopBar'
 import TransactionFilters from '../components/transactions/TransactionFilters'
@@ -18,6 +18,7 @@ export default function TransactionsPage() {
     eersteJaar,
     addTransaction,
     removeTransaction,
+    updateTransaction,
     filters,
     updateFilter,
     sort,
@@ -25,6 +26,8 @@ export default function TransactionsPage() {
     formOpen,
     setFormOpen,
   } = useTransactions()
+
+  const [editingTx, setEditingTx] = useState(null)
 
   return (
     <>
@@ -35,21 +38,21 @@ export default function TransactionsPage() {
         {/* Totalen als StatCards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, padding: '0 28px' }}>
           <StatCard
-            label="Uitgaven"
-            value={totals.uitgaven}
-            color={T.red}
-            accent={T.red}
-          />
-          <StatCard
             label="Inkomsten"
             value={totals.inkomsten}
             color={T.green}
             accent={T.green}
           />
           <StatCard
+            label="Uitgaven"
+            value={totals.uitgaven}
+            color={T.red}
+            accent={T.red}
+          />
+          <StatCard
             label="Balans"
             value={totals.balans}
-            color={totals.balans >= 0 ? T.green : T.red}
+            color={T.blueText}
             accent={T.blue}
           />
         </div>
@@ -66,15 +69,18 @@ export default function TransactionsPage() {
             sort={sort}
             onSort={updateSort}
             onDelete={removeTransaction}
+            onEdit={(tx) => setEditingTx(tx)}
             count={transactionCount}
           />
         </div>
       </div>
 
       <TransactionForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
+        open={formOpen || editingTx !== null}
+        onClose={() => { setFormOpen(false); setEditingTx(null) }}
         onSave={addTransaction}
+        onUpdate={(id, fields) => { updateTransaction(id, fields); setEditingTx(null) }}
+        editingTransaction={editingTx}
       />
     </>
   )

@@ -17,6 +17,14 @@ import DashboardCostSplit from '../components/dashboard/DashboardCostSplit'
 import DashboardRuleScore from '../components/dashboard/DashboardRuleScore'
 const now = new Date()
 
+// Lees startsaldo uit localStorage
+function laadStartsaldo() {
+  try {
+    const s = localStorage.getItem('webfinance_startsaldo')
+    return s ? JSON.parse(s) : null
+  } catch { return null }
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { allTransactions, addTransaction } = useTransactions()
@@ -26,9 +34,12 @@ export default function DashboardPage() {
   const [jaar, setJaar]   = useState(now.getFullYear())
   const [showForm, setShowForm] = useState(false)
 
+  // ─── Startsaldo (eenmalig ingelezen bij mount) ───
+  const [startsaldo] = useState(laadStartsaldo)
+
   function onMaandWijzig({ maand: m, jaar: j }) { setMaand(m); setJaar(j) }
 
-  // ─── Gefilterde transacties voor geselecteerde maand ───
+  // ─── Gefilterde transacties voor geselecteerde maand (alle tx, geen startsaldo filter) ───
   const monthTx = useMemo(() => allTransactions.filter(t => {
     const d = new Date(t.datum)
     return d.getMonth() + 1 === maand && d.getFullYear() === jaar
@@ -42,11 +53,21 @@ export default function DashboardPage() {
     return d.getMonth() + 1 === prevMaand && d.getFullYear() === prevJaar
   }), [allTransactions, prevMaand, prevJaar])
 
-  // ─── StatCard waarden ───
+  // ─── StatCard waarden (geselecteerde maand) ───
   const inkomsten     = useMemo(() => monthTx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0), [monthTx])
   const uitgaven      = useMemo(() => monthTx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0), [monthTx])
   const prevInkomsten = useMemo(() => prevMonthTx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0), [prevMonthTx])
   const prevUitgaven  = useMemo(() => prevMonthTx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0), [prevMonthTx])
+
+  // ─── Huidig saldo (cumulatief, maand-onafhankelijk): startsaldo + alle tx na peildatum ───
+  const huidigSaldo = useMemo(() => {
+    const tx = startsaldo?.datum
+      ? allTransactions.filter(t => t.datum >= startsaldo.datum)
+      : allTransactions
+    const totInkomsten = tx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
+    const totUitgaven  = tx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
+    return (startsaldo?.bedrag ?? 0) + totInkomsten - totUitgaven
+  }, [allTransactions, startsaldo])
 
   // ─── Categorie totalen voor donut ───
   const categoryTotals = useMemo(() => {
@@ -110,6 +131,7 @@ export default function DashboardPage() {
           maand={maand} jaar={jaar}
           inkomsten={inkomsten} uitgaven={uitgaven}
           prevInkomsten={prevInkomsten} prevUitgaven={prevUitgaven}
+          huidigSaldo={huidigSaldo}
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>

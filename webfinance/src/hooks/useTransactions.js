@@ -67,6 +67,18 @@ const addTransaction = useCallback((tx) => {
     })
   }, [])
 
+  // ─── Transactie bewerken ───
+  // Bron wordt altijd 'handmatig' na bewerking (ook auto/import)
+  const updateTransaction = useCallback((id, updatedFields) => {
+    setTransactions(prev => {
+      const updated = prev.map(t =>
+        t.id === id ? { ...t, ...updatedFields, bron: 'handmatig' } : t
+      )
+      saveTransactions(updated)
+      return updated
+    })
+  }, [])
+
   // ─── Filter updaten ───
   // Bij wijziging hoofdcategorie: subcategorie automatisch resetten
   const updateFilter = useCallback((key, value) => {
@@ -189,6 +201,7 @@ const addTransaction = useCallback((tx) => {
     // Acties
     addTransaction,
     removeTransaction,
+    updateTransaction,
 
     // Filters
     filters,

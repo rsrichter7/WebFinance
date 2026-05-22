@@ -36,8 +36,8 @@ src/
 │   ├── transactions/           → Transactie componenten
 │   │   ├── TransactionTopBar.jsx
 │   │   ├── TransactionFilters.jsx   (bevat CustomDropdown + CategoryDropdown; gebruikt useProfiles)
-│   │   ├── TransactionTable.jsx     (WieAvatar gebruikt useProfiles voor kleuren)
-│   │   └── TransactionForm.jsx      (wie-knoppen dynamisch via useProfiles)
+│   │   ├── TransactionTable.jsx     (WieAvatar + potlood/prullenbak acties per rij; gebruikt useProfiles)
+│   │   └── TransactionForm.jsx      (wie-knoppen via useProfiles; ondersteunt toevoeg- én bewerk-modus)
 │   ├── fixed/                  → Vaste lasten componenten
 │   │   ├── FixedTopBar.jsx
 │   │   ├── FixedStats.jsx           (StatCards + MiniDonut)
@@ -71,7 +71,7 @@ src/
 │   │   └── CalendarLegend.jsx       (legenda rechts)
 │   ├── dashboard/              → Dashboard componenten (landingspagina)
 │   │   ├── DashboardTopBar.jsx      (dynamische begroeting + maandselector + transactie-knop)
-│   │   ├── DashboardStatCards.jsx   (4 kaarten: saldo/inkomsten/uitgaven/resterend + trends)
+│   │   ├── DashboardStatCards.jsx   (3 kaarten: inkomsten/uitgaven/huidig saldo + trends)
 │   │   ├── DashboardCategoryDonut.jsx (donut chart uitgaven per categorie + legenda)
 │   │   ├── DashboardYearChart.jsx   (staafdiagram inkomsten vs uitgaven, filtert op jaar)
 │   │   ├── DashboardSavingsGoals.jsx (spaardoelen met voortgangsbalken)
@@ -81,19 +81,20 @@ src/
 │   │   └── DashboardRuleScore.jsx   (50/30/20 voortgangsbalken)
 │   └── settings/               → Instellingen componenten
 │       ├── SettingsTopBar.jsx       (paginatitel)
-│       ├── SettingsSidebar.jsx      (eigen sidebar met secties incl. Huishouden)
+│       ├── SettingsSidebar.jsx      (eigen sidebar met 8 secties incl. Huishouden en Saldo)
 │       ├── SettingsHousehold.jsx    (profielbeheer: toevoegen/bewerken/verwijderen; kleurpicker)
 │       ├── SettingsProfile.jsx      (profielgegevens — lokaal opgeslagen)
+│       ├── SettingsSaldo.jsx        (startsaldo instellen: bedrag + peildatum)
 │       ├── SettingsPreferences.jsx  (datumformaat, thema — werkend opgeslagen)
 │       ├── SettingsCategories.jsx   (categorieën toevoegen/verwijderen — werkend)
-│       ├── SettingsDataManagement.jsx (export/import/wissen)
+│       ├── SettingsDataManagement.jsx (export JSON/CSV, import JSON, wis alles — werkend)
 │       ├── SettingsNotifications.jsx  (placeholder — vereist account)
 │       ├── SettingsAbout.jsx        (over Webfinance + easter egg voor admin)
 │       └── SettingsAdmin.jsx        (verborgen sectie: premium toggle, diagnostiek)
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
 │   ├── DashboardPage.jsx       (werkend — landingspagina)
-│   ├── TransactionsPage.jsx    (werkend)
+│   ├── TransactionsPage.jsx    (werkend — incl. bewerk-modus)
 │   ├── AnalyticsPage.jsx       (werkend)
 │   ├── BudgetsPage.jsx         (werkend)
 │   ├── FixedPage.jsx           (werkend)
@@ -102,7 +103,7 @@ src/
 │
 ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 ├── hooks/
-│   ├── useTransactions.js      → Alle transactie state & logica
+│   ├── useTransactions.js      → Alle transactie state & logica (incl. updateTransaction)
 │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica
 │   ├── useBudgets.js           → Alle budget state & logica
 │   ├── usePremium.js           → Centrale premium-status (leest/schrijft webfinance_premium)
@@ -136,6 +137,7 @@ src/
 8. **Border radius** — 12px voor kaarten, 8px voor knoppen en inputs, 4-6px voor badges.
 9. **Spacing** — padding 22px in kaarten, 28px voor pagina-content, 16-20px gaps in grids.
 10. **Geen felle kleuren in tabellen** — subtiele iconen (↑/↓) voor bedragen, geen rood/groen bombardement.
+11. **StatCards uniform** — op alle pagina's: groen links (inkomsten), rood midden (uitgaven), blauw rechts (saldo/balans).
 
 ### Coderegels
 
@@ -156,7 +158,7 @@ src/
 
 ### Hooks als single source of truth
 Elke domein heeft zijn eigen hook die de **enige** plek is voor state en logica:
-- `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, verwijderen)
+- `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
 - `useFixedExpenses.js` — vaste lasten (CRUD, auto-transacties aanmaken)
 - `useBudgets.js` — budgetten en spaardoelen (berekeningen, CRUD, maand/jaar filter)
 - `usePremium.js` — centrale premium-status app-breed (leest/schrijft `webfinance_premium`)
@@ -172,9 +174,11 @@ Sample data en constanten staan in `src/data/`. Elke datafile is de single sourc
 
 ### Bron-veld op transacties
 Elke transactie heeft een `bron` veld:
-- `'handmatig'` — door de gebruiker ingevoerd
+- `'handmatig'` — door de gebruiker ingevoerd of bewerkt
 - `'auto'` — automatisch aangemaakt (vaste lasten, spaardoel-stortingen)
 - `'import'` — later, voor bankimport
+
+**Bron-logica bij bewerken:** `updateTransaction()` zet de bron altijd naar `'handmatig'`, ook als de originele bron `'auto'` of `'import'` was. De `vasteLast` property (koppeling naar vaste last) blijft behouden — die link is nog steeds waardevol voor kalender-matching.
 
 ### Spaardoelen
 `huidigBedrag` wordt **berekend** uit transacties met `spaardoelId` — niet opgeslagen op het spaardoel zelf. Stortingen zijn transacties (categorie: 'Financieel', sub: 'Sparen / Beleggen', soort: 'Sparen', bron: 'auto'). Bij gebruik in componenten altijd fallback naar `0` als `huidigBedrag` undefined is.
@@ -209,7 +213,7 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 
 **`genInitialen(naam)`** — genereert initialen automatisch: eerste letter voornaam + eerste letter achternaam, tussenvoegsels (de/van/der/den/ten/ter) worden overgeslagen. Maximaal 2 tekens, altijd hoofdletters.
 
-**`PROFIEL_KLEUREN`** — 8 preset kleurobjecten `{ bg, fg }` voor de kleurpicker in `SettingsHousehold`. Kleuren zijn passen-bij-het-T-token palet (indigo, blue, teal, green, amber, orange, red, pink).
+**`PROFIEL_KLEUREN`** — 8 preset kleurobjecten `{ bg, fg }` voor de kleurpicker in `SettingsHousehold`. Kleuren passen bij het T-token palet (indigo, blue, teal, green, amber, orange, red, pink).
 
 **GZ-splitsing in kostenverdeling:** Transacties met `wie === 'GZ'` worden gelijk verdeeld over alle `persons`. Dit geldt zowel in `DashboardCostSplit` (betaaldMap) als in toekomstige berekeningen.
 
@@ -222,6 +226,13 @@ Bij gelijke datum worden nieuwste transacties (hoogste id) eerst getoond.
 - `DashboardCostSplit` — persoonblokken via `persons`
 - `DashboardIncomeModal` — inkomensvelden via `persons`
 - `SettingsHousehold` — volledig CRUD-beheer van profielen
+
+### useTransactions hook — updateTransaction
+`updateTransaction(id, updatedFields)` is de enige plek voor het bewerken van transacties:
+- Mergt `updatedFields` over de bestaande transactie
+- Zet `bron` altijd naar `'handmatig'` (ook als origineel `'auto'` of `'import'`)
+- Bewaart de `vasteLast` property als die aanwezig is
+- Slaat op naar localStorage
 
 ### fmtDate — datum formatteren
 `fmtDate(dateStr)` in `tokens.js` formatteert datums op basis van de instelling in `webfinance_datumformaat`:
@@ -244,16 +255,42 @@ Dashboard is de landingspagina (`/`). `DashboardPage.jsx` roept hooks aan en ber
 
 De maandselector in de TopBar stuurt alle widgets tegelijk bij. Het staafdiagram filtert op het geselecteerde **jaar** (niet maand). Recente transacties zijn altijd ongefilterd op maand.
 
-`DashboardCostSplit` is volledig zelfvoorzienend: het leest eigen localStorage-state (`webfinance_netto_inkomen`, `webfinance_verdeel_methode`) en accepteert alleen `allTransactions` als prop. De inkomen-modal en methode-toggle zijn intern beheerd.
+**Huidig saldo berekening:** `DashboardPage` leest `webfinance_startsaldo` uit localStorage (`{ bedrag, datum }`). Het huidig saldo = startsaldo + alle inkomsten − alle uitgaven vanaf de peildatum. Dit is maand-onafhankelijk. Als geen startsaldo is ingesteld, wordt saldo berekend over alle transacties.
+
+### Dashboard StatCards
+`DashboardStatCards` toont altijd **3 kaarten** in vaste volgorde en kleuren:
+- **Groen links** — Inkomsten (geselecteerde maand)
+- **Rood midden** — Uitgaven (geselecteerde maand)
+- **Blauw rechts** — Huidig saldo (maand-onafhankelijk, op basis van startsaldo)
+
+Elke kaart toont een trend-badge (% vs vorige maand). Dit patroon — groen/rood/blauw — is uniform op alle pagina's (Transacties, Budgetten, Kalender, Vaste Lasten).
+
+### Startsaldo (SettingsSaldo)
+`SettingsSaldo.jsx` in Instellingen → Saldo stelt het startsaldo in:
+- Slaat `{ bedrag: number, datum: 'YYYY-MM-DD' }` op in `webfinance_startsaldo`
+- `DashboardPage` leest dit en berekent huidig saldo relatief aan de peildatum
+- Instelling is optioneel: zonder startsaldo telt het dashboard alle transacties mee
 
 ### Kostenverdeling widget
+`DashboardCostSplit` is volledig zelfvoorzienend: het leest eigen localStorage-state en accepteert alleen `allTransactions` als prop. De inkomen-modal en methode-toggle zijn intern beheerd.
+
 `DashboardCostSplit` berekent per persoon:
 - **Gemiddelde maandkosten** — totale uitgaven / unieke maanden met minstens 1 uitgave
 - **Bijdrage** — aandeel op basis van inkomenratio (methode=`ratio`) of gelijke verdeling (methode=`50/50`)
 - **Betaald** — gemiddeld per maand betaald, GZ-transacties gelijk gesplitst over `persons`
 - **Verschil** — betaald − bijdrage; badge toont `▲ te veel` (rood) of `▼ te weinig` (groen)
 
-Inkomen per persoon wordt opgeslagen in `webfinance_netto_inkomen` via `DashboardIncomeModal`. Als er geen inkomen ingesteld is, toont de widget een lege state met "Inkomen instellen" knop.
+Inkomen per persoon wordt opgeslagen in `webfinance_kostenverdeeld_inkomen` via `DashboardIncomeModal`. Als er geen inkomen ingesteld is, toont de widget een lege state met "Inkomen instellen" knop.
+
+### TransactionForm — bewerk-modus
+`TransactionForm` ondersteunt twee modi via de `editingTransaction` prop:
+
+| Prop | Modus | Gedrag |
+|------|-------|--------|
+| `editingTransaction = null` | Nieuw | Leeg formulier, "Nieuwe transactie", "Opslaan en volgende" zichtbaar |
+| `editingTransaction = { ...tx }` | Bewerken | Velden ingevuld, "Transactie bewerken", "Opslaan en volgende" verborgen |
+
+Bij opslaan in bewerk-modus: roept `onUpdate(id, velden)` aan. Bij nieuw: roept `onSave(velden)` aan. Het `bron` veld wordt niet getoond — de hook regelt de bron automatisch.
 
 ### Kalender architectuur
 `CalendarPage.jsx` is premium-only: niet-premium gebruikers zien een blur/lock overlay. De pagina combineert `useTransactions` (`allTransactions`) en `useFixedExpenses` voor verwachte vs. werkelijke items. `buildDayMap` en `getMondayOfWeek` zijn named exports uit hun respectieve componenten en worden hergebruikt in `CalendarPage`. Maandnavigatie staat gecentreerd boven het kalender grid.
@@ -271,6 +308,7 @@ De sidebar reageert op `usePremium()`:
 | Key | Inhoud |
 |-----|--------|
 | `"webfinance_transactions"` | Alle transacties (handmatig + auto + stortingen) |
+| `"webfinance_startsaldo"` | `{ bedrag: number, datum: 'YYYY-MM-DD' }` — peildatum + beginsaldo voor saldo-berekening |
 | `"webfinance_fixed"` | Vaste lasten items |
 | `"webfinance_budgets"` | Categorie-budgetten |
 | `"webfinance_spaardoelen"` | Spaardoelen (zonder huidigBedrag) |
@@ -284,8 +322,9 @@ De sidebar reageert op `usePremium()`:
 | `"webfinance_theme"` | `'light'` \| `'dark'` (dark mode styling nog niet actief) |
 | `"webfinance_admin_unlocked"` | Boolean — admin-sectie ontgrendeld via easter egg |
 | `"webfinance_profielen"` | Array van profielobjecten — beheerd via `useProfiles` hook |
-| `"webfinance_netto_inkomen"` | `{ [initialen]: number }` — netto maandinkomen per persoon |
+| `"webfinance_kostenverdeeld_inkomen"` | `{ [initialen]: number }` — netto maandinkomen per persoon (kostenverdeling) |
 | `"webfinance_verdeel_methode"` | `'ratio'` \| `'50/50'` — methode voor kostenverdeling |
+| `"webfinance_profiel"` | `{ naam, email }` — profielgegevens (SettingsProfile) |
 
 ---
 
@@ -307,7 +346,9 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
 
 ### ✅ Afgerond
 - Fundament: tokens, componenten, sidebar, routing, MainLayout
-- **Transacties pagina** — volledig werkend (zoeken, filteren, sorteren, toevoegen, verwijderen, auto-badge)
+- **Transacties pagina** — volledig werkend:
+  - Zoeken, filteren, sorteren, toevoegen, verwijderen, auto-badge
+  - **Bewerken** — potlood-icoon per rij opent TransactionForm in bewerk-modus; alle velden bewerkbaar; bron wordt automatisch `'handmatig'`
 - **Vaste Lasten pagina** — volledig werkend (CRUD, auto-transacties, donut chart, leningen placeholder)
 - **Budgetten pagina** — volledig werkend (50/30/20, handmatige modus, categorie-tabel, spaardoelen)
 - **Analyse pagina** — volledig werkend:
@@ -322,11 +363,13 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - Sidebar label is "Analyse" (bestandsnamen en route blijven `analytics`)
   - Subtitels verwijderd op alle pagina's (ook BudgetTopBar)
 - **Instellingen pagina** — volledig werkend:
-  - Eigen sidebar met 7 secties (incl. Huishouden) + verborgen Admin-sectie
+  - Eigen sidebar met 8 secties + verborgen Admin-sectie
+  - **Profiel** — naam en e-mail, lokaal opgeslagen
   - **Huishouden** — profielen toevoegen/bewerken/verwijderen; kleurpicker (8 presets); `genInitialen` voor auto-initialen; GZ-profiel kan niet verwijderd worden
+  - **Saldo** — startsaldo instellen met peildatum; `webfinance_startsaldo`; Dashboard gebruikt dit voor huidig saldo berekening
   - **Voorkeuren** — datumformaat (3 opties), thema-toggle; opgeslagen in localStorage; `fmtDate()` in `tokens.js` past dit app-breed toe
   - **Categorieën** — eigen subcategorieën toevoegen aan standaard categorieën; eigen hoofdcategorieën aanmaken en verwijderen; opgeslagen in `webfinance_custom_categories`; `getMergedCategories()` maakt custom categorieën beschikbaar app-breed
-  - **Data beheer** — export/import/wissen UI (knoppen nog niet functioneel)
+  - **Data beheer** — export JSON, export CSV (transacties), import JSON, wis alles (TYPE 'DELETE' bevestiging) — volledig werkend
   - **Notificaties** — placeholder (vereist account)
   - **Over Webfinance** — credits + easter egg: 5x klikken op versienummer ontgrendelt Admin-sectie
   - **Admin** (verborgen) — Premium aan/uit via `usePremium()` hook, diagnostiek, admin vergrendelen
@@ -347,8 +390,9 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - Dynamische begroeting in TopBar op basis van tijdstip (Goedemorgen/Goedemiddag/Goedenavond, Ronald)
   - Maandselector met pijltjes in TopBar — alle widgets filteren mee op geselecteerde maand
   - "+ Transactie" knop opent `TransactionForm` slide-in via `createPortal`
-  - 4 StatCards: Totaal saldo, Inkomsten, Uitgaven, Budget resterend — met trend vs vorige maand
-  - Kostenverdeling: uitgebreide widget met gemKosten, bijdrage per persoon, betaald, verschil; inkomen instellen via modal; methode toggle (ratio / 50-50)
+  - 3 StatCards: Inkomsten (groen), Uitgaven (rood), Huidig Saldo (blauw) — met trend vs vorige maand
+  - Huidig saldo = startsaldo + inkomsten − uitgaven vanaf peildatum (maand-onafhankelijk)
+  - Kostenverdeling: gemKosten, bijdrage per persoon op basis van inkomenratio of 50/50, verschil; inkomen instellen via modal
   - Maandoverzicht: staafdiagram inkomsten (teal) vs uitgaven (rood) per maand — filtert op **jaar**
   - Spaardoelen: voortgangsbalken, `huidigBedrag` berekend uit transacties, "+ Doel" navigeert naar `/budgetten`
   - Recente transacties: laatste 5, altijd ongefilterd op geselecteerde maand
@@ -366,14 +410,15 @@ Dit probleem is opgetreden bij Vaste Lasten én Budgetten. Bij nieuwe componente
   - "Upgrade naar Premium" blok verborgen voor premium gebruikers
   - Profiel-chip toont "PREMIUM" (blauw) of "GRATIS" (grijs) op basis van `isPremium`
 
+### 🔮 Volgende stap
+- **Supabase migratie** — database (PostgreSQL), authenticatie (email/wachtwoord), multi-user ondersteuning; vervangt LocalStorage als persistence laag
+
 ### 🔮 Later (niet nu)
-- Bewerken transacties
 - Leningen (placeholder bestaat al in FixedLoanSection)
 - Paginering in transactietabel
 - Dark mode (thema-toggle bestaat al, styling nog niet actief)
-- Data beheer: export/import/wissen knoppen (UI bestaat al, functionaliteit ontbreekt)
 - Notificaties (vereist account)
-- Supabase backend, login, bankimport, AI-categorisering
+- Bankimport, AI-categorisering
 - Vercel hosting
 
 ---

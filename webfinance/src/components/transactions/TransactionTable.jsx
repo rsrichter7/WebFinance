@@ -59,7 +59,7 @@ function WieAvatar({ initials }) {
   )
 }
 
-export default function TransactionTable({ transactions, sort, onSort, onDelete, count }) {
+export default function TransactionTable({ transactions, sort, onSort, onDelete, onEdit, count }) {
   return (
     <div style={{
       background: T.card, border: `1px solid ${T.border}`,
@@ -84,8 +84,8 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
               <tr
                 key={tx.id}
                 style={{ background: i % 2 === 1 ? T.cardAlt : T.card }}
-                onMouseEnter={e => e.currentTarget.querySelector('.del-btn').style.opacity = 1}
-                onMouseLeave={e => e.currentTarget.querySelector('.del-btn').style.opacity = 0}
+                onMouseEnter={e => e.currentTarget.querySelectorAll('.row-action').forEach(b => b.style.opacity = 1)}
+                onMouseLeave={e => e.currentTarget.querySelectorAll('.row-action').forEach(b => b.style.opacity = 0)}
               >
                 <td style={{ padding: '12px 16px', fontSize: 13, borderBottom: `1px solid ${T.rule}`, whiteSpace: 'nowrap', color: T.ink3 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -124,20 +124,36 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
                   <WieAvatar initials={tx.wie} />
                 </td>
                 <td style={{ padding: '12px 16px', borderBottom: `1px solid ${T.rule}` }}>
-                  <button
-                    className="del-btn"
-                    onClick={() => onDelete(tx.id)}
-                    style={{
-                      border: 'none', background: 'transparent',
-                      padding: 5, borderRadius: 6, cursor: 'pointer',
-                      color: T.ink4, display: 'inline-flex', opacity: 0,
-                      transition: 'opacity 0.15s, color 0.15s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.color = T.red}
-                    onMouseLeave={e => e.currentTarget.style.color = T.ink4}
-                  >
-                    {ICONS.trash}
-                  </button>
+                  <div style={{ display: 'inline-flex', gap: 4 }}>
+                    <button
+                      className="row-action"
+                      onClick={() => onEdit(tx)}
+                      style={{
+                        border: 'none', background: 'transparent',
+                        padding: 5, borderRadius: 6, cursor: 'pointer',
+                        color: T.ink4, display: 'inline-flex', opacity: 0,
+                        transition: 'opacity 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.color = T.ink2}
+                      onMouseLeave={e => e.currentTarget.style.color = T.ink4}
+                    >
+                      {ICONS.edit}
+                    </button>
+                    <button
+                      className="row-action"
+                      onClick={() => onDelete(tx.id)}
+                      style={{
+                        border: 'none', background: 'transparent',
+                        padding: 5, borderRadius: 6, cursor: 'pointer',
+                        color: T.ink4, display: 'inline-flex', opacity: 0,
+                        transition: 'opacity 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.color = T.red}
+                      onMouseLeave={e => e.currentTarget.style.color = T.ink4}
+                    >
+                      {ICONS.trash}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

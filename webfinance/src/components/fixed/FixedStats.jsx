@@ -52,22 +52,22 @@ export default function FixedStats({ totals, donutData }) {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
         <StatCard
-          label="Vaste lasten / maand"
-          value={totals.uitgaven}
-          color={T.red}
-          accent={T.red}
-        />
-        <StatCard
           label="Vaste inkomsten / maand"
           value={totals.inkomsten}
           color={T.green}
           accent={T.green}
         />
         <StatCard
+          label="Vaste lasten / maand"
+          value={totals.uitgaven}
+          color={T.red}
+          accent={T.red}
+        />
+        <StatCard
           label="Restant / maand"
           value={totals.restant}
-          color={totals.restant >= 0 ? T.blue : T.red}
-          accent={totals.restant >= 0 ? T.blue : T.red}
+          color={T.blueText}
+          accent={T.blue}
         />
       </div>
 

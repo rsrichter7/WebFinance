@@ -23,7 +23,7 @@ export default function BudgetStats({ totaalBudget, totaalBesteed, totaalRestere
       <StatCard
         label="Totaal resterend"
         value={totaalResterend}
-        color={totaalResterend >= 0 ? T.green : T.red}
+        color={T.blueText}
         accent={T.blue}
       />
     </div>
