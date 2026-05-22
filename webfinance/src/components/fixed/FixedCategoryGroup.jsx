@@ -139,8 +139,9 @@ export default function FixedCategoryGroup({ icon, title, color, colorSoft, item
                 <td style={{ ...TD, color: T.ink3 }}>
                   {item.winkel || '—'}
                 </td>
-                <td style={{ ...TD, color: T.ink2 }}>
-                  {item.sub || '—'}
+                <td style={TD}>
+                  <div style={{ color: T.ink2 }}>{item.categorie}</div>
+                  <div style={{ color: T.ink4, fontSize: 11.5 }}>{item.sub}</div>
                 </td>
                 <td style={TD}>
                   <SoortBadge soort={item.soort} />

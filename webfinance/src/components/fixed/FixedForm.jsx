@@ -149,6 +149,13 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
               onChange={e => update('omschrijving', e.target.value)} style={I} />
           </div>
 
+          {/* Winkel / Bron */}
+          <div>
+            <label style={L}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
+            <input type="text" placeholder="Bijv. Essent" value={form.winkel}
+              onChange={e => update('winkel', e.target.value)} style={I} />
+          </div>
+
           {/* Categorie + Subcategorie */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
@@ -163,13 +170,6 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
                 {subs.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-          </div>
-
-          {/* Winkel / Bron */}
-          <div>
-            <label style={L}>Winkel / Bron</label>
-            <input type="text" placeholder="Bijv. Essent" value={form.winkel}
-              onChange={e => update('winkel', e.target.value)} style={I} />
           </div>
 
           {/* Herhaling */}
