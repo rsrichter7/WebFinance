@@ -3,10 +3,11 @@
 // Gebruikt React Router's NavLink voor actieve state.
 
 import React, { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import usePremium from '../../hooks/usePremium'
+import { useAuth } from '../../hooks/useAuth'
 
 const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
@@ -21,7 +22,17 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { isPremium } = usePremium()
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const w = collapsed ? 64 : 240
+
+  async function handleSignOut() {
+    await signOut()
+    navigate('/login')
+  }
+
+  const userEmail    = user?.email ?? ''
+  const userInitials = userEmail.slice(0, 2).toUpperCase()
 
   return (
     <aside style={{
@@ -91,20 +102,41 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px 8px', borderTop: `1px solid ${T.border}`, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E0E7FF', color: '#3730A3', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>RR</div>
-        {!collapsed && (
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Ronald Richter</div>
-              {isPremium
-                ? <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.blueSoft, color: T.blueText, border: `1px solid ${T.blue}33`, letterSpacing: 0.3 }}>PREMIUM</span>
-                : <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.bg, color: T.ink3, border: `1px solid ${T.border}`, letterSpacing: 0.3 }}>GRATIS</span>
-              }
+      {/* Profile + uitloggen */}
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E0E7FF', color: '#3730A3', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{userInitials}</div>
+          {!collapsed && (
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+                {isPremium
+                  ? <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.blueSoft, color: T.blueText, border: `1px solid ${T.blue}33`, letterSpacing: 0.3 }}>PREMIUM</span>
+                  : <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.bg, color: T.ink3, border: `1px solid ${T.border}`, letterSpacing: 0.3 }}>GRATIS</span>
+                }
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: T.ink3 }}>ronald@webfin.nl</div>
-          </div>
+          )}
+        </div>
+        {!collapsed && (
+          <button
+            onClick={handleSignOut}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              width: '100%', padding: '6px 8px', marginBottom: 4,
+              borderRadius: 6, border: 'none', background: 'transparent',
+              fontSize: 13, color: T.ink3, cursor: 'pointer',
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            <span style={{ display: 'inline-flex' }}>{ICONS.logout ?? (
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}</span>
+            Uitloggen
+          </button>
         )}
       </div>
 

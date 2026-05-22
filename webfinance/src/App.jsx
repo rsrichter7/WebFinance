@@ -12,12 +12,19 @@ import BudgetsPage from './pages/BudgetsPage'
 import FixedPage from './pages/FixedPage'
 import CalendarPage from './pages/CalendarPage'
 import SettingsPage from './pages/SettingsPage'
+import LoginPage from './components/auth/LoginPage'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<MainLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/transacties" element={<TransactionsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
