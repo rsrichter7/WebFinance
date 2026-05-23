@@ -1,24 +1,31 @@
 // ─── SettingsCategories ───
 // Beheer hoofd- en subcategorieën voor transacties.
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import { CATEGORIES } from '../../data/categories'
+import useSettings from '../../hooks/useSettings'
 
-const KEY = 'webfinance_custom_categories'
 const EMPTY = { customSubs: {}, customCats: [] }
 
-function load() {
-  try { return { ...EMPTY, ...JSON.parse(localStorage.getItem(KEY)) } } catch { return EMPTY }
-}
-function save(data) { localStorage.setItem(KEY, JSON.stringify(data)) }
-
 export default function SettingsCategories() {
-  const [custom,   setCustom]   = useState(load)
+  const { settings, loading, updateSetting } = useSettings()
+  const [custom,   setCustom]   = useState(EMPTY)
   const [expanded, setExpanded] = useState({})
   const [newSub,   setNewSub]   = useState({})
   const [newCat,   setNewCat]   = useState('')
+
+  useEffect(() => {
+    if (!loading && settings.custom_categories) {
+      setCustom({ ...EMPTY, ...settings.custom_categories })
+    }
+  }, [loading, settings.custom_categories])
+
+  function save(next) {
+    setCustom(next)
+    updateSetting('custom_categories', next)
+  }
 
   function toggleExpanded(name) {
     setExpanded(e => ({ ...e, [name]: !e[name] }))
@@ -28,26 +35,27 @@ export default function SettingsCategories() {
     const val = (newSub[catName] || '').trim()
     if (!val) return
     const next = { ...custom, customSubs: { ...custom.customSubs, [catName]: [...(custom.customSubs[catName] || []), val] } }
-    setCustom(next); save(next)
+    save(next)
     setNewSub(s => ({ ...s, [catName]: '' }))
   }
 
   function deleteSub(catName, subName) {
     const next = { ...custom, customSubs: { ...custom.customSubs, [catName]: (custom.customSubs[catName] || []).filter(s => s !== subName) } }
-    setCustom(next); save(next)
+    save(next)
   }
 
   function addCat() {
     const val = newCat.trim()
     if (!val) return
     const next = { ...custom, customCats: [...custom.customCats, { name: val }] }
-    setCustom(next); save(next); setNewCat('')
+    save(next)
+    setNewCat('')
   }
 
   function deleteCat(name) {
     const { [name]: _, ...restSubs } = custom.customSubs
     const next = { ...custom, customCats: custom.customCats.filter(c => c.name !== name), customSubs: restSubs }
-    setCustom(next); save(next)
+    save(next)
   }
 
   const allCats = [
@@ -141,6 +149,6 @@ export default function SettingsCategories() {
   )
 }
 
-const iconBtn = { border: 'none', background: 'transparent', padding: 4, borderRadius: 6, cursor: 'pointer', color: T.ink4, display: 'inline-flex' }
-const addSubBtn = { padding: '6px 12px', borderRadius: 6, background: T.blue, color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }
+const iconBtn    = { border: 'none', background: 'transparent', padding: 4, borderRadius: 6, cursor: 'pointer', color: T.ink4, display: 'inline-flex' }
+const addSubBtn  = { padding: '6px 12px', borderRadius: 6, background: T.blue, color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }
 const addMainBtn = { padding: '8px 14px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }

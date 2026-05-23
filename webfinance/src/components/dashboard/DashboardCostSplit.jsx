@@ -7,16 +7,16 @@ import { T, fmt } from '../../tokens'
 import { Card } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 import useProfiles from '../../hooks/useProfiles'
-import DashboardIncomeModal, { loadNettoInkomen } from './DashboardIncomeModal'
-
-const KEY_METHODE = 'webfinance_verdeel_methode'
-function loadMethode() { return localStorage.getItem(KEY_METHODE) || 'ratio' }
+import useSettings from '../../hooks/useSettings'
+import DashboardIncomeModal from './DashboardIncomeModal'
 
 export default function DashboardCostSplit({ allTransactions }) {
   const { persons } = useProfiles()
-  const [inkomen,   setInkomen]   = useState(loadNettoInkomen)
-  const [methode,   setMethode]   = useState(loadMethode)
+  const { settings, updateSetting } = useSettings()
   const [showModal, setShowModal] = useState(false)
+
+  const inkomen = settings.kosten_inkomen || {}
+  const methode = settings.verdeel_methode || 'ratio'
 
   const totaalInkomen = persons.reduce((s, p) => s + (inkomen[p.initialen] || 0), 0)
   const heeftInkomen  = totaalInkomen > 0
@@ -66,8 +66,7 @@ export default function DashboardCostSplit({ allTransactions }) {
   }
 
   function wisselMethode(m) {
-    setMethode(m)
-    try { localStorage.setItem(KEY_METHODE, m) } catch {}
+    updateSetting('verdeel_methode', m)
   }
 
   return (
@@ -155,7 +154,14 @@ export default function DashboardCostSplit({ allTransactions }) {
         </div>
       </div>
 
-      {showModal && <DashboardIncomeModal persons={persons} inkomen={inkomen} onSave={d => { setInkomen(d); setShowModal(false) }} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <DashboardIncomeModal
+          persons={persons}
+          inkomen={inkomen}
+          onSave={d => { updateSetting('kosten_inkomen', d); setShowModal(false) }}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </Card>
   )
 }

@@ -1,27 +1,28 @@
 // ─── SettingsProfile ───
 // Profiel sectie: naam, e-mail en avatar-initialen.
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-
-const KEY = 'webfinance_profiel'
-const DEFAULT = { naam: 'Ronald Richter', email: 'ronald@webfin.nl' }
-
-function load() {
-  try { return { ...DEFAULT, ...JSON.parse(localStorage.getItem(KEY)) } } catch { return DEFAULT }
-}
+import useSettings from '../../hooks/useSettings'
 
 export default function SettingsProfile() {
-  const [data, setData] = useState(load)
+  const { settings, loading, updateSettings } = useSettings()
+  const [data, setData]   = useState({ naam: '', email: '' })
   const [saved, setSaved] = useState(false)
 
-  function save() {
-    localStorage.setItem(KEY, JSON.stringify(data))
+  useEffect(() => {
+    if (!loading) {
+      setData({ naam: settings.profiel_naam || '', email: settings.profiel_email || '' })
+    }
+  }, [loading, settings.profiel_naam, settings.profiel_email])
+
+  async function save() {
+    await updateSettings({ profiel_naam: data.naam, profiel_email: data.email })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const initialen = data.naam
+  const initialen = (data.naam || 'RR')
     .split(' ')
     .map(w => w[0])
     .join('')
@@ -30,7 +31,7 @@ export default function SettingsProfile() {
 
   return (
     <div>
-      <SectionHeader title="Profiel" description="Je persoonlijke gegevens — voor nu lokaal opgeslagen" />
+      <SectionHeader title="Profiel" description="Je persoonlijke gegevens" />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
         <div style={{
@@ -50,14 +51,14 @@ export default function SettingsProfile() {
         <Field label="Naam">
           <input
             value={data.naam}
-            onChange={e => setData(d => ({ ...d, naam: e.target.value }))}
+            onChange={e => { setData(d => ({ ...d, naam: e.target.value })); setSaved(false) }}
             style={inputStyle}
           />
         </Field>
         <Field label="E-mailadres">
           <input
             value={data.email}
-            onChange={e => setData(d => ({ ...d, email: e.target.value }))}
+            onChange={e => { setData(d => ({ ...d, email: e.target.value })); setSaved(false) }}
             style={inputStyle}
           />
         </Field>
@@ -68,20 +69,22 @@ export default function SettingsProfile() {
         background: T.blueSoft, border: '1px solid #DBEAFE',
         borderRadius: 10, fontSize: 12.5, color: T.blueText,
       }}>
-        <div style={{ fontWeight: 600, marginBottom: 2 }}>Voorbereid op accounts</div>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>Gesynchroniseerd via Supabase</div>
         <div style={{ color: T.ink3 }}>
-          Zodra cloud-sync beschikbaar is, kun je je profiel koppelen aan een account zonder gegevens te verliezen.
+          Je profielgegevens worden opgeslagen in je account en zijn beschikbaar op alle apparaten.
         </div>
       </div>
 
       <button
         onClick={save}
+        disabled={loading}
         style={{
           padding: '8px 16px', borderRadius: 8,
           background: saved ? T.green : T.blue,
           color: '#fff', border: 'none',
           fontSize: 13, fontWeight: 500, cursor: 'pointer',
           transition: 'background 0.2s',
+          opacity: loading ? 0.6 : 1,
         }}
       >
         {saved ? 'Opgeslagen ✓' : 'Opslaan'}

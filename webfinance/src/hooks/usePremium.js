@@ -1,31 +1,16 @@
 // ─── usePremium ───
 // Centrale premium-status voor de hele app.
-// Leest/schrijft naar LocalStorage key "webfinance_premium"
+// Leest/schrijft via useSettings (Supabase), synct ook naar localStorage.
 
-import { useState, useEffect } from 'react'
-
-const KEY = 'webfinance_premium'
+import { useCallback } from 'react'
+import useSettings from './useSettings'
 
 export default function usePremium() {
-  const [isPremium, setIsPremiumState] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(KEY)) === true } catch { return false }
-  })
+  const { settings, updateSetting } = useSettings()
 
-  // Luister naar wijzigingen vanuit andere tabbladen
-  useEffect(() => {
-    function onStorage(e) {
-      if (e.key === KEY) {
-        try { setIsPremiumState(JSON.parse(e.newValue) === true) } catch { setIsPremiumState(false) }
-      }
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
+  const setPremium = useCallback((val) => {
+    updateSetting('premium', val)
+  }, [updateSetting])
 
-  function setPremium(val) {
-    setIsPremiumState(val)
-    localStorage.setItem(KEY, JSON.stringify(val))
-  }
-
-  return { isPremium, setPremium }
+  return { isPremium: settings.premium === true, setPremium }
 }

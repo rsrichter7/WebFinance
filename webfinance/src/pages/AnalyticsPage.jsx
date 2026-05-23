@@ -1,9 +1,10 @@
 // ─── AnalyticsPage ───
 // Analyse pagina: vier grafieken in een versleepbaar 2×2 grid + premium sectie.
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import useTransactions from '../hooks/useTransactions'
 import usePremium from '../hooks/usePremium'
+import useSettings from '../hooks/useSettings'
 import AnalyticsTopBar         from '../components/analytics/AnalyticsTopBar'
 import AnalyticsChartCard      from '../components/analytics/AnalyticsChartCard'
 import AnalyticsTopCategories  from '../components/analytics/AnalyticsTopCategories'
@@ -12,7 +13,6 @@ import AnalyticsSoortDonut     from '../components/analytics/AnalyticsSoortDonut
 import AnalyticsIncomeExpense  from '../components/analytics/AnalyticsIncomeExpense'
 import AnalyticsPremiumSection from '../components/analytics/AnalyticsPremiumSection'
 
-const ORDER_KEY     = 'webfinance_analytics_order'
 const DEFAULT_ORDER = ['categories', 'subcategories', 'soort', 'inkexp']
 
 const CHART_DEFS = {
@@ -22,24 +22,20 @@ const CHART_DEFS = {
   inkexp:        { title: 'Inkomsten vs Uitgaven',    Component: AnalyticsIncomeExpense      },
 }
 
-function loadOrder() {
-  try {
-    const s = localStorage.getItem(ORDER_KEY)
-    if (s) {
-      const parsed = JSON.parse(s)
-      if (Array.isArray(parsed) && parsed.length === DEFAULT_ORDER.length) return parsed
-    }
-  } catch {}
-  return DEFAULT_ORDER
-}
-
 export default function AnalyticsPage() {
-  const { allTransactions, loading } = useTransactions()
+  const { allTransactions, loading: txLoading } = useTransactions()
   const { isPremium } = usePremium()
+  const { settings, loading: settingsLoading, updateSetting } = useSettings()
 
-  const [order,  setOrder]  = useState(loadOrder)
+  const [order,  setOrder]  = useState(DEFAULT_ORDER)
   const [dragId, setDragId] = useState(null)
   const [overId, setOverId] = useState(null)
+
+  useEffect(() => {
+    if (!settingsLoading && Array.isArray(settings.analytics_order) && settings.analytics_order.length === DEFAULT_ORDER.length) {
+      setOrder(settings.analytics_order)
+    }
+  }, [settingsLoading, settings.analytics_order])
 
   function handleDrop(targetId) {
     if (!dragId || dragId === targetId) return
@@ -49,7 +45,7 @@ export default function AnalyticsPage() {
     next.splice(from, 1)
     next.splice(to, 0, dragId)
     setOrder(next)
-    localStorage.setItem(ORDER_KEY, JSON.stringify(next))
+    updateSetting('analytics_order', next)
   }
 
   function endDrag() {
@@ -57,7 +53,7 @@ export default function AnalyticsPage() {
     setOverId(null)
   }
 
-  if (loading) {
+  if (txLoading) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: 14, fontFamily: "'Inter', sans-serif" }}>
         Analyse laden…

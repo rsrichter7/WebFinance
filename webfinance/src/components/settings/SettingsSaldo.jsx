@@ -1,40 +1,35 @@
 // ─── SettingsSaldo ───
 // Startsaldo instelling: beginsaldo + datum als basis voor saldoberekening op Dashboard.
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { T, TAB, fmt, fmtDate } from '../../tokens'
 import DatePicker from '../ui/DatePicker'
 import { ICONS } from '../ui/Icons'
-
-const STORAGE_KEY = 'webfinance_startsaldo'
-
-function laadStartsaldo() {
-  try {
-    const s = localStorage.getItem(STORAGE_KEY)
-    if (s) {
-      const p = JSON.parse(s)
-      return { bedrag: String(p.bedrag ?? ''), datum: p.datum || '' }
-    }
-  } catch {}
-  return { bedrag: '', datum: '' }
-}
+import useSettings from '../../hooks/useSettings'
 
 export default function SettingsSaldo() {
-  const init = laadStartsaldo()
-  const [bedrag, setBedrag] = useState(init.bedrag)
-  const [datum,  setDatum]  = useState(init.datum)
+  const { settings, loading, updateSetting } = useSettings()
+  const [bedrag, setBedrag] = useState('')
+  const [datum,  setDatum]  = useState('')
   const [saved,  setSaved]  = useState(false)
 
-  function handleOpslaan() {
+  useEffect(() => {
+    if (!loading && settings.startsaldo) {
+      setBedrag(String(settings.startsaldo.bedrag ?? ''))
+      setDatum(settings.startsaldo.datum || '')
+    }
+  }, [loading, settings.startsaldo])
+
+  async function handleOpslaan() {
     const b = parseFloat(bedrag.replace(',', '.'))
     if (isNaN(b) || !datum) return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ bedrag: b, datum }))
+    await updateSetting('startsaldo', { bedrag: b, datum })
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
-  function handleWissen() {
-    localStorage.removeItem(STORAGE_KEY)
+  async function handleWissen() {
+    await updateSetting('startsaldo', null)
     setBedrag('')
     setDatum('')
     setSaved(false)
@@ -43,13 +38,7 @@ export default function SettingsSaldo() {
   const isValid   = bedrag !== '' && !isNaN(parseFloat(bedrag.replace(',', '.'))) && datum !== ''
   const heeftData = bedrag !== '' || datum !== ''
 
-  // Lees huidig opgeslagen waarde voor preview
-  const opgeslagen = (() => {
-    try {
-      const s = localStorage.getItem(STORAGE_KEY)
-      return s ? JSON.parse(s) : null
-    } catch { return null }
-  })()
+  const opgeslagen = settings.startsaldo
 
   return (
     <div>
@@ -105,7 +94,7 @@ export default function SettingsSaldo() {
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={handleOpslaan}
-            disabled={!isValid}
+            disabled={!isValid || loading}
             style={{
               padding: '9px 20px', borderRadius: 8, border: 'none',
               background: isValid ? T.blue : T.border,

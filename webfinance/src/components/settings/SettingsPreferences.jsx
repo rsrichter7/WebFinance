@@ -1,10 +1,9 @@
 // ─── SettingsPreferences ───
 // Voorkeuren: taal, valuta, datumformaat en donkere modus.
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { T } from '../../tokens'
-
-const KEYS = { taal: 'webfinance_taal', theme: 'webfinance_theme', datumformaat: 'webfinance_datumformaat' }
+import useSettings from '../../hooks/useSettings'
 
 const DATE_OPTIONS = [
   { val: 'long', label: '8 mei 2026',  desc: 'Lang formaat' },
@@ -12,24 +11,25 @@ const DATE_OPTIONS = [
   { val: 'iso',  label: '2026-05-08',  desc: 'ISO 8601' },
 ]
 
-function loadPrefs() {
-  return {
-    taal:         localStorage.getItem(KEYS.taal)         || 'nl',
-    datumformaat: localStorage.getItem(KEYS.datumformaat) || 'long',
-    theme:        localStorage.getItem(KEYS.theme)        || 'light',
-  }
-}
-
 export default function SettingsPreferences() {
-  const [prefs, setPrefs] = useState(loadPrefs)
+  const { settings, loading, updateSettings } = useSettings()
+  const [prefs, setPrefs] = useState({ datumformaat: 'long', taal: 'nl', thema: 'light' })
   const [saved, setSaved]  = useState(false)
 
-  function set(key, val) { setPrefs(p => ({ ...p, [key]: val })) }
+  useEffect(() => {
+    if (!loading) {
+      setPrefs({
+        datumformaat: settings.datumformaat,
+        taal:         settings.taal,
+        thema:        settings.thema,
+      })
+    }
+  }, [loading, settings.datumformaat, settings.taal, settings.thema])
 
-  function saveAll() {
-    localStorage.setItem(KEYS.taal,         prefs.taal)
-    localStorage.setItem(KEYS.theme,        prefs.theme)
-    localStorage.setItem(KEYS.datumformaat, prefs.datumformaat)
+  function set(key, val) { setPrefs(p => ({ ...p, [key]: val })); setSaved(false) }
+
+  async function saveAll() {
+    await updateSettings({ datumformaat: prefs.datumformaat, taal: prefs.taal, thema: prefs.thema })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -89,9 +89,9 @@ export default function SettingsPreferences() {
             <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Donkere modus</div>
             <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Gebruik een donkere achtergrond</div>
           </div>
-          <Toggle on={prefs.theme === 'dark'} onClick={() => set('theme', prefs.theme === 'dark' ? 'light' : 'dark')} />
+          <Toggle on={prefs.thema === 'dark'} onClick={() => set('thema', prefs.thema === 'dark' ? 'light' : 'dark')} />
         </div>
-        {prefs.theme === 'dark' && (
+        {prefs.thema === 'dark' && (
           <div style={{ marginTop: 8, fontSize: 12, color: T.ink3, padding: '8px 12px', background: T.bg, borderRadius: 8 }}>
             Donkere modus styling wordt in een toekomstige update geactiveerd.
           </div>
@@ -100,12 +100,14 @@ export default function SettingsPreferences() {
 
       <button
         onClick={saveAll}
+        disabled={loading}
         style={{
           padding: '8px 16px', borderRadius: 8,
           background: saved ? T.green : T.blue,
           color: '#fff', border: 'none',
           fontSize: 13, fontWeight: 500, cursor: 'pointer',
           transition: 'background 0.2s',
+          opacity: loading ? 0.6 : 1,
         }}
       >
         {saved ? 'Opgeslagen ✓' : 'Opslaan'}

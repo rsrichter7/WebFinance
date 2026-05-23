@@ -32,10 +32,12 @@ export const CATEGORIES = [
   },
 ]
 
-// Gecombineerde categorieën: standaard + eigen uit instellingen
-export function getMergedCategories() {
-  let custom = { customSubs: {}, customCats: [] }
-  try { custom = { ...custom, ...JSON.parse(localStorage.getItem('webfinance_custom_categories')) } } catch {}
+// Gecombineerde categorieën: standaard + eigen (via param of localStorage fallback)
+export function getMergedCategories(customCategories) {
+  let custom = customCategories || { customSubs: {}, customCats: [] }
+  if (!customCategories) {
+    try { custom = { ...custom, ...JSON.parse(localStorage.getItem('webfinance_custom_categories')) } } catch {}
+  }
 
   const merged = CATEGORIES.map(cat => ({
     ...cat,

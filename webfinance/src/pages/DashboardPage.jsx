@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import useTransactions from '../hooks/useTransactions'
 import useBudgets from '../hooks/useBudgets'
+import useSettings from '../hooks/useSettings'
 import TransactionForm from '../components/transactions/TransactionForm'
 import DashboardTopBar from '../components/dashboard/DashboardTopBar'
 import DashboardStatCards from '../components/dashboard/DashboardStatCards'
@@ -17,25 +18,17 @@ import DashboardCostSplit from '../components/dashboard/DashboardCostSplit'
 import DashboardRuleScore from '../components/dashboard/DashboardRuleScore'
 const now = new Date()
 
-// Lees startsaldo uit localStorage
-function laadStartsaldo() {
-  try {
-    const s = localStorage.getItem('webfinance_startsaldo')
-    return s ? JSON.parse(s) : null
-  } catch { return null }
-}
-
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { allTransactions, addTransaction } = useTransactions()
   const { spaardoelen, actieveVerdeling } = useBudgets()
+  const { settings } = useSettings()
 
   const [maand, setMaand] = useState(now.getMonth() + 1)
   const [jaar, setJaar]   = useState(now.getFullYear())
   const [showForm, setShowForm] = useState(false)
 
-  // ─── Startsaldo (eenmalig ingelezen bij mount) ───
-  const [startsaldo] = useState(laadStartsaldo)
+  const startsaldo = settings.startsaldo
 
   function onMaandWijzig({ maand: m, jaar: j }) { setMaand(m); setJaar(j) }
 

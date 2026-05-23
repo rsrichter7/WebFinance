@@ -48,12 +48,12 @@ export const fmtShort = (n) =>
 // Datumformattering — leest voorkeur uit localStorage (key: webfinance_datumformaat)
 const MONTHS_NL = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
 
-export function fmtDate(dateStr) {
+export function fmtDate(dateStr, format) {
   const d = new Date(dateStr)
-  const format = localStorage.getItem('webfinance_datumformaat') || 'long'
+  const fmt = format || localStorage.getItem('webfinance_datumformaat') || 'long'
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
-  if (format === 'dmy') return `${dd}-${mm}-${d.getFullYear()}`
-  if (format === 'iso') return `${d.getFullYear()}-${mm}-${dd}`
+  if (fmt === 'dmy') return `${dd}-${mm}-${d.getFullYear()}`
+  if (fmt === 'iso') return `${d.getFullYear()}-${mm}-${dd}`
   return `${d.getDate()} ${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}`
 }
