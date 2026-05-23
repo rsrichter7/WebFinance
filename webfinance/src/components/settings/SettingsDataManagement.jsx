@@ -1,16 +1,17 @@
 // ─── SettingsDataManagement ───
-// Exporteer, importeer of wis alle Webfinance-gegevens.
+// Exporteer, importeer of wis lokale Webfinance-instellingen.
+// Transactie- en financiële data staat nu in Supabase.
 
 import React, { useState, useRef } from 'react'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 
+// Alleen lokale keys die niet in Supabase staan
 const WF_KEYS = [
-  'webfinance_transactions', 'webfinance_fixed', 'webfinance_budgets',
-  'webfinance_spaardoelen', 'webfinance_budget_modus', 'webfinance_budget_verdeling',
-  'webfinance_analytics_order', 'webfinance_profiel', 'webfinance_taal',
-  'webfinance_theme', 'webfinance_custom_categories',
-  'webfinance_admin_unlocked', 'webfinance_premium',
+  'webfinance_admin_unlocked',
+  'webfinance_datumformaat',
+  'webfinance_custom_categories',
+  'webfinance_premium',
 ]
 
 export default function SettingsDataManagement() {
@@ -23,16 +24,7 @@ export default function SettingsDataManagement() {
   function exportJSON() {
     const data = {}
     WF_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { try { data[k] = JSON.parse(v) } catch { data[k] = v } } })
-    dl(JSON.stringify(data, null, 2), 'webfinance-backup.json', 'application/json')
-  }
-
-  function exportCSV() {
-    try {
-      const txs = JSON.parse(localStorage.getItem('webfinance_transactions')) || []
-      const headers = ['datum', 'beschrijving', 'bedrag', 'categorie', 'subcategorie', 'soort', 'bron']
-      const rows = txs.map(t => headers.map(h => `"${String(t[h] ?? '').replace(/"/g, '""')}"`).join(','))
-      dl([headers.join(','), ...rows].join('\n'), 'webfinance-transacties.csv', 'text/csv')
-    } catch {}
+    dl(JSON.stringify(data, null, 2), 'webfinance-instellingen.json', 'application/json')
   }
 
   function dl(content, filename, type) {
@@ -71,29 +63,32 @@ export default function SettingsDataManagement() {
     <div>
       <div style={{ marginBottom: 22 }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>Data beheer</div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Exporteer, importeer of wis je gegevens</div>
+        <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Exporteer of wis je lokale instellingen</div>
+      </div>
+
+      <div style={{ marginBottom: 20, padding: 14, background: T.blueSoft, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12.5, color: T.blueText, lineHeight: 1.5 }}>
+        <strong>Let op:</strong> Transacties, vaste lasten en budgetten staan nu in Supabase en worden hier niet geëxporteerd. Alleen lokale instellingen (datumformaat, categorieën) worden opgeslagen.
       </div>
 
       <SubSection title="Exporteren">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <DataRow icon={ICONS.download} title="Backup (JSON)"       desc="Alle data: transacties, categorieën, vaste lasten en instellingen" action="Exporteer JSON" onAction={exportJSON} />
-          <DataRow icon={ICONS.download} title="Transacties (CSV)"   desc="Alleen transacties, importeerbaar in Excel of Numbers"             action="Exporteer CSV"  onAction={exportCSV} />
+          <DataRow icon={ICONS.download} title="Instellingen (JSON)" desc="Lokale instellingen: datumformaat, custom categorieën" action="Exporteer JSON" onAction={exportJSON} />
         </div>
       </SubSection>
 
       <SubSection title="Importeren">
         <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFile} />
-        <DataRow icon={ICONS.upload} title="Backup terugzetten" desc="Selecteer een eerder geëxporteerd JSON-bestand" action="Bestand kiezen" onAction={() => importRef.current?.click()} />
+        <DataRow icon={ICONS.upload} title="Instellingen terugzetten" desc="Selecteer een eerder geëxporteerd JSON-bestand" action="Bestand kiezen" onAction={() => importRef.current?.click()} />
       </SubSection>
 
       <SubSection title="Gevarenzone" description="Niet ongedaan te maken">
         <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, background: T.redSoft, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Alle data wissen</div>
-            <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert alle transacties, vaste lasten en instellingen permanent</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Lokale instellingen wissen</div>
+            <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert lokale instellingen. Data in Supabase blijft bewaard.</div>
           </div>
           <button onClick={() => setShowConfirm(true)} style={{ padding: '8px 14px', borderRadius: 8, background: T.card, color: T.red, border: '1px solid #FECACA', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {ICONS.trash} Alles wissen
+            {ICONS.trash} Wissen
           </button>
         </div>
       </SubSection>
@@ -103,7 +98,7 @@ export default function SettingsDataManagement() {
           <div style={{ width: 38, height: 38, borderRadius: 10, background: T.redSoft, color: T.red, display: 'grid', placeItems: 'center', marginBottom: 12 }}>{ICONS.warn}</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 4 }}>Weet je het zeker?</div>
           <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 16 }}>
-            Hiermee verwijder je <strong style={{ color: T.ink }}>alle data</strong> uit Webfinance. Dit kan niet ongedaan worden gemaakt.
+            Hiermee verwijder je <strong style={{ color: T.ink }}>lokale instellingen</strong>. Data in Supabase blijft bewaard.
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
             <label style={{ fontSize: 12, color: T.ink2 }}>Typ <span style={{ fontFamily: 'monospace', color: T.red }}>DELETE</span> om te bevestigen</label>
@@ -111,15 +106,15 @@ export default function SettingsDataManagement() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setShowConfirm(false); setDeleteInput('') }} style={secBtn}>Annuleer</button>
-            <button onClick={wipeAll} disabled={deleteInput !== 'DELETE'} style={{ ...dangerBtn, opacity: deleteInput !== 'DELETE' ? 0.45 : 1 }}>Alles wissen</button>
+            <button onClick={wipeAll} disabled={deleteInput !== 'DELETE'} style={{ ...dangerBtn, opacity: deleteInput !== 'DELETE' ? 0.45 : 1 }}>Wissen</button>
           </div>
         </Overlay>
       )}
 
       {showImportConfirm && (
         <Overlay onClose={() => { setShowImportConfirm(false); setImportData(null) }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 8 }}>Backup terugzetten?</div>
-          <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 20 }}>Dit overschrijft alle huidige data. Weet je het zeker?</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 8 }}>Instellingen terugzetten?</div>
+          <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 20 }}>Dit overschrijft de huidige lokale instellingen. Weet je het zeker?</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setShowImportConfirm(false); setImportData(null) }} style={secBtn}>Annuleer</button>
             <button onClick={confirmImport} style={{ ...secBtn, background: T.blue, color: '#fff', border: 'none' }}>Terugzetten</button>

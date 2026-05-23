@@ -5,12 +5,6 @@ import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { T, fmt } from '../../tokens'
 
-const KEY = 'webfinance_netto_inkomen'
-
-export function loadNettoInkomen() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || {} } catch { return {} }
-}
-
 export default function DashboardIncomeModal({ persons, inkomen, onSave, onClose }) {
   const [waarden, setWaarden] = useState(() => {
     const init = {}
@@ -26,7 +20,6 @@ export default function DashboardIncomeModal({ persons, inkomen, onSave, onClose
       const v = parseFloat(waarden[p.initialen])
       if (v > 0) data[p.initialen] = v
     }
-    try { localStorage.setItem(KEY, JSON.stringify(data)) } catch {}
     onSave(data)
   }
 
