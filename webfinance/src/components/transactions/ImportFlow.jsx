@@ -1,6 +1,6 @@
 // ─── ImportFlow ───
 // CSV-importflow: upload (stap 1) → preview (stap 2) → importeer.
-// Herkent Rabobank CSV, detecteert duplicaten en koppelt vaste lasten.
+// Detecteert bank automatisch, controleert duplicaten en koppelt vaste lasten.
 
 import React, { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
@@ -10,31 +10,33 @@ import { supabase } from '../../supabaseClient'
 import { useHousehold } from '../../hooks/useHousehold'
 import useProfiles from '../../hooks/useProfiles'
 import useSettings from '../../hooks/useSettings'
-import { parseRabobankCSV, markDuplicates, matchFixedExpenses } from '../../utils/csvParser'
+import { parseCSV, markDuplicates, matchFixedExpenses } from '../../utils/csvParser'
 import ImportPreviewTable from './ImportPreviewTable'
 import ImportAiModal from './ImportAiModal'
+import BankInstructies from './BankInstructies'
 
 export default function ImportFlow({ open, onClose, onImportComplete }) {
   const { householdId } = useHousehold()
-  const { profiles } = useProfiles()
-  const { settings } = useSettings()
+  const { profiles }    = useProfiles()
+  const { settings }    = useSettings()
 
-  const [stap, setStap]               = useState(1)
-  const [rows, setRows]               = useState([])
-  const [isDragging, setIsDragging]   = useState(false)
-  const [importing, setImporting]     = useState(false)
+  const [stap, setStap]                   = useState(1)
+  const [rows, setRows]                   = useState([])
+  const [detectedBank, setDetectedBank]   = useState('')
+  const [isDragging, setIsDragging]       = useState(false)
+  const [importing, setImporting]         = useState(false)
   const [importedCount, setImportedCount] = useState(0)
-  const [error, setError]             = useState('')
+  const [error, setError]                 = useState('')
   const [validationError, setValidationError] = useState('')
-  const [showInfo, setShowInfo]       = useState(false)
-  const [aiModalOpen, setAiModalOpen] = useState(false)
-  const fileRef                       = useRef()
-  const contentRef                    = useRef()
+  const [aiModalOpen, setAiModalOpen]     = useState(false)
+  const fileRef                           = useRef()
+  const contentRef                        = useRef()
 
   const maxRows = settings.import_max_regels ?? 1000
 
   function reset() {
-    setStap(1); setRows([]); setError(''); setValidationError(''); setImportedCount(0); setImporting(false); setAiModalOpen(false)
+    setStap(1); setRows([]); setError(''); setValidationError('')
+    setImportedCount(0); setImporting(false); setAiModalOpen(false); setDetectedBank('')
   }
 
   function handleAiApply(results) {
@@ -42,9 +44,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
     setRows(prev => {
       const next = [...prev]
       for (const r of results) {
-        if (r.index >= 0 && r.index < next.length) {
-          next[r.index] = { ...next[r.index], ...r }
-        }
+        if (r.index >= 0 && r.index < next.length) next[r.index] = { ...next[r.index], ...r }
       }
       return next
     })
@@ -53,20 +53,24 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   function handleClose() { reset(); onClose() }
 
   async function processFile(file) {
-    if (!file?.name.endsWith('.csv')) { setError('Selecteer een .csv bestand.'); return }
+    const name = file?.name ?? ''
+    if (!name.endsWith('.csv') && !name.endsWith('.txt')) {
+      setError('Selecteer een .csv of .txt bestand.'); return
+    }
     setError('')
-    const text = await file.text()
-    const parsed = parseRabobankCSV(text)
-    if (!parsed) {
-      setError('CSV-formaat niet herkend. Momenteel wordt alleen Rabobank ondersteund.')
+    const text   = await file.text()
+    const result = parseCSV(text)
+
+    if (result.error || !result.transactions.length) {
+      setError(result.error ?? 'Geen transacties gevonden in dit bestand.')
       return
     }
 
-    let limited = parsed
+    let limited = result.transactions
     let limitWarning = ''
-    if (parsed.length > maxRows) {
-      limited = parsed.slice(0, maxRows)
-      limitWarning = `CSV bevat ${parsed.length} regels — alleen de eerste ${maxRows} worden geladen.`
+    if (result.transactions.length > maxRows) {
+      limited = result.transactions.slice(0, maxRows)
+      limitWarning = `CSV bevat ${result.transactions.length} regels — alleen de eerste ${maxRows} worden geladen.`
     }
 
     const [{ data: existing }, { data: fixedItems }] = await Promise.all([
@@ -75,8 +79,9 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
     ])
 
     let processed = markDuplicates(limited, existing ?? [])
-    processed = matchFixedExpenses(processed, fixedItems ?? [])
+    processed     = matchFixedExpenses(processed, fixedItems ?? [])
 
+    setDetectedBank(result.bankLabel)
     setRows(processed)
     if (limitWarning) setError(limitWarning)
     setStap(2)
@@ -103,17 +108,15 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
     const selected = rows.filter(r => r.selected)
     if (!selected.length || !householdId) return
 
-    // Valideer verplichte velden
     const incomplete = selected.filter(r => !r.categorie || !r.subcategorie || !r.soort)
     if (incomplete.length > 0) {
-      const enkelvoud = incomplete.length === 1
+      const ev = incomplete.length === 1
       setValidationError(
-        `${incomplete.length} transactie${enkelvoud ? '' : 's'} ${enkelvoud ? 'heeft' : 'hebben'} nog geen categorie, subcategorie of soort. Vul deze eerst in voordat je importeert.`
+        `${incomplete.length} transactie${ev ? '' : 's'} ${ev ? 'heeft' : 'hebben'} nog geen categorie, subcategorie of soort. Vul deze eerst in voordat je importeert.`
       )
       setRows(prev => prev.map(r =>
         r.selected && (!r.categorie || !r.subcategorie || !r.soort)
-          ? { ...r, _invalid: true }
-          : { ...r, _invalid: false }
+          ? { ...r, _invalid: true } : { ...r, _invalid: false }
       ))
       setTimeout(() => {
         const el = contentRef.current?.querySelector('[data-invalid="true"]')
@@ -186,8 +189,6 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
               fileRef={fileRef}
               onFileInput={handleFileInput}
               error={error}
-              showInfo={showInfo}
-              onToggleInfo={() => setShowInfo(v => !v)}
             />
           )}
           {stap === 2 && (
@@ -199,6 +200,11 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
                 </div>
               ) : (
                 <>
+                  {detectedBank && (
+                    <div style={{ marginBottom: 14, padding: '8px 14px', borderRadius: 8, background: T.greenSoft, color: T.green, fontSize: 13, fontWeight: 500, border: `1px solid ${T.green}22` }}>
+                      {detectedBank} CSV gedetecteerd — {rows.length} transacties gevonden
+                    </div>
+                  )}
                   {validationError && (
                     <div style={{ marginBottom: 14, padding: '12px 16px', borderRadius: 8, background: T.redSoft, color: T.redText, fontSize: 13, border: '1px solid #FECACA', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <span style={{ display: 'inline-flex', marginTop: 1, flexShrink: 0, color: T.red }}>{ICONS.warn}</span>
@@ -237,10 +243,9 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   )
 }
 
-function UploadStap({ isDragging, onDragOver, onDragLeave, onDrop, onPickFile, fileRef, onFileInput, error, showInfo, onToggleInfo }) {
+function UploadStap({ isDragging, onDragOver, onDragLeave, onDrop, onPickFile, fileRef, onFileInput, error }) {
   return (
     <div style={{ maxWidth: 580, margin: '0 auto' }}>
-      {/* Drop zone */}
       <div
         onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
         style={{
@@ -255,35 +260,17 @@ function UploadStap({ isDragging, onDragOver, onDragLeave, onDrop, onPickFile, f
         </div>
         <div style={{ fontSize: 14, fontWeight: 500, color: T.ink, marginBottom: 6 }}>Sleep een CSV-bestand hierheen</div>
         <div style={{ fontSize: 13, color: T.ink3, marginBottom: 20 }}>of kies een bestand van je computer</div>
-        <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={onFileInput} />
+        <input ref={fileRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={onFileInput} />
         <button onClick={onPickFile} style={{ ...secBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ display: 'inline-flex' }}>{ICONS.folder}</span>Bestand kiezen
         </button>
       </div>
 
-      {/* Foutmelding */}
       {error && (
         <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: T.redSoft, color: T.redText, fontSize: 13, border: '1px solid #FECACA' }}>{error}</div>
       )}
 
-      {/* Info knop */}
-      <div style={{ marginTop: 20, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <button onClick={onToggleInfo} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, fontSize: 12.5, color: T.ink3, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <span style={{ display: 'inline-flex' }}>{ICONS.info}</span>
-          Hoe exporteer je bij Rabobank?
-        </button>
-      </div>
-
-      {showInfo && (
-        <div style={{ marginTop: 10, padding: 16, borderRadius: 10, background: T.blueSoft, border: `1px solid ${T.border}`, fontSize: 13, color: T.ink2, lineHeight: 1.7 }}>
-          <div style={{ fontWeight: 600, color: T.ink, marginBottom: 6 }}>Transacties exporteren bij Rabobank</div>
-          <div>1. Log in op <strong>rabobank.nl</strong></div>
-          <div>2. Ga naar <strong>Betalen</strong> → <strong>Transacties</strong></div>
-          <div>3. Klik op <strong>Downloaden</strong></div>
-          <div>4. Kies als formaat <strong>CSV</strong> en stel de gewenste periode in</div>
-          <div>5. Klik op <strong>Downloaden</strong> en importeer het bestand hier</div>
-        </div>
-      )}
+      <BankInstructies />
     </div>
   )
 }

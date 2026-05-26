@@ -1,76 +1,95 @@
-// ─── CSV Parser — Rabobank importformaat ───
-// parseRabobankCSV, markDuplicates, matchFixedExpenses.
+// ─── CSV Parser — bankdetectie + parsing + hulpfuncties ───
+// detectBank, parseCSV, markDuplicates, matchFixedExpenses
 
-function parseCsvText(text) {
-  const lines = []
-  let row = [], field = '', inQ = false
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i], n = text[i + 1]
-    if (inQ) {
-      if (c === '"' && n === '"') { field += '"'; i++ }
-      else if (c === '"') { inQ = false }
-      else { field += c }
-    } else {
-      if (c === '"') { inQ = true }
-      else if (c === ',') { row.push(field); field = '' }
-      else if (c === '\r' || c === '\n') {
-        if (c === '\r' && n === '\n') i++
-        row.push(field); field = ''
-        if (row.some(f => f.length > 0)) lines.push(row)
-        row = []
-      } else { field += c }
-    }
-  }
-  if (row.length || field) {
-    row.push(field)
-    if (row.some(f => f.length > 0)) lines.push(row)
-  }
-  return lines
+import { parseRabobank, isRabobank }    from './parsers/parseRabobank'
+import { parseING, isING }              from './parsers/parseING'
+import { parseABNAmro, isABNAmro }      from './parsers/parseABNAmro'
+import { parseVolksbank, isVolksbank }  from './parsers/parseVolksbank'
+import { parseBunq, isBunq }            from './parsers/parseBunq'
+import { parseKnab, isKnab }            from './parsers/parseKnab'
+import { parseTriodos, isTriodos }      from './parsers/parseTriodos'
+import { parseRevolut, isRevolut }      from './parsers/parseRevolut'
+
+export const BANK_LABELS = {
+  rabobank:  'Rabobank',
+  ing:       'ING',
+  abn_amro:  'ABN AMRO',
+  volksbank: 'SNS / ASN / RegioBank',
+  bunq:      'bunq',
+  knab:      'Knab',
+  triodos:   'Triodos Bank',
+  revolut:   'Revolut',
 }
 
-function parseBedrag(s) {
-  const trimmed = s.trim()
-  const neg = trimmed.startsWith('-')
-  const n = parseFloat(trimmed.replace(',', '.').replace(/[^\d.]/g, ''))
-  return { bedrag: isNaN(n) ? 0 : n, type: neg ? 'Uitgave' : 'Inkomst' }
+function getHeaders(firstLine, delimiter) {
+  return firstLine.split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''))
 }
 
-export function isRabobankCSV(headers) {
-  return (
-    headers.includes('Naam tegenpartij') &&
-    headers.includes('Volgnr') &&
-    headers.includes('Saldo na trn')
-  )
+export function detectBank(csvText) {
+  const firstLine = csvText.trim().split(/\r?\n/)[0]
+
+  // ABN AMRO: tab-gescheiden, geen headers, eerste kolom is IBAN
+  if (isABNAmro(csvText)) return 'abn_amro'
+
+  const semiCount  = (firstLine.match(/;/g) || []).length
+  const commaCount = (firstLine.match(/,/g) || []).length
+  const delimiter  = semiCount > commaCount ? ';' : ','
+  const headers    = getHeaders(firstLine, delimiter)
+
+  // ING: puntkomma-gescheiden, "Af Bij" + "Mutatiesoort"
+  if (delimiter === ';' && isING(headers)) return 'ing'
+
+  // bunq: komma of puntkomma, "Rentedatum"/"Interest Date" + "Tegenpartij"/"Counterparty"
+  if (isBunq(headers)) return 'bunq'
+
+  // Revolut: "Started Date", "Completed Date", "State"
+  if (isRevolut(headers)) return 'revolut'
+
+  // Volksbank (ASN/SNS/RegioBank): "Boekingsdatum", "Opdrachtgeversrekening", "Naam tegenrekening"
+  if (isVolksbank(headers)) return 'volksbank'
+
+  // Knab: "CreditDebit", "Tegenrekeninghouder", "Betaalwijze"
+  if (isKnab(headers)) return 'knab'
+
+  // Triodos: komma-gescheiden, zelfde kolommen als ING maar zonder "Saldo na mutatie"
+  if (delimiter === ',' && isTriodos(headers)) return 'triodos'
+
+  // Rabobank: "Naam tegenpartij", "Volgnr", "Saldo na trn"
+  if (isRabobank(headers)) return 'rabobank'
+
+  return null
 }
 
-export function parseRabobankCSV(csvText) {
-  const lines = parseCsvText(csvText.trim())
-  if (lines.length < 2) return null
-  const headers = lines[0]
-  if (!isRabobankCSV(headers)) return null
-  const idx = name => headers.indexOf(name)
+export function parseCSV(csvText) {
+  const clean = csvText.trim().replace(/^﻿/, '')
+  const bank  = detectBank(clean)
 
-  return lines.slice(1).map((row, i) => {
-    const g = name => (row[idx(name)] ?? '').trim()
-    const { bedrag, type } = parseBedrag(g('Bedrag'))
-    const beschrijving = [g('Omschrijving-1'), g('Omschrijving-2'), g('Omschrijving-3')]
-      .filter(s => s.length > 0).join(' ')
+  if (!bank) {
     return {
-      _id:          i,
-      datum:        g('Datum'),
-      bedrag,
-      type,
-      winkel:       g('Naam tegenpartij'),
-      beschrijving,
-      categorie:    '',
-      subcategorie: '',
-      soort:        '',
-      wie:          'GZ',
-      bron:         'import',
-      selected:     true,
-      status:       'nieuw',
+      bank: null, bankLabel: null, transactions: [],
+      error: 'CSV-formaat niet herkend. Controleer of het bestand van een ondersteunde bank afkomstig is.',
     }
-  }).filter(tx => tx.bedrag > 0)
+  }
+
+  const parsers = {
+    rabobank:  parseRabobank,
+    ing:       parseING,
+    abn_amro:  parseABNAmro,
+    volksbank: parseVolksbank,
+    bunq:      parseBunq,
+    knab:      parseKnab,
+    triodos:   parseTriodos,
+    revolut:   parseRevolut,
+  }
+
+  const transactions = parsers[bank]?.(clean) ?? []
+  const bankLabel    = BANK_LABELS[bank]
+
+  if (!transactions || transactions.length === 0) {
+    return { bank, bankLabel, transactions: [], error: `${bankLabel} bestand herkend maar geen transacties gevonden.` }
+  }
+
+  return { bank, bankLabel, transactions, error: null }
 }
 
 export function markDuplicates(rows, existing) {
@@ -84,7 +103,7 @@ export function markDuplicates(rows, existing) {
   })
 }
 
-// fixedItems: rijen rechtstreeks uit Supabase (kolom 'naam', niet 'omschrijving')
+// fixedItems: rijen uit Supabase (kolom 'naam')
 export function matchFixedExpenses(rows, fixedItems) {
   return rows.map(row => {
     if (row.status === 'duplicaat') return row
