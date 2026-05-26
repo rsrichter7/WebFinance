@@ -74,20 +74,18 @@ export default function useSettings() {
     if (!user) return
     setSettings(prev => ({ ...prev, [key]: value }))
     syncLocalStorage({ [key]: value })
-    await supabase.from('user_settings').upsert(
-      { user_id: user.id, [key]: value, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    )
+    await supabase.from('user_settings')
+      .update({ [key]: value })
+      .eq('user_id', user.id)
   }, [user])
 
   const updateSettings = useCallback(async (updates) => {
     if (!user) return
     setSettings(prev => ({ ...prev, ...updates }))
     syncLocalStorage(updates)
-    await supabase.from('user_settings').upsert(
-      { user_id: user.id, ...updates, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    )
+    await supabase.from('user_settings')
+      .update(updates)
+      .eq('user_id', user.id)
   }, [user])
 
   return { settings, loading, error, updateSetting, updateSettings }

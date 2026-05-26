@@ -10,8 +10,9 @@ import { supabase } from '../../supabaseClient'
 export default function SettingsProfile() {
   const { settings, loading, updateSettings } = useSettings()
   const { user } = useAuth()
-  const [data, setData]   = useState({ naam: '', email: '' })
-  const [saved, setSaved] = useState(false)
+  const [data, setData]       = useState({ naam: '', email: '' })
+  const [saved, setSaved]     = useState(false)
+  const [emailMsg, setEmailMsg] = useState(null)
 
   const [pwData, setPwData]     = useState({ nieuw: '', bevestig: '' })
   const [pwStatus, setPwStatus] = useState(null) // null | 'ok' | string (fout)
@@ -26,6 +27,15 @@ export default function SettingsProfile() {
   }, [loading, settings.profiel_naam, settings.profiel_email, user?.email])
 
   async function save() {
+    setEmailMsg(null)
+    if (data.email !== user?.email) {
+      const { error } = await supabase.auth.updateUser({ email: data.email })
+      if (error) {
+        setEmailMsg({ type: 'error', text: error.message })
+        return
+      }
+      setEmailMsg({ type: 'info', text: `Er is een bevestigingsmail gestuurd naar ${data.email}. Klik op de link om je emailadres te wijzigen.` })
+    }
     await updateSettings({ profiel_naam: data.naam, profiel_email: data.email })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -89,11 +99,25 @@ export default function SettingsProfile() {
         <Field label="E-mailadres">
           <input
             value={data.email}
-            onChange={e => { setData(d => ({ ...d, email: e.target.value })); setSaved(false) }}
+            onChange={e => { setData(d => ({ ...d, email: e.target.value })); setSaved(false); setEmailMsg(null) }}
             style={inputStyle}
           />
+          <div style={{ fontSize: 11.5, color: T.ink4, marginTop: 2 }}>
+            Dit is ook je inlog-emailadres
+          </div>
         </Field>
       </div>
+
+      {emailMsg && (
+        <div style={{
+          marginBottom: 12, padding: '10px 14px', borderRadius: 8, fontSize: 12.5,
+          background: emailMsg.type === 'error' ? '#FEF2F2' : T.blueSoft,
+          color: emailMsg.type === 'error' ? T.red : T.blueText,
+          border: `1px solid ${emailMsg.type === 'error' ? '#FECACA' : '#DBEAFE'}`,
+        }}>
+          {emailMsg.text}
+        </div>
+      )}
 
       <button
         onClick={save}
