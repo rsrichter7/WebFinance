@@ -42,8 +42,8 @@ export default function AnalyticsPage() {
     const next = [...order]
     const from = next.indexOf(dragId)
     const to   = next.indexOf(targetId)
-    next.splice(from, 1)
-    next.splice(to, 0, dragId)
+    next[from] = targetId
+    next[to]   = dragId
     setOrder(next)
     updateSetting('analytics_order', next)
   }
