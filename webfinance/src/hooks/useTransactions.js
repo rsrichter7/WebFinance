@@ -1,58 +1,63 @@
 // ─── useTransactions Hook ───
 // Enige plek waar transactiedata en logica leeft.
-// Data komt uit Supabase (transactions tabel, gefilterd op household_id).
+// Gecacht op household_id — mutaties bijwerken de cache direct zonder refetch.
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { registerCache } from './cacheManager'
 
-// Kolommen die we ophalen uit Supabase
 const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, bron, vaste_last_id, spaardoel_id, created_at'
+
+let txCache = { data: null, householdId: null }
+function clearCache() { txCache = { data: null, householdId: null } }
+registerCache(clearCache)
 
 // snake_case (database) → camelCase (frontend)
 function dbNaarFrontend(row) {
   return {
-    id:          row.id,
-    datum:       row.datum,
+    id:           row.id,
+    datum:        row.datum,
     beschrijving: row.beschrijving,
-    bedrag:      row.bedrag,
-    type:        row.type,
-    categorie:   row.categorie,
+    bedrag:       row.bedrag,
+    type:         row.type,
+    categorie:    row.categorie,
     subcategorie: row.subcategorie ?? '',
-    soort:       row.soort ?? '',
-    wie:         row.wie ?? '',
-    winkel:      row.winkel ?? '',
-    bron:        row.bron ?? 'handmatig',
-    vasteLast:   row.vaste_last_id ?? null,
-    spaardoelId: row.spaardoel_id ?? null,
-    createdAt:   row.created_at,
+    soort:        row.soort ?? '',
+    wie:          row.wie ?? '',
+    winkel:       row.winkel ?? '',
+    bron:         row.bron ?? 'handmatig',
+    vasteLast:    row.vaste_last_id ?? null,
+    spaardoelId:  row.spaardoel_id ?? null,
+    createdAt:    row.created_at,
   }
 }
 
 // camelCase (frontend) → snake_case (database)
 function frontendNaarDb(tx) {
-  const row = {
-    datum:        tx.datum,
-    beschrijving: tx.beschrijving,
-    bedrag:       tx.bedrag,
-    type:         tx.type,
-    categorie:    tx.categorie,
-    subcategorie: tx.subcategorie ?? '',
-    soort:        tx.soort ?? '',
-    wie:          tx.wie ?? '',
-    winkel:       tx.winkel ?? '',
-    bron:         tx.bron ?? 'handmatig',
+  return {
+    datum:         tx.datum,
+    beschrijving:  tx.beschrijving,
+    bedrag:        tx.bedrag,
+    type:          tx.type,
+    categorie:     tx.categorie,
+    subcategorie:  tx.subcategorie ?? '',
+    soort:         tx.soort ?? '',
+    wie:           tx.wie ?? '',
+    winkel:        tx.winkel ?? '',
+    bron:          tx.bron ?? 'handmatig',
     vaste_last_id: tx.vasteLast ?? null,
     spaardoel_id:  tx.spaardoelId ?? null,
   }
-  return row
 }
 
 export default function useTransactions() {
   const { householdId, loading: householdLoading } = useHousehold()
 
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading]           = useState(true)
+  const cacheHit = txCache.data !== null && txCache.householdId === householdId && householdId !== null
+
+  const [transactions, setTransactions] = useState(cacheHit ? txCache.data : [])
+  const [loading, setLoading]           = useState(!cacheHit)
   const [error, setError]               = useState(null)
   const [formOpen, setFormOpen]         = useState(false)
 
@@ -72,6 +77,14 @@ export default function useTransactions() {
   // ─── Data ophalen uit Supabase ───
   const fetchTransactions = useCallback(async () => {
     if (!householdId) return
+
+    // Cache geldig voor dit huishouden
+    if (txCache.data !== null && txCache.householdId === householdId) {
+      setTransactions(txCache.data)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -85,40 +98,58 @@ export default function useTransactions() {
     if (err) {
       setError(err.message)
     } else {
-      setTransactions((data ?? []).map(dbNaarFrontend))
+      const result = (data ?? []).map(dbNaarFrontend)
+      txCache = { data: result, householdId }
+      setTransactions(result)
     }
     setLoading(false)
   }, [householdId])
 
   useEffect(() => {
-    if (!householdLoading) {
-      fetchTransactions()
-    }
+    if (!householdLoading) fetchTransactions()
   }, [fetchTransactions, householdLoading])
 
-  // ─── Transactie toevoegen ───
+  // ─── Transactie toevoegen — cache direct bijwerken ───
   const addTransaction = useCallback(async (tx) => {
     if (!householdId) return
     const row = { ...frontendNaarDb(tx), household_id: householdId }
-    const { error: err } = await supabase.from('transactions').insert(row)
-    if (!err) fetchTransactions()
-  }, [householdId, fetchTransactions])
+    const { data: rows, error: err } = await supabase
+      .from('transactions')
+      .insert(row)
+      .select(KOLOMMEN)
 
-  // ─── Transactie verwijderen ───
+    if (!err && rows?.length) {
+      const newTx  = dbNaarFrontend(rows[0])
+      const updated = [newTx, ...(txCache.data || [])]
+      txCache.data = updated
+      setTransactions(updated)
+    }
+  }, [householdId])
+
+  // ─── Transactie verwijderen — cache direct bijwerken ───
   const removeTransaction = useCallback(async (id) => {
     const { error: err } = await supabase.from('transactions').delete().eq('id', id)
-    if (!err) fetchTransactions()
-  }, [fetchTransactions])
+    if (!err) {
+      const updated = (txCache.data || []).filter(t => t.id !== id)
+      txCache.data = updated
+      setTransactions(updated)
+    }
+  }, [])
 
-  // ─── Transactie bewerken ───
+  // ─── Transactie bewerken — cache direct bijwerken ───
   // Bron wordt altijd 'handmatig' na bewerking; vasteLast (vaste_last_id) blijft behouden
   const updateTransaction = useCallback(async (id, updatedFields) => {
     const dbFields = frontendNaarDb({ ...updatedFields, bron: 'handmatig' })
-    // Behoud vasteLast-koppeling als niet meegestuurd
     if (updatedFields.vasteLast === undefined) delete dbFields.vaste_last_id
     const { error: err } = await supabase.from('transactions').update(dbFields).eq('id', id)
-    if (!err) fetchTransactions()
-  }, [fetchTransactions])
+    if (!err) {
+      const updated = (txCache.data || []).map(t =>
+        t.id !== id ? t : { ...t, ...updatedFields, bron: 'handmatig' }
+      )
+      txCache.data = updated
+      setTransactions(updated)
+    }
+  }, [])
 
   // ─── Filter updaten ───
   const updateFilter = useCallback((key, value) => {

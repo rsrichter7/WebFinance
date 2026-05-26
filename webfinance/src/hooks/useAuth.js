@@ -1,8 +1,10 @@
 // ─── useAuth ───
 // Centrale auth-hook: sessie, inloggen, registreren, uitloggen.
+// Wist alle caches bij uitloggen zodat stale data niet zichtbaar blijft.
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { clearAllCaches } from './cacheManager'
 
 export function useAuth() {
   const [user, setUser]       = useState(null)
@@ -35,6 +37,7 @@ export function useAuth() {
   }
 
   async function signOut() {
+    clearAllCaches()
     await supabase.auth.signOut()
   }
 

@@ -1,33 +1,92 @@
 // ─── useBudgets Hook ───
 // Enige plek voor budget state en logica.
-// Data komt uit Supabase (budgets, savings_goals, transactions tabellen).
+// Gecacht op household_id — cache wordt bij mutaties gewist (3 tabellen, complexe state).
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { registerCache } from './cacheManager'
 import { CATEGORIES } from '../data/categories'
 
 const STANDAARD_VERDELING = { noodzaak: 50, wens: 30, sparen: 20 }
+
+// Cache slaat de complete verwerkte state op om re-processing te vermijden
+let bCache = { state: null, householdId: null }
+function clearCache() { bCache = { state: null, householdId: null } }
+registerCache(clearCache)
+
+// Verwerk ruwe DB-data naar de state die de hook exporteert
+function verwerkData(budgetData, goalData, txData) {
+  const categorieBudgetten = (budgetData ?? []).map(b => ({
+    id:                    b.id,
+    categorie:             b.categorie,
+    totaalBudget:          b.bedrag ?? 0,
+    subcategorieBudgetten: {},
+  }))
+
+  const eerste = budgetData?.[0]
+  const budgetModus         = eerste?.modus     || '50/30/20'
+  const handmatigeVerdeling = eerste?.verdeling || STANDAARD_VERDELING
+
+  const allTransactions = (txData ?? []).map(t => ({
+    datum:        t.datum,
+    bedrag:       t.bedrag,
+    type:         t.type,
+    categorie:    t.categorie,
+    subcategorie: t.subcategorie ?? '',
+    soort:        t.soort ?? '',
+    spaardoelId:  t.spaardoel_id ?? null,
+  }))
+
+  const spaardoelen = (goalData ?? []).map(g => ({
+    id:          g.id,
+    naam:        g.naam,
+    doelbedrag:  g.doelbedrag,
+    deadline:    g.deadline ?? null,
+    icoon:       g.icoon ?? null,
+    huidigBedrag: allTransactions
+      .filter(t => t.spaardoelId === g.id)
+      .reduce((s, t) => s + t.bedrag, 0),
+  }))
+
+  return { categorieBudgetten, budgetModus, handmatigeVerdeling, allTransactions, spaardoelen }
+}
 
 export default function useBudgets() {
   const { householdId, loading: householdLoading } = useHousehold()
   const now = new Date()
 
-  const [budgetModus, setBudgetModusState]               = useState('50/30/20')
-  const [handmatigeVerdeling, setHandmatigeVerdelingState] = useState(STANDAARD_VERDELING)
-  const [categorieBudgetten, setCategorieBudgetten]      = useState([])
-  const [spaardoelen, setSpaardoelen]                    = useState([])
-  const [allTransactions, setAllTransactions]            = useState([])
+  const cacheHit = bCache.state !== null && bCache.householdId === householdId && householdId !== null
+  const cached   = cacheHit ? bCache.state : null
+
+  const [budgetModus, setBudgetModusState]               = useState(cached?.budgetModus || '50/30/20')
+  const [handmatigeVerdeling, setHandmatigeVerdelingState] = useState(cached?.handmatigeVerdeling || STANDAARD_VERDELING)
+  const [categorieBudgetten, setCategorieBudgetten]      = useState(cached?.categorieBudgetten || [])
+  const [spaardoelen, setSpaardoelen]                    = useState(cached?.spaardoelen || [])
+  const [allTransactions, setAllTransactions]            = useState(cached?.allTransactions || [])
   const [geselecteerdeMaand, setGeselecteerdeMaand]      = useState({
     maand: now.getMonth() + 1,
     jaar:  now.getFullYear(),
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cacheHit)
   const [error, setError]     = useState(null)
 
   // ─── Alles ophalen uit Supabase ───
   const fetchAll = useCallback(async () => {
     if (!householdId) return
+
+    // Cache geldig voor dit huishouden
+    if (bCache.state !== null && bCache.householdId === householdId) {
+      const s = bCache.state
+      setBudgetModusState(s.budgetModus)
+      setHandmatigeVerdelingState(s.handmatigeVerdeling)
+      setCategorieBudgetten(s.categorieBudgetten)
+      setAllTransactions(s.allTransactions)
+      setSpaardoelen(s.spaardoelen)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -53,49 +112,26 @@ export default function useBudgets() {
       return
     }
 
-    // Budgetten mappen — subcategorieBudgetten niet in DB, leeg object als fallback
-    setCategorieBudgetten((budgetData ?? []).map(b => ({
-      id:                    b.id,
-      categorie:             b.categorie,
-      totaalBudget:          b.bedrag ?? 0,
-      subcategorieBudgetten: {},
-    })))
+    const processed = verwerkData(budgetData, goalData, txData)
+    bCache = { state: processed, householdId }
 
-    // Globale modus en verdeling uit eerste rij
-    const eerste = budgetData?.[0]
-    if (eerste?.modus)     setBudgetModusState(eerste.modus)
-    if (eerste?.verdeling) setHandmatigeVerdelingState(eerste.verdeling)
-
-    // Transacties mappen (veldnamen DB → frontend)
-    const txMapped = (txData ?? []).map(t => ({
-      datum:        t.datum,
-      bedrag:       t.bedrag,
-      type:         t.type,
-      categorie:    t.categorie,
-      subcategorie: t.subcategorie ?? '',
-      soort:        t.soort ?? '',
-      spaardoelId:  t.spaardoel_id ?? null,
-    }))
-    setAllTransactions(txMapped)
-
-    // Spaardoelen — huidigBedrag berekend uit transacties met spaardoel_id
-    setSpaardoelen((goalData ?? []).map(g => ({
-      id:          g.id,
-      naam:        g.naam,
-      doelbedrag:  g.doelbedrag,
-      deadline:    g.deadline ?? null,
-      icoon:       g.icoon ?? null,
-      huidigBedrag: txMapped
-        .filter(t => t.spaardoelId === g.id)
-        .reduce((s, t) => s + t.bedrag, 0),
-    })))
-
+    setBudgetModusState(processed.budgetModus)
+    setHandmatigeVerdelingState(processed.handmatigeVerdeling)
+    setCategorieBudgetten(processed.categorieBudgetten)
+    setAllTransactions(processed.allTransactions)
+    setSpaardoelen(processed.spaardoelen)
     setLoading(false)
   }, [householdId])
 
   useEffect(() => {
     if (!householdLoading) fetchAll()
   }, [fetchAll, householdLoading])
+
+  // Invalideer cache en haal verse data op na mutaties
+  function invalideerEnHerlaad() {
+    bCache = { state: null, householdId: null }
+    fetchAll()
+  }
 
   // ─── Gefilterde transacties voor geselecteerde maand ───
   const maandTransacties = useMemo(() =>
@@ -168,12 +204,12 @@ export default function useBudgets() {
       modus:        budgetModus,
       verdeling:    handmatigeVerdeling,
     }, { onConflict: 'household_id,categorie' })
-    fetchAll()
+    invalideerEnHerlaad()
   }, [householdId, budgetModus, handmatigeVerdeling, fetchAll])
 
   const verwijderBudget = useCallback(async (id) => {
     await supabase.from('budgets').delete().eq('id', id)
-    fetchAll()
+    invalideerEnHerlaad()
   }, [fetchAll])
 
   const wijzigBudget = useCallback(async (id, data) => {
@@ -182,7 +218,7 @@ export default function useBudgets() {
     if (Object.keys(updates).length > 0) {
       await supabase.from('budgets').update(updates).eq('id', id)
     }
-    fetchAll()
+    invalideerEnHerlaad()
   }, [fetchAll])
 
   // ─── Spaardoel acties ───
@@ -195,12 +231,12 @@ export default function useBudgets() {
       deadline:     doel.deadline || null,
       icoon:        doel.icoon || null,
     })
-    fetchAll()
+    invalideerEnHerlaad()
   }, [householdId, fetchAll])
 
   const verwijderSpaardoel = useCallback(async (id) => {
     await supabase.from('savings_goals').delete().eq('id', id)
-    fetchAll()
+    invalideerEnHerlaad()
   }, [fetchAll])
 
   const stortOpSpaardoel = useCallback(async (id, bedrag) => {
@@ -220,12 +256,13 @@ export default function useBudgets() {
       bron:          'auto',
       spaardoel_id:  id,
     })
-    fetchAll()
+    invalideerEnHerlaad()
   }, [householdId, spaardoelen, fetchAll])
 
   // ─── Globale instellingen persisteren naar alle budget-rijen ───
   const setBudgetModus = useCallback(async (modus) => {
     setBudgetModusState(modus)
+    if (bCache.state) bCache.state = { ...bCache.state, budgetModus: modus }
     if (householdId) {
       await supabase.from('budgets').update({ modus }).eq('household_id', householdId)
     }
@@ -233,6 +270,7 @@ export default function useBudgets() {
 
   const setHandmatigeVerdeling = useCallback(async (verdeling) => {
     setHandmatigeVerdelingState(verdeling)
+    if (bCache.state) bCache.state = { ...bCache.state, handmatigeVerdeling: verdeling }
     if (householdId) {
       await supabase.from('budgets').update({ verdeling }).eq('household_id', householdId)
     }

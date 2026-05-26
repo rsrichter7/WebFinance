@@ -1,15 +1,20 @@
 // ─── useFixedExpenses Hook ───
 // Beheer van vaste lasten: CRUD, groepering, totalen en auto-transacties.
-// Data komt uit Supabase (fixed_expenses tabel, gefilterd op household_id).
+// Gecacht op household_id — cache wordt bij mutaties gewist zodat auto-transacties opnieuw lopen.
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { registerCache } from './cacheManager'
 import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
 
 const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, created_at'
+
+let feCache = { data: null, householdId: null }
+function clearCache() { feCache = { data: null, householdId: null } }
+registerCache(clearCache)
 
 function pad(n) { return String(n).padStart(2, '0') }
 
@@ -34,8 +39,8 @@ function dbNaarFrontend(row) {
     wie:          row.wie ?? 'GZ',
     afschrijfdag: row.afschrijfdag ?? 1,
     actief:       row.actief ?? true,
-    type:         'Uitgave', // niet in DB, default voor componentcompatibiliteit
-    winkel:       '',        // niet in DB
+    type:         'Uitgave',
+    winkel:       '',
     startdatum:   maakStartdatum(row.created_at, row.afschrijfdag),
     createdAt:    row.created_at,
   }
@@ -116,8 +121,10 @@ function berekenVerwachteDatums(item, minDate, today) {
 export default function useFixedExpenses() {
   const { householdId, loading: householdLoading } = useHousehold()
 
-  const [items, setItems]               = useState([])
-  const [loading, setLoading]           = useState(true)
+  const cacheHit = feCache.data !== null && feCache.householdId === householdId && householdId !== null
+
+  const [items, setItems]               = useState(cacheHit ? feCache.data : [])
+  const [loading, setLoading]           = useState(!cacheHit)
   const [error, setError]               = useState(null)
   const [formOpen, setFormOpen]         = useState(false)
   const [editingItem, setEditingItem]   = useState(null)
@@ -161,6 +168,14 @@ export default function useFixedExpenses() {
   // ─── Data ophalen uit Supabase ───
   const fetchItems = useCallback(async () => {
     if (!householdId) return
+
+    // Cache geldig voor dit huishouden (auto-transacties al gedraaid bij eerste fetch)
+    if (feCache.data !== null && feCache.householdId === householdId) {
+      setItems(feCache.data)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -177,36 +192,44 @@ export default function useFixedExpenses() {
     }
 
     const mapped = (data ?? []).map(dbNaarFrontend)
+    feCache = { data: mapped, householdId }
     setItems(mapped)
     setLoading(false)
     await verwerkAutoTransacties(mapped)
   }, [householdId, verwerkAutoTransacties])
 
   useEffect(() => {
-    if (!householdLoading) {
-      fetchItems()
-    }
+    if (!householdLoading) fetchItems()
   }, [fetchItems, householdLoading])
 
-  // ─── Vaste last toevoegen ───
+  // ─── Vaste last toevoegen — cache wissen zodat auto-transacties opnieuw lopen ───
   const addItem = useCallback(async (item) => {
     if (!householdId) return
     const row = { ...frontendNaarDb(item), household_id: householdId }
     const { error: err } = await supabase.from('fixed_expenses').insert(row)
-    if (!err) fetchItems()
+    if (!err) {
+      feCache = { data: null, householdId: null }
+      fetchItems()
+    }
   }, [householdId, fetchItems])
 
-  // ─── Vaste last verwijderen ───
+  // ─── Vaste last verwijderen — cache wissen ───
   const removeItem = useCallback(async (id) => {
     const { error: err } = await supabase.from('fixed_expenses').delete().eq('id', id)
-    if (!err) fetchItems()
+    if (!err) {
+      feCache = { data: null, householdId: null }
+      fetchItems()
+    }
   }, [fetchItems])
 
-  // ─── Vaste last bewerken ───
+  // ─── Vaste last bewerken — cache wissen ───
   const updateItem = useCallback(async (id, changes) => {
     const dbFields = frontendNaarDb(changes)
     const { error: err } = await supabase.from('fixed_expenses').update(dbFields).eq('id', id)
-    if (!err) fetchItems()
+    if (!err) {
+      feCache = { data: null, householdId: null }
+      fetchItems()
+    }
   }, [fetchItems])
 
   const openEdit = useCallback((item) => {

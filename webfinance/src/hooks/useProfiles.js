@@ -1,10 +1,11 @@
 // ─── useProfiles Hook ───
 // Enige plek voor profielen (huishoudensleden) state en logica.
-// Data komt uit Supabase (profiles tabel, gefilterd op household_id).
+// Gecacht op household_id — mutaties wissen de cache en herladen (volgorde van DB bewaard).
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { registerCache } from './cacheManager'
 
 export const PROFIEL_KLEUREN = [
   { bg: '#E0E7FF', fg: '#3730A3', label: 'Blauw'  },
@@ -39,7 +40,6 @@ function parseKleur(kleurStr) {
     const parsed = JSON.parse(kleurStr)
     if (parsed && typeof parsed === 'object') return parsed
   } catch {}
-  // Fallback voor enkele hex (bijv. aangemaakt door DB-trigger)
   return PROFIEL_KLEUREN.find(k => k.bg === kleurStr) || { bg: kleurStr, fg: '#374151' }
 }
 
@@ -54,16 +54,30 @@ function dbNaarFrontend(row) {
   }
 }
 
+let prCache = { data: null, householdId: null }
+function clearCache() { prCache = { data: null, householdId: null } }
+registerCache(clearCache)
+
 export default function useProfiles() {
   const { householdId, loading: householdLoading } = useHousehold()
 
-  const [profiles, setProfiles] = useState([])
-  const [loading, setLoading]   = useState(true)
+  const cacheHit = prCache.data !== null && prCache.householdId === householdId && householdId !== null
+
+  const [profiles, setProfiles] = useState(cacheHit ? prCache.data : [])
+  const [loading, setLoading]   = useState(!cacheHit)
   const [error, setError]       = useState(null)
 
   // ─── Profielen ophalen uit Supabase ───
   const fetchProfiles = useCallback(async () => {
     if (!householdId) return
+
+    // Cache geldig voor dit huishouden
+    if (prCache.data !== null && prCache.householdId === householdId) {
+      setProfiles(prCache.data)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -80,7 +94,9 @@ export default function useProfiles() {
       return
     }
 
-    setProfiles((data ?? []).map(dbNaarFrontend))
+    const mapped = (data ?? []).map(dbNaarFrontend)
+    prCache = { data: mapped, householdId }
+    setProfiles(mapped)
     setLoading(false)
   }, [householdId])
 
@@ -96,7 +112,7 @@ export default function useProfiles() {
     profiles.find(p => p.initialen === initialen) || null
   , [profiles])
 
-  // ─── Profiel toevoegen ───
+  // ─── Profiel toevoegen — cache wissen (DB-volgorde bewaren) ───
   const addProfile = useCallback(async (data) => {
     if (!householdId) return
     await supabase.from('profiles').insert({
@@ -106,10 +122,11 @@ export default function useProfiles() {
       kleur:        JSON.stringify(data.kleur),
       is_deletable: true,
     })
+    prCache = { data: null, householdId: null }
     fetchProfiles()
   }, [householdId, fetchProfiles])
 
-  // ─── Profiel bijwerken ───
+  // ─── Profiel bijwerken — cache wissen ───
   const updateProfile = useCallback(async (id, data) => {
     const updates = {}
     if (data.naam      !== undefined) updates.naam      = data.naam
@@ -118,15 +135,17 @@ export default function useProfiles() {
     if (Object.keys(updates).length > 0) {
       await supabase.from('profiles').update(updates).eq('id', id)
     }
+    prCache = { data: null, householdId: null }
     fetchProfiles()
   }, [fetchProfiles])
 
-  // ─── Profiel verwijderen (GZ en enige persoon zijn beschermd) ───
+  // ─── Profiel verwijderen (GZ en enige persoon zijn beschermd) — cache wissen ───
   const removeProfile = useCallback(async (id) => {
     const profiel = profiles.find(p => p.id === id)
     if (!profiel || profiel.isGezamenlijk) return
     if (profiles.filter(p => !p.isGezamenlijk).length <= 1) return
     await supabase.from('profiles').delete().eq('id', id)
+    prCache = { data: null, householdId: null }
     fetchProfiles()
   }, [profiles, fetchProfiles])
 
