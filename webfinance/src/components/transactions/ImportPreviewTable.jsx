@@ -53,6 +53,7 @@ export default function ImportPreviewTable({ rows, onUpdate, profiles, customCat
         </div>
       </div>
 
+      <StatusLegenda />
       <div style={{ maxHeight: 420, overflow: 'auto', border: `1px solid ${T.border}`, borderRadius: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
           <thead>
@@ -73,13 +74,16 @@ export default function ImportPreviewTable({ rows, onUpdate, profiles, customCat
             {rows.map((row, i) => {
               const catObj = allCats.find(c => c.name === row.categorie)
               const subs = catObj ? catObj.subs : []
-              const isDup = row.status === 'duplicaat'
               const isInvalid = row._invalid && row.selected
+              const rowBg = isInvalid ? T.redSoft
+                : row.status === 'duplicaat' ? T.amberSoft
+                : row.status === 'vaste_last' ? T.blueSoft
+                : T.card
               return (
                 <tr
                   key={i}
                   data-invalid={isInvalid ? 'true' : undefined}
-                  style={{ opacity: isDup ? 0.5 : 1, borderTop: `1px solid ${T.border}`, background: isInvalid ? T.redSoft : T.card }}
+                  style={{ borderTop: `1px solid ${T.border}`, background: rowBg }}
                 >
                   <Td center>
                     <input
@@ -177,6 +181,26 @@ function StatusBadge({ status }) {
     }}>
       {s.label}
     </span>
+  )
+}
+
+function StatusLegenda() {
+  return (
+    <div style={{ display: 'flex', gap: 20, marginBottom: 10, flexWrap: 'wrap' }}>
+      <LegendaItem color={T.greenText} label="Nieuw" desc="wordt geïmporteerd" />
+      <LegendaItem color={T.amberText} label="Duplicaat" desc="mogelijk al eerder geïmporteerd (standaard uitgevinkt)" />
+      <LegendaItem color={T.blueText} label="Vaste last" desc="gekoppeld aan bestaande vaste last" />
+    </div>
+  )
+}
+
+function LegendaItem({ color, label, desc }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.ink3 }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      <span style={{ fontWeight: 600, color: T.ink2 }}>{label}</span>
+      <span>— {desc}</span>
+    </div>
   )
 }
 
