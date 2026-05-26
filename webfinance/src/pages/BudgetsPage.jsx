@@ -63,6 +63,12 @@ export default function BudgetsPage() {
               totaalBesteed={totaalBesteed}
               totaalResterend={totaalResterend}
             />
+            <BudgetSavingsGoals
+              spaardoelen={spaardoelen}
+              onToevoegen={voegSpaardoelToe}
+              onStorten={stortOpSpaardoel}
+              onVerwijderen={verwijderSpaardoel}
+            />
             <BudgetRuleSection
               regelVerdeling={regelVerdeling}
               inkomen={inkomen}
@@ -77,12 +83,6 @@ export default function BudgetsPage() {
               onSave={handleCategorySave}
               budgetLimiet={inkomen}
               totaalCategorieBudget={totaalCategorieBudget}
-            />
-            <BudgetSavingsGoals
-              spaardoelen={spaardoelen}
-              onToevoegen={voegSpaardoelToe}
-              onStorten={stortOpSpaardoel}
-              onVerwijderen={verwijderSpaardoel}
             />
           </>
         )}

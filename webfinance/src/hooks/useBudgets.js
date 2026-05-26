@@ -72,7 +72,7 @@ export default function useBudgets() {
   const [error, setError]     = useState(null)
 
   // ─── Alles ophalen uit Supabase ───
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (silent = false) => {
     if (!householdId) return
 
     // Cache geldig voor dit huishouden
@@ -87,7 +87,7 @@ export default function useBudgets() {
       return
     }
 
-    setLoading(true)
+    if (!silent) setLoading(true)
     setError(null)
 
     const [
@@ -127,10 +127,10 @@ export default function useBudgets() {
     if (!householdLoading) fetchAll()
   }, [fetchAll, householdLoading])
 
-  // Invalideer cache en haal verse data op na mutaties
+  // Invalideer cache en haal verse data op na mutaties (silent = geen laad-indicator)
   function invalideerEnHerlaad() {
     bCache = { state: null, householdId: null }
-    fetchAll()
+    fetchAll(true)
   }
 
   // ─── Gefilterde transacties voor geselecteerde maand ───
@@ -224,14 +224,14 @@ export default function useBudgets() {
   // ─── Spaardoel acties ───
   const voegSpaardoelToe = useCallback(async (doel) => {
     if (!householdId) return
-    await supabase.from('savings_goals').insert({
+    const { error: err } = await supabase.from('savings_goals').insert({
       household_id: householdId,
       naam:         doel.naam,
       doelbedrag:   doel.doelbedrag,
       deadline:     doel.deadline || null,
       icoon:        doel.icoon || null,
     })
-    invalideerEnHerlaad()
+    if (!err) invalideerEnHerlaad()
   }, [householdId, fetchAll])
 
   const verwijderSpaardoel = useCallback(async (id) => {
