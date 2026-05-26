@@ -24,13 +24,15 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   const [importing, setImporting]     = useState(false)
   const [importedCount, setImportedCount] = useState(0)
   const [error, setError]             = useState('')
+  const [validationError, setValidationError] = useState('')
   const [showInfo, setShowInfo]       = useState(false)
   const fileRef                       = useRef()
+  const contentRef                    = useRef()
 
   const maxRows = settings.import_max_regels ?? 1000
 
   function reset() {
-    setStap(1); setRows([]); setError(''); setImportedCount(0); setImporting(false)
+    setStap(1); setRows([]); setError(''); setValidationError(''); setImportedCount(0); setImporting(false)
   }
 
   function handleClose() { reset(); onClose() }
@@ -78,12 +80,34 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   }
 
   function updateRow(index, updates) {
-    setRows(prev => prev.map((r, i) => i !== index ? r : { ...r, ...updates }))
+    setValidationError('')
+    setRows(prev => prev.map((r, i) => i !== index ? r : { ...r, ...updates, _invalid: false }))
   }
 
   async function handleImport() {
     const selected = rows.filter(r => r.selected)
     if (!selected.length || !householdId) return
+
+    // Valideer verplichte velden
+    const incomplete = selected.filter(r => !r.categorie || !r.subcategorie || !r.soort)
+    if (incomplete.length > 0) {
+      const enkelvoud = incomplete.length === 1
+      setValidationError(
+        `${incomplete.length} transactie${enkelvoud ? '' : 's'} ${enkelvoud ? 'heeft' : 'hebben'} nog geen categorie, subcategorie of soort. Vul deze eerst in voordat je importeert.`
+      )
+      setRows(prev => prev.map(r =>
+        r.selected && (!r.categorie || !r.subcategorie || !r.soort)
+          ? { ...r, _invalid: true }
+          : { ...r, _invalid: false }
+      ))
+      setTimeout(() => {
+        const el = contentRef.current?.querySelector('[data-invalid="true"]')
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+      return
+    }
+
+    setValidationError('')
     setImporting(true)
 
     const toInsert = selected.map(r => ({
@@ -136,7 +160,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+        <div ref={contentRef} style={{ flex: 1, overflow: 'auto', padding: 24 }}>
           {stap === 1 && (
             <UploadStap
               isDragging={isDragging}
@@ -159,10 +183,18 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
                   <div style={{ fontSize: 16, fontWeight: 600, color: T.ink }}>{importedCount} transacties geïmporteerd!</div>
                 </div>
               ) : (
-                <ImportPreviewTable rows={rows} onUpdate={updateRow} profiles={profiles} customCategories={settings.custom_categories} />
-              )}
-              {error && importedCount === 0 && (
-                <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: T.amberSoft, color: T.amberText, fontSize: 12.5, border: `1px solid #FDE68A` }}>{error}</div>
+                <>
+                  {validationError && (
+                    <div style={{ marginBottom: 14, padding: '12px 16px', borderRadius: 8, background: T.redSoft, color: T.redText, fontSize: 13, border: '1px solid #FECACA', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <span style={{ display: 'inline-flex', marginTop: 1, flexShrink: 0, color: T.red }}>{ICONS.warn}</span>
+                      {validationError}
+                    </div>
+                  )}
+                  <ImportPreviewTable rows={rows} onUpdate={updateRow} profiles={profiles} customCategories={settings.custom_categories} />
+                  {error && (
+                    <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: T.amberSoft, color: T.amberText, fontSize: 12.5, border: `1px solid #FDE68A` }}>{error}</div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -171,7 +203,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
         {/* Footer stap 2 */}
         {stap === 2 && importedCount === 0 && (
           <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button onClick={() => { setStap(1); setError('') }} style={secBtn}>← Terug</button>
+            <button onClick={() => { setStap(1); setError(''); setValidationError('') }} style={secBtn}>← Terug</button>
             <button onClick={handleImport} disabled={importing || selectedCount === 0} style={{ ...priBtn, opacity: selectedCount === 0 ? 0.45 : 1 }}>
               {importing ? 'Bezig…' : `${selectedCount} transacties importeren`}
             </button>

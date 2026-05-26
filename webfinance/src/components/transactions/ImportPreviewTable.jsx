@@ -63,8 +63,13 @@ export default function ImportPreviewTable({ rows, onUpdate, profiles, customCat
               const catObj = allCats.find(c => c.name === row.categorie)
               const subs = catObj ? catObj.subs : []
               const isDup = row.status === 'duplicaat'
+              const isInvalid = row._invalid && row.selected
               return (
-                <tr key={i} style={{ opacity: isDup ? 0.5 : 1, borderTop: `1px solid ${T.border}`, background: T.card }}>
+                <tr
+                  key={i}
+                  data-invalid={isInvalid ? 'true' : undefined}
+                  style={{ opacity: isDup ? 0.5 : 1, borderTop: `1px solid ${T.border}`, background: isInvalid ? T.redSoft : T.card }}
+                >
                   <Td center>
                     <input
                       type="checkbox"
