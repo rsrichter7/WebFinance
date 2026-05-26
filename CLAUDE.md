@@ -2,7 +2,7 @@
 
 ---
 
-## 1. Project overzicht
+## Wat is Webfinance?
 
 Een persoonlijke financiële webapp (SaaS) gebouwd met React. Geïnspireerd door Stripe Dashboard, Linear en Notion. Desktop-first, later uitbreidbaar naar mobiel.
 
@@ -15,7 +15,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ---
 
-## 2. Tech stack
+## Tech stack
 
 - React 18 + Vite + React Router
 - Inline styles met design tokens (T-object uit `src/tokens.js`)
@@ -27,7 +27,78 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ---
 
-## 3. Mappenstructuur
+## Huidige status
+
+### ✅ Afgerond — alle 7 pagina's + authenticatie + Supabase + CSV import
+
+**Supabase backend volledig werkend:**
+- Authenticatie via email/wachtwoord, `useAuth` hook, `LoginPage`, `ProtectedRoute`
+- `useHousehold` hook — haalt household_id op van ingelogde user; gebruikt door alle data-hooks
+- `useSettings` hook — centrale instellingen per user (Supabase `user_settings` tabel)
+- Auto-setup trigger bij registratie: huishouden + GZ-profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER (enige uitzondering op de regel)
+- RLS-policies op alle 8 tabellen — gebruikers zien alleen eigen huishouden-data
+- `household_members` RLS: directe `user_id = auth.uid()` check (niet via `get_my_household_id()` wegens circulaire afhankelijkheid)
+- GRANT op alle tabellen voor de `authenticated` rol (nodig omdat "Automatically expose new tables" uit staat)
+- Check constraints hoofdlettergevoelig: `Inkomst`/`Uitgave`, `Noodzaak`/`Wens`/`Sparen`, `Maandelijks`/`Jaarlijks`/etc.
+- localStorage opgeruimd — alleen backward-compat syncs + `admin_unlocked` blijven
+
+**Alle pagina's werkend:**
+- **Dashboard** — begroeting, maandselector, 3 StatCards, kostenverdeling, staafdiagram, spaardoelen, recente tx, donut, 50/30/20 score
+- **Transacties** — zoeken, filteren, sorteren, toevoegen, bewerken, verwijderen, auto-badge, import
+- **Vaste Lasten** — CRUD, auto-transacties, donut chart, gegroepeerde tabellen per categorie; tabelkolommen consistent met transactietabel: Volgende Afschrijving, Bedrag, Omschrijving, Winkel/Bron, Categorie (+ subcategorie), Soort, Wie
+- **Budgetten** — 50/30/20 + handmatige modus, categorie-tabel, spaardoelen met storten
+- **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters, premium sectie; drag-and-drop volgorde-opslag gefixt (swap ipv splice)
+- **Instellingen** — profiel (naam + email via Supabase Auth, wachtwoord via `supabase.auth.updateUser`), huishouden, saldo, voorkeuren, categorieën, data beheer (incl. importknop), admin
+- **Kalender** — premium-only, maand/week view, verwacht vs. werkelijk, detailpaneel
+
+**CSV Import volledig werkend:**
+- Import-flow: CSV uploaden → bankdetectie → parsing → duplicaat-check → vaste lasten matching → preview-tabel → importeren
+- Ondersteunde banken: Rabobank, ING, ABN AMRO, ASN Bank, SNS Bank, RegioBank, bunq, Knab, Triodos Bank, Revolut
+- Van Lanschot: "binnenkort beschikbaar"
+- Bankdetectie automatisch op basis van CSV-headers en scheidingsteken
+- Rabobank parser volledig getest en werkend; overige banken op basis van gedocumenteerde formaten (feedback-driven)
+- Duplicaat-detectie: datum + bedrag + winkel vergelijking — oranje markering, standaard uitgevinkt
+- Vaste lasten matching: automatisch categorie/subcategorie/soort/wie invullen bij match
+- Kleurcodering + legenda: groen (nieuw), oranje (duplicaat), blauw (vaste last match)
+- AI-hulp voor categorisering: kopieer transacties → plak in ChatGPT/Claude → plak resultaat terug → automatisch toepassen
+- Validatie: categorie, subcategorie en soort verplicht voor import
+- Import-knop op twee plekken: TransactionTopBar + SettingsDataManagement
+- Info-knop met downloadinstructies per bank (`BankInstructies` component)
+- Geïmporteerde transacties krijgen `bron: 'import'`
+- Admin instelling: `import_max_regels` (default 1000)
+
+**Profielensysteem volledig werkend:**
+- `useProfiles` hook — data uit Supabase, CRUD
+- Dynamische wie-knoppen in alle formulieren
+- WieAvatar dynamisch op kleur via `getByInitialen`
+- GZ-profiel automatisch aangemaakt bij registratie (`is_deletable: false`)
+
+**Supabase migratie volledig:**
+- Alle data in PostgreSQL, localStorage alleen voor backward-compat caches
+
+### 🔮 Volgende stap
+
+- **Performance optimalisatie** — caching in hooks zodat data niet bij elke pagina-wissel opnieuw wordt opgehaald
+- **Bugfixes na import-testing** — CSV parsers voor niet-Rabobank banken zijn ongetest; afhankelijk van gebruikersfeedback
+- **Feedback-knop** — gebruikers kunnen feedback/bugs melden, admin kan inzien in de admin-sectie
+- **Meerdere bankrekeningen** (premium feature) — extra tabel `accounts` + `account_id` op transactions
+
+### 🔮 Later (niet nu)
+
+- GoCardless bankkoppeling (premium) — directe import zonder CSV
+- Automatische AI-categorisering via Anthropic API (premium) — vervangt kopieer/plak methode
+- Leningen sectie werkend maken
+- Paginering in tabellen
+- Dark mode (toggle bestaat al, styling niet actief)
+- Notificaties uitwerken
+- Hosting op Vercel
+- Privacy policy pagina
+- Account verwijderen functie (AVG)
+- Huishouden uitnodigingssysteem (Anne toevoegen via email-link)
+
+---
+
+## Mappenstructuur
 
 ```
 src/
@@ -39,7 +110,8 @@ src/
 │   │   ├── LoginPage.jsx       → Login + registratie pagina (toggle)
 │   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
 │   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust)
-│   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm
+│   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
+│   │                             ImportFlow, ImportPreviewTable, ImportAiModal, BankInstructies
 │   ├── fixed/                  → FixedTopBar, FixedStats, FixedCategoryGroup, FixedForm, FixedLoanSection
 │   ├── budgets/                → BudgetTopBar, BudgetStats, BudgetRuleSection, BudgetCategoryTable, BudgetSavingsGoals, BudgetForm
 │   ├── analytics/              → AnalyticsTopBar, AnalyticsPeriodFilter, AnalyticsChartCard, AnalyticsTopCategories,
@@ -79,6 +151,19 @@ src/
 │   ├── fixed.js                → Sample data (niet geïmporteerd, alleen referentie)
 │   └── budgets.js              → Sample data (niet geïmporteerd, alleen referentie)
 │
+├── utils/
+│   ├── csvParser.js            → Bankdetectie (detectBank) + parseCSV + markDuplicates + matchFixedExpenses
+│   └── parsers/                → Per bank een eigen parser + helpers.js
+│       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx
+│       ├── parseRabobank.js
+│       ├── parseING.js
+│       ├── parseABNAmro.js
+│       ├── parseVolksbank.js   → ASN Bank, SNS Bank, RegioBank (zelfde formaat)
+│       ├── parseBunq.js        → NL en EN headers, komma of puntkomma
+│       ├── parseKnab.js
+│       ├── parseTriodos.js
+│       └── parseRevolut.js
+│
 ├── styles/index.css            → Basis CSS
 ├── supabaseClient.js           → Supabase client configuratie
 ├── tokens.js                   → Design tokens + fmt() + fmtShort() + fmtDate(dateStr, format?)
@@ -87,7 +172,7 @@ src/
 
 ---
 
-## 4. Conventies
+## Conventies
 
 ### Designregels
 
@@ -118,7 +203,7 @@ src/
 
 ---
 
-## 5. Architectuur
+## Architectuur
 
 ### Hooks als single source of truth
 
@@ -152,7 +237,7 @@ Alle data-hooks gebruiken hetzelfde patroon:
 Elke transactie heeft een `bron` veld:
 - `'handmatig'` — door de gebruiker ingevoerd of bewerkt
 - `'auto'` — automatisch aangemaakt (vaste lasten, spaardoel-stortingen)
-- `'import'` — later, voor bankimport
+- `'import'` — geïmporteerd via CSV-import
 
 `updateTransaction()` zet `bron` altijd naar `'handmatig'`, ook als origineel `'auto'` of `'import'` was.
 
@@ -235,9 +320,21 @@ Bij gelijke datum worden nieuwste transacties (hoogste `created_at`) eerst getoo
 
 Premium-only. Combineert `useTransactions` en `useFixedExpenses` voor verwacht vs. werkelijk. `buildDayMap` en `getMondayOfWeek` zijn named exports die in `CalendarPage` hergebruikt worden.
 
+### CSV Parser architectuur
+
+`src/utils/csvParser.js` is de orchestrator:
+- `detectBank(csvText)` → `'rabobank' | 'ing' | 'abn_amro' | 'volksbank' | 'bunq' | 'knab' | 'triodos' | 'revolut' | null`
+- `parseCSV(csvText)` → `{ bank, bankLabel, transactions, error }`
+- `markDuplicates(rows, existing)` — datum + bedrag + winkel vergelijking
+- `matchFixedExpenses(rows, fixedItems)` — automatisch categoriseren op basis van naam
+
+ABN AMRO: tab-gescheiden, geen headers, detectie op IBAN in eerste kolom (`/^NL\d/`).
+ING: puntkomma-gescheiden. Triodos: komma-gescheiden, zelfde headers als ING (geen "Saldo na mutatie").
+Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
+
 ---
 
-## 6. Supabase database
+## Supabase database
 
 ### Tabellen en RLS
 
@@ -266,6 +363,13 @@ Premium-only. Combineert `useTransactions` en `useFixedExpenses` voor verwacht v
 | `user_settings` | `verdeel_methode` | `'ratio'`, `'50/50'` |
 | `budgets` | `modus` | `'50/30/20'`, `'handmatig'` |
 
+### Kolomnotities
+
+- `transactions.winkel` — kolom toegevoegd (was niet in origineel schema)
+- `transactions.beschrijving` (niet `omschrijving`), `transactions.subcategorie` (niet `sub`)
+- `user_settings.analytics_order` — default `["categories","subcategories","soort","inkexp"]` (niet `[0,1,2,3]`)
+- `user_settings.import_max_regels` — INTEGER, default 1000 (admin-instelling)
+
 ### Trigger: on_auth_user_created
 
 AFTER INSERT op `auth.users` — functie `handle_new_user()` met SECURITY DEFINER:
@@ -278,7 +382,7 @@ Dit is de **enige** uitzondering op de "geen SECURITY DEFINER" regel.
 
 ---
 
-## 7. LocalStorage (minimaal na Supabase-migratie)
+## LocalStorage (minimaal na Supabase-migratie)
 
 | Key | Inhoud | Reden |
 |-----|--------|-------|
@@ -289,82 +393,11 @@ Dit is de **enige** uitzondering op de "geen SECURITY DEFINER" regel.
 
 ---
 
-## 8. Known issues
+## Known issues
 
-### Overflow hidden
-
-Cards en containers met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af:
-- Slide-in formulieren → gebruik `createPortal(... , document.body)` uit `react-dom`
-- Cards met tabellen of dropdowns → `overflow: 'visible'` op de Card
-
-### Analyse drag-and-drop
-
-Volgorde-opslag werkt niet correct (links-rechts ipv positie-swap) — nog te fixen.
-
----
-
-## 9. Huidige status
-
-### ✅ Afgerond — alle 7 pagina's + authenticatie + Supabase
-
-**Supabase backend volledig werkend:**
-- Authenticatie via email/wachtwoord, `useAuth` hook, `LoginPage`, `ProtectedRoute`
-- `useHousehold`, `useSettings` hooks
-- Auto-setup trigger bij registratie (huishouden + GZ-profiel + user_settings)
-- RLS-policies op alle 8 tabellen
-
-**Alle pagina's werkend:**
-- **Dashboard** — begroeting, maandselector, 3 StatCards, kostenverdeling, staafdiagram, spaardoelen, recente tx, donut, 50/30/20 score
-- **Transacties** — zoeken, filteren, sorteren, toevoegen, bewerken, verwijderen, auto-badge
-- **Vaste Lasten** — CRUD, auto-transacties, donut chart, gegroepeerde tabellen per categorie
-- **Budgetten** — 50/30/20 + handmatige modus, categorie-tabel, spaardoelen met storten
-- **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters, premium sectie
-- **Instellingen** — profiel, huishouden, saldo, voorkeuren, categorieën, data beheer, admin
-- **Kalender** — premium-only, maand/week view, verwacht vs. werkelijk, detailpaneel
-
-**Profielensysteem volledig werkend:**
-- Dynamische wie-knoppen in alle formulieren
-- WieAvatar dynamisch op kleur via `getByInitialen`
-- GZ-profiel automatisch aangemaakt bij registratie
-
-**Supabase migratie volledig:**
-- Alle data in PostgreSQL, localStorage alleen voor backward-compat caches
-
-### 🔮 Volgende stap
-
-- **Analyse drag-and-drop fixen** — volgorde-opslag werkt niet correct
-- **Meerdere bankrekeningen** (premium feature) — tabel `accounts` + `account_id` op transactions
-
-### 🔮 Later (niet nu)
-
-- Leningen sectie werkend maken
-- Paginering in tabellen
-- Dark mode (toggle bestaat al, styling niet actief)
-- Notificaties
-- Bankimport, AI-categorisering
-- Hosting op Vercel
-- Privacy policy pagina
-- Account verwijderen functie (AVG)
-- Huishouden uitnodigingssysteem (Anne toevoegen via email-link)
-
----
-
-## 10. Werkwijze
-
-1. **Vraag eerst** — beschrijf wat je gaat bouwen en welke bestanden je aanmaakt/wijzigt. Wacht op akkoord.
-2. **Eén onderdeel tegelijk** — bouw niet meerdere pagina's tegelijk.
-3. **Bestaande code respecteren** — wijzig geen bestanden die niet relevant zijn voor de opdracht.
-4. **Toon de structuur** — na elke wijziging, laat zien welke bestanden zijn aangemaakt of gewijzigd.
-5. **Test-instructies** — geef aan wat Ronald moet doen om het resultaat te zien.
-
-### Wat NIET doen
-- Geen nieuwe npm packages installeren zonder overleg
-- Geen mappenstructuur wijzigen zonder overleg
-- Geen bestanden hernoemen zonder overleg
-- Geen Tailwind, geen CSS-modules, geen styled-components
-- Geen complexe state management (Redux, Zustand, etc.)
-- Geen TypeScript
-- Geen code schrijven zonder eerst akkoord te vragen
+1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
+2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
+3. **Performance** — bij 250+ transacties is laden merkbaar trager dan localStorage — caching in hooks nodig
 
 ---
 
@@ -383,3 +416,29 @@ Kleuren per categorie (zie `src/data/categoryConfig.js`):
 - Vrije tijd: red/redSoft, icoon: target
 - Financieel: green/greenSoft, icoon: coin
 - Overig: ink3/rule, icoon: grip
+
+---
+
+## Verdienmodel (voor later, niet nu)
+
+- Gratis: basisfuncties
+- Premium (€3–5/mnd): ongelimiteerd, kalender, bankimport, GoCardless koppeling, AI-categorisering, meerdere bankrekeningen, aanpasbare analytics
+
+---
+
+## Werkwijze
+
+1. **Vraag eerst** — beschrijf wat je gaat bouwen en welke bestanden je aanmaakt/wijzigt. Wacht op akkoord.
+2. **Eén onderdeel tegelijk** — bouw niet meerdere pagina's tegelijk.
+3. **Bestaande code respecteren** — wijzig geen bestanden die niet relevant zijn voor de opdracht.
+4. **Toon de structuur** — na elke wijziging, laat zien welke bestanden zijn aangemaakt of gewijzigd.
+5. **Test-instructies** — geef aan wat Ronald moet doen om het resultaat te zien.
+
+### Wat NIET doen
+- Geen nieuwe npm packages installeren zonder overleg
+- Geen mappenstructuur wijzigen zonder overleg
+- Geen bestanden hernoemen zonder overleg
+- Geen Tailwind, geen CSS-modules, geen styled-components
+- Geen complexe state management (Redux, Zustand, etc.)
+- Geen TypeScript
+- Geen code schrijven zonder eerst akkoord te vragen
