@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react'
 import { T, fmt, TAB } from '../../tokens'
+import { ICONS } from '../ui/Icons'
 import { getMergedCategories } from '../../data/categories'
 
 const SOORTEN = ['Noodzaak', 'Wens', 'Sparen']
@@ -13,7 +14,7 @@ const STATUS_STYLE = {
   vaste_last: { color: T.blueText,  bg: T.blueSoft,   label: 'Vaste last' },
 }
 
-export default function ImportPreviewTable({ rows, onUpdate, profiles, customCategories }) {
+export default function ImportPreviewTable({ rows, onUpdate, profiles, customCategories, onAiHelp }) {
   const allCats = useMemo(() => getMergedCategories(customCategories), [customCategories])
   const selected = rows.filter(r => r.selected).length
 
@@ -24,7 +25,7 @@ export default function ImportPreviewTable({ rows, onUpdate, profiles, customCat
     rows.forEach((r, i) => onUpdate(i, { selected: r.status === 'nieuw' }))
   }
   function updateRow(i, field, value) {
-    const updates = { [field]: value }
+    const updates = { [field]: value, _aiTagged: false }
     if (field === 'categorie') updates.subcategorie = ''
     onUpdate(i, updates)
   }
@@ -35,10 +36,20 @@ export default function ImportPreviewTable({ rows, onUpdate, profiles, customCat
         <div style={{ fontSize: 13, color: T.ink2, fontWeight: 500 }}>
           {selected} van {rows.length} geselecteerd
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <CtrlBtn onClick={() => toggleAll(true)}>Alles selecteren</CtrlBtn>
           <CtrlBtn onClick={() => toggleAll(false)}>Alles deselecteren</CtrlBtn>
           <CtrlBtn onClick={selectOnlyNew}>Alleen nieuwe</CtrlBtn>
+          <div style={{ width: 1, height: 20, background: T.border, margin: '0 4px' }} />
+          <button onClick={onAiHelp} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '5px 12px', borderRadius: 6,
+            border: `1px solid ${T.violet}`, background: T.violetSoft,
+            fontSize: 12, color: T.violet, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+          }}>
+            <span style={{ display: 'inline-flex' }}>{ICONS.sparkle}</span>
+            AI-hulp voor categorisering
+          </button>
         </div>
       </div>
 
@@ -87,10 +98,15 @@ export default function ImportPreviewTable({ rows, onUpdate, profiles, customCat
                   <Td truncate={130}>{row.winkel || '—'}</Td>
                   <Td truncate={180}>{row.beschrijving || '—'}</Td>
                   <Td>
-                    <select value={row.categorie} onChange={e => updateRow(i, 'categorie', e.target.value)} style={selStyle}>
-                      <option value="">—</option>
-                      {allCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {row._aiTagged && (
+                        <span title="Gesuggereerd door AI" style={{ color: T.violet, display: 'inline-flex', flexShrink: 0 }}>{ICONS.sparkle}</span>
+                      )}
+                      <select value={row.categorie} onChange={e => updateRow(i, 'categorie', e.target.value)} style={selStyle}>
+                        <option value="">—</option>
+                        {allCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
                   </Td>
                   <Td>
                     <select value={row.subcategorie} onChange={e => updateRow(i, 'subcategorie', e.target.value)} style={selStyle} disabled={!row.categorie}>

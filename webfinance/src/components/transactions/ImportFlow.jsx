@@ -12,6 +12,7 @@ import useProfiles from '../../hooks/useProfiles'
 import useSettings from '../../hooks/useSettings'
 import { parseRabobankCSV, markDuplicates, matchFixedExpenses } from '../../utils/csvParser'
 import ImportPreviewTable from './ImportPreviewTable'
+import ImportAiModal from './ImportAiModal'
 
 export default function ImportFlow({ open, onClose, onImportComplete }) {
   const { householdId } = useHousehold()
@@ -26,13 +27,27 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   const [error, setError]             = useState('')
   const [validationError, setValidationError] = useState('')
   const [showInfo, setShowInfo]       = useState(false)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
   const fileRef                       = useRef()
   const contentRef                    = useRef()
 
   const maxRows = settings.import_max_regels ?? 1000
 
   function reset() {
-    setStap(1); setRows([]); setError(''); setValidationError(''); setImportedCount(0); setImporting(false)
+    setStap(1); setRows([]); setError(''); setValidationError(''); setImportedCount(0); setImporting(false); setAiModalOpen(false)
+  }
+
+  function handleAiApply(results) {
+    setValidationError('')
+    setRows(prev => {
+      const next = [...prev]
+      for (const r of results) {
+        if (r.index >= 0 && r.index < next.length) {
+          next[r.index] = { ...next[r.index], ...r }
+        }
+      }
+      return next
+    })
   }
 
   function handleClose() { reset(); onClose() }
@@ -190,7 +205,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
                       {validationError}
                     </div>
                   )}
-                  <ImportPreviewTable rows={rows} onUpdate={updateRow} profiles={profiles} customCategories={settings.custom_categories} />
+                  <ImportPreviewTable rows={rows} onUpdate={updateRow} profiles={profiles} customCategories={settings.custom_categories} onAiHelp={() => setAiModalOpen(true)} />
                   {error && (
                     <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: T.amberSoft, color: T.amberText, fontSize: 12.5, border: `1px solid #FDE68A` }}>{error}</div>
                   )}
@@ -210,6 +225,13 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
           </div>
         )}
       </div>
+      <ImportAiModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        rows={rows}
+        customCategories={settings.custom_categories}
+        onApply={handleAiApply}
+      />
     </>,
     document.body
   )
