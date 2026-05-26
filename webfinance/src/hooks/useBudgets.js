@@ -21,7 +21,7 @@ function verwerkData(budgetData, goalData, txData) {
     id:                    b.id,
     categorie:             b.categorie,
     totaalBudget:          b.bedrag ?? 0,
-    subcategorieBudgetten: {},
+    subcategorieBudgetten: b.subcategoriebudgetten ?? {},
   }))
 
   const eerste = budgetData?.[0]
@@ -96,7 +96,7 @@ export default function useBudgets() {
       { data: txData,     error: txErr },
     ] = await Promise.all([
       supabase.from('budgets')
-        .select('id, categorie, bedrag, modus, verdeling')
+        .select('id, categorie, bedrag, modus, verdeling, subcategoriebudgetten')
         .eq('household_id', householdId),
       supabase.from('savings_goals')
         .select('id, naam, doelbedrag, deadline, icoon')
@@ -198,11 +198,12 @@ export default function useBudgets() {
   const voegBudgetToe = useCallback(async (budget) => {
     if (!householdId) return
     await supabase.from('budgets').upsert({
-      household_id: householdId,
-      categorie:    budget.categorie,
-      bedrag:       budget.totaalBudget ?? budget.bedrag ?? 0,
-      modus:        budgetModus,
-      verdeling:    handmatigeVerdeling,
+      household_id:          householdId,
+      categorie:             budget.categorie,
+      bedrag:                budget.totaalBudget ?? budget.bedrag ?? 0,
+      subcategoriebudgetten: budget.subcategorieBudgetten ?? {},
+      modus:                 budgetModus,
+      verdeling:             handmatigeVerdeling,
     }, { onConflict: 'household_id,categorie' })
     invalideerEnHerlaad()
   }, [householdId, budgetModus, handmatigeVerdeling, fetchAll])
@@ -214,7 +215,8 @@ export default function useBudgets() {
 
   const wijzigBudget = useCallback(async (id, data) => {
     const updates = {}
-    if (data.totaalBudget !== undefined) updates.bedrag = data.totaalBudget
+    if (data.totaalBudget          !== undefined) updates.bedrag                = data.totaalBudget
+    if (data.subcategorieBudgetten !== undefined) updates.subcategoriebudgetten = data.subcategorieBudgetten
     if (Object.keys(updates).length > 0) {
       await supabase.from('budgets').update(updates).eq('id', id)
     }
