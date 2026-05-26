@@ -7,6 +7,7 @@ import TransactionTopBar from '../components/transactions/TransactionTopBar'
 import TransactionFilters from '../components/transactions/TransactionFilters'
 import TransactionTable from '../components/transactions/TransactionTable'
 import TransactionForm from '../components/transactions/TransactionForm'
+import ImportFlow from '../components/transactions/ImportFlow'
 import { StatCard } from '../components/ui/Card'
 import { T } from '../tokens'
 
@@ -20,6 +21,7 @@ export default function TransactionsPage() {
     addTransaction,
     removeTransaction,
     updateTransaction,
+    fetchTransactions,
     filters,
     updateFilter,
     sort,
@@ -28,7 +30,8 @@ export default function TransactionsPage() {
     setFormOpen,
   } = useTransactions()
 
-  const [editingTx, setEditingTx] = useState(null)
+  const [editingTx, setEditingTx]   = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   if (loading) {
     return (
@@ -40,7 +43,7 @@ export default function TransactionsPage() {
 
   return (
     <>
-      <TransactionTopBar onNewClick={() => setFormOpen(true)} />
+      <TransactionTopBar onNewClick={() => setFormOpen(true)} onImportClick={() => setImportOpen(true)} />
 
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -90,6 +93,12 @@ export default function TransactionsPage() {
         onSave={addTransaction}
         onUpdate={(id, fields) => { updateTransaction(id, fields); setEditingTx(null) }}
         editingTransaction={editingTx}
+      />
+
+      <ImportFlow
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImportComplete={fetchTransactions}
       />
     </>
   )

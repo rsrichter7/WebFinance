@@ -18,9 +18,10 @@ const DEFAULTS = {
   profiel_naam:      '',
   profiel_email:     '',
   analytics_order:   ['categories', 'subcategories', 'soort', 'inkexp'],
+  import_max_regels: 1000,
 }
 
-const SELECT_COLS = 'datumformaat, taal, thema, premium, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order'
+const SELECT_COLS = 'datumformaat, taal, thema, premium, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels'
 
 function syncLocalStorage(data) {
   if (data.datumformaat)      localStorage.setItem('webfinance_datumformaat', data.datumformaat)

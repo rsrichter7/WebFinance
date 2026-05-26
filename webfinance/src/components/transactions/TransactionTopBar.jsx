@@ -7,7 +7,7 @@ import { ICONS } from '../ui/Icons'
 import { Badge } from '../ui/Card'
 import usePremium from '../../hooks/usePremium'
 
-export default function TransactionTopBar({ onNewClick }) {
+export default function TransactionTopBar({ onNewClick, onImportClick }) {
   const { isPremium } = usePremium()
   return (
     <div style={{
@@ -23,7 +23,7 @@ export default function TransactionTopBar({ onNewClick }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* Importeren knop: actief voor premium, grayed-out met badge voor niet-premium */}
         {isPremium ? (
-          <button style={{
+          <button onClick={onImportClick} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '8px 14px', borderRadius: 8,
             border: `1px solid ${T.border}`, background: T.card,

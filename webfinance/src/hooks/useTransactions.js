@@ -208,6 +208,7 @@ export default function useTransactions() {
     addTransaction,
     removeTransaction,
     updateTransaction,
+    fetchTransactions,
 
     // Filters
     filters,

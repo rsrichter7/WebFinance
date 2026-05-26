@@ -1,15 +1,18 @@
 // ─── SettingsAdmin ───
 // Verborgen admin-sectie — ontgrendeld via easter egg in 'Over Webfinance'.
 
-import React from 'react'
+import React, { useState } from 'react'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import usePremium from '../../hooks/usePremium'
+import useSettings from '../../hooks/useSettings'
 
 const ADMIN_KEY = 'webfinance_admin_unlocked'
 
 export default function SettingsAdmin({ onAdminLock }) {
   const { isPremium, setPremium } = usePremium()
+  const { settings, updateSetting } = useSettings()
+  const [maxRegels, setMaxRegels] = useState(String(settings.import_max_regels ?? 1000))
 
   function resetAdmin() {
     localStorage.removeItem(ADMIN_KEY)
@@ -56,6 +59,37 @@ export default function SettingsAdmin({ onAdminLock }) {
             </div>
           </div>
           <Toggle on={isPremium} onClick={() => setPremium(!isPremium)} />
+        </div>
+      </div>
+
+      {/* Import-instellingen */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.ink2, marginBottom: 12 }}>Import-instellingen</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', border: `1px solid ${T.border}`, borderRadius: 10 }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Max. importregels</div>
+            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Maximaal aantal CSV-regels per import (standaard 1000)</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number"
+              min={10}
+              max={10000}
+              value={maxRegels}
+              onChange={e => setMaxRegels(e.target.value)}
+              style={{ width: 90, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${T.border}`, fontSize: 13, fontFamily: 'inherit', color: T.ink, outline: 'none', textAlign: 'right' }}
+            />
+            <button
+              onClick={() => {
+                const n = Math.max(10, Math.min(10000, parseInt(maxRegels) || 1000))
+                setMaxRegels(String(n))
+                updateSetting('import_max_regels', n)
+              }}
+              style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, fontSize: 13, fontWeight: 500, color: T.ink2, cursor: 'pointer' }}
+            >
+              Opslaan
+            </button>
+          </div>
         </div>
       </div>
 

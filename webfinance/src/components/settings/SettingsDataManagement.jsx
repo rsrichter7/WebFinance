@@ -5,6 +5,7 @@
 import React, { useState, useRef } from 'react'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
+import ImportFlow from '../transactions/ImportFlow'
 
 // Alleen lokale keys die niet in Supabase staan
 const WF_KEYS = [
@@ -15,10 +16,11 @@ const WF_KEYS = [
 ]
 
 export default function SettingsDataManagement() {
-  const [deleteInput,      setDeleteInput]      = useState('')
-  const [showConfirm,      setShowConfirm]      = useState(false)
+  const [deleteInput,       setDeleteInput]       = useState('')
+  const [showConfirm,       setShowConfirm]       = useState(false)
   const [showImportConfirm, setShowImportConfirm] = useState(false)
-  const [importData,       setImportData]       = useState(null)
+  const [importData,        setImportData]        = useState(null)
+  const [csvImportOpen,     setCsvImportOpen]     = useState(false)
   const importRef = useRef()
 
   function exportJSON() {
@@ -77,8 +79,17 @@ export default function SettingsDataManagement() {
       </SubSection>
 
       <SubSection title="Importeren">
-        <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFile} />
-        <DataRow icon={ICONS.upload} title="Instellingen terugzetten" desc="Selecteer een eerder geëxporteerd JSON-bestand" action="Bestand kiezen" onAction={() => importRef.current?.click()} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <DataRow
+            icon={ICONS.upload}
+            title="Transacties importeren (CSV)"
+            desc="Importeer transacties vanuit Rabobank CSV-bestand"
+            action="Importeren"
+            onAction={() => setCsvImportOpen(true)}
+          />
+          <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFile} />
+          <DataRow icon={ICONS.upload} title="Instellingen terugzetten" desc="Selecteer een eerder geëxporteerd JSON-bestand" action="Bestand kiezen" onAction={() => importRef.current?.click()} />
+        </div>
       </SubSection>
 
       <SubSection title="Gevarenzone" description="Niet ongedaan te maken">
@@ -121,6 +132,11 @@ export default function SettingsDataManagement() {
           </div>
         </Overlay>
       )}
+
+      <ImportFlow
+        open={csvImportOpen}
+        onClose={() => setCsvImportOpen(false)}
+      />
     </div>
   )
 }
