@@ -3,8 +3,8 @@
 // 5x klikken op versienummer ontgrendelt de admin-sectie.
 
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { T, TAB } from '../../tokens'
-import { ICONS } from '../ui/Icons'
 
 const ADMIN_KEY = 'webfinance_admin_unlocked'
 
@@ -27,7 +27,7 @@ export default function SettingsAbout({ onAdminUnlock }) {
     <div>
       <div style={{ marginBottom: 22 }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>Over Webfinance</div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Versie, credits en bronnen</div>
+        <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Versie, credits en beleid</div>
       </div>
 
       {/* App-kaart */}
@@ -88,15 +88,11 @@ export default function SettingsAbout({ onAdminUnlock }) {
         </div>
       </div>
 
-      {/* Bronnen */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.ink2, marginBottom: 10 }}>Bronnen</div>
-        <LinkRow
-          icon={ICONS.github}
-          label="GitHub repository"
-          sub="github.com/rsrichter7/WebFinance"
-          href="https://github.com/rsrichter7/WebFinance"
-        />
+      {/* Privacy link */}
+      <div style={{ marginBottom: 22 }}>
+        <Link to="/privacy" style={{ fontSize: 13, color: T.blue, textDecoration: 'none', fontWeight: 500 }}>
+          Lees ons privacybeleid →
+        </Link>
       </div>
 
       <div style={{
@@ -108,29 +104,5 @@ export default function SettingsAbout({ onAdminUnlock }) {
         <span>MIT License</span>
       </div>
     </div>
-  )
-}
-
-function LinkRow({ icon, label, sub, href }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 14px',
-        border: `1px solid ${T.border}`, borderRadius: 10,
-        background: T.card, cursor: 'pointer',
-        textDecoration: 'none',
-      }}
-    >
-      <span style={{ color: T.ink3, display: 'inline-flex' }}>{icon}</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: T.ink }}>{label}</div>
-        <div style={{ fontSize: 11.5, color: T.ink4, fontFamily: 'ui-monospace, monospace', marginTop: 1 }}>{sub}</div>
-      </div>
-      <span style={{ color: T.ink4, fontSize: 12 }}>↗</span>
-    </a>
   )
 }

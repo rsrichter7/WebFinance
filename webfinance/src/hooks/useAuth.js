@@ -28,11 +28,17 @@ export function useAuth() {
 
   async function signUp(email, password) {
     const { data, error } = await supabase.auth.signUp({ email, password })
-    return { data, error }
+    const needsConfirmation = !error && data.session === null
+    return { data, error, needsConfirmation }
   }
 
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    return { data, error }
+  }
+
+  async function signInWithGoogle() {
+    const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' })
     return { data, error }
   }
 
@@ -41,5 +47,5 @@ export function useAuth() {
     await supabase.auth.signOut()
   }
 
-  return { user, session, loading, signUp, signIn, signOut }
+  return { user, session, loading, signUp, signIn, signOut, signInWithGoogle }
 }

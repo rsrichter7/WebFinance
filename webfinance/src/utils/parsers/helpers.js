@@ -1,5 +1,11 @@
 // ─── Gedeelde hulpfuncties voor alle CSV-parsers ───
 
+// Verwijdert IBAN-nummers (NL + internationaal) uit een string
+export function stripIBANs(text) {
+  if (!text) return text
+  return text.replace(/\b[A-Z]{2}\d{2}\s?[A-Z0-9]{4}\s?\d{4}\s?\d{4}\s?\d{0,4}\s?\d{0,2}\b/g, '***')
+}
+
 export function parseCsvText(text, delimiter = ',') {
   const lines = []
   let row = [], field = '', inQ = false
@@ -68,7 +74,7 @@ export function parseDateDMYSlash(s) {
 }
 
 export function makeTx(overrides, i) {
-  return {
+  const tx = {
     _id:          i,
     datum:        '',
     bedrag:       0,
@@ -84,4 +90,7 @@ export function makeTx(overrides, i) {
     status:       'nieuw',
     ...overrides,
   }
+  tx.winkel       = stripIBANs(tx.winkel)
+  tx.beschrijving = stripIBANs(tx.beschrijving)
+  return tx
 }

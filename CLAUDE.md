@@ -23,19 +23,20 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Geen Tailwind, geen TypeScript, geen Redux
 - **Backend: Supabase** (PostgreSQL database, authenticatie, RLS) — Central EU (Frankfurt)
 - `.env` met `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` (staat in `.gitignore`)
-- Hosting: nog niet live (later Vercel)
+- Hosting: Vercel deployment geconfigureerd (`vercel.json` in repo-root)
 
 ---
 
 ## Huidige status
 
-### ✅ Afgerond — alle 7 pagina's + authenticatie + Supabase + CSV import
+### ✅ Afgerond — alle 7 pagina's + authenticatie + Supabase + CSV import + security
 
 **Supabase backend volledig werkend:**
-- Authenticatie via email/wachtwoord, `useAuth` hook, `LoginPage`, `ProtectedRoute`
+- Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
+- Email-verificatie verplicht bij registratie; wachtwoord minimaal 8 tekens
 - `useHousehold` hook — haalt household_id op van ingelogde user; gebruikt door alle data-hooks
 - `useSettings` hook — centrale instellingen per user (Supabase `user_settings` tabel)
-- Auto-setup trigger bij registratie: huishouden + GZ-profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER (enige uitzondering op de regel)
+- Auto-setup trigger bij registratie: huishouden + GZ-profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER
 - RLS-policies op alle 8 tabellen — gebruikers zien alleen eigen huishouden-data
 - `household_members` RLS: directe `user_id = auth.uid()` check (niet via `get_my_household_id()` wegens circulaire afhankelijkheid)
 - GRANT op alle tabellen voor de `authenticated` rol (nodig omdat "Automatically expose new tables" uit staat)
@@ -48,8 +49,9 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - **Vaste Lasten** — CRUD, auto-transacties, donut chart, gegroepeerde tabellen per categorie; tabelkolommen consistent met transactietabel: Volgende Afschrijving, Bedrag, Omschrijving, Winkel/Bron, Categorie (+ subcategorie), Soort, Wie
 - **Budgetten** — 50/30/20 + handmatige modus, categorie-tabel, spaardoelen met storten
 - **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters, premium sectie; drag-and-drop volgorde-opslag gefixt (swap ipv splice)
-- **Instellingen** — profiel (naam + email via Supabase Auth, wachtwoord via `supabase.auth.updateUser`), huishouden, saldo, voorkeuren, categorieën, data beheer (incl. importknop), admin
+- **Instellingen** — profiel (naam + email via Supabase Auth, wachtwoord via `supabase.auth.updateUser`), huishouden, saldo, voorkeuren, categorieën, data beheer (incl. importknop + Excel-export + account verwijderen), admin
 - **Kalender** — premium-only, maand/week view, verwacht vs. werkelijk, detailpaneel
+- **Privacy policy** — statische pagina op `/privacy`, toegankelijk zonder login (AVG)
 
 **CSV Import volledig werkend:**
 - Import-flow: CSV uploaden → bankdetectie → parsing → duplicaat-check → vaste lasten matching → preview-tabel → importeren
@@ -75,12 +77,23 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 **Supabase migratie volledig:**
 - Alle data in PostgreSQL, localStorage alleen voor backward-compat caches
+- In-memory caching in alle data-hooks via `cacheManager.js`
+
+**Security-hardening afgerond:**
+- Centrale invoervalidatie (`src/utils/validation.js`) — 7 functies voor bedragen, datums, tekst, categorieën, soort, type en wie
+- IBAN-stripping bij CSV-import (`stripIBANs` in helpers.js)
+- Content Security Policy + security headers in `vercel.json`
+- Privacy policy pagina (`/privacy`) toegankelijk zonder login
+- Account verwijderen (AVG) via `delete_my_account()` database-functie (SECURITY DEFINER)
+- Data-export als Excel (.xlsx) via Instellingen → Data beheer (SheetJS, 6 tabbladen)
+- Vercel deployment geconfigureerd (`vercel.json`: CSP, rewrites, buildCommand, outputDirectory)
 
 ### 🔮 Volgende stap
 
-- **Performance optimalisatie** — caching in hooks zodat data niet bij elke pagina-wissel opnieuw wordt opgehaald
-- **Bugfixes na import-testing** — CSV parsers voor niet-Rabobank banken zijn ongetest; afhankelijk van gebruikersfeedback
 - **Feedback-knop** — gebruikers kunnen feedback/bugs melden, admin kan inzien in de admin-sectie
+- **SMTP-provider configureren** — Supabase default heeft 2/uur limiet; voor productie externe SMTP nodig (bijv. Resend)
+- **Productie-URLs instellen** — Site URL en redirect URLs aanpassen naar productie-domein bij Vercel deployment
+- **Bugfixes na import-testing** — CSV parsers voor niet-Rabobank banken zijn ongetest; afhankelijk van gebruikersfeedback
 - **Meerdere bankrekeningen** (premium feature) — extra tabel `accounts` + `account_id` op transactions
 
 ### 🔮 Later (niet nu)
@@ -91,10 +104,8 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Paginering in tabellen
 - Dark mode (toggle bestaat al, styling niet actief)
 - Notificaties uitwerken
-- Hosting op Vercel
-- Privacy policy pagina
-- Account verwijderen functie (AVG)
 - Huishouden uitnodigingssysteem (Anne toevoegen via email-link)
+- Cookie-banner bij analytics-implementatie
 
 ---
 
@@ -107,7 +118,7 @@ src/
 │   ├── ui/Icons.jsx            → Alle iconen (Lucide-stijl, ICONS object)
 │   ├── ui/DatePicker.jsx       → Custom datumkiezer (kalenderweergave)
 │   ├── auth/
-│   │   ├── LoginPage.jsx       → Login + registratie pagina (toggle)
+│   │   ├── LoginPage.jsx       → Login + registratie + Google OAuth + email-verificatie flow
 │   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
 │   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust)
 │   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
@@ -121,8 +132,8 @@ src/
 │   ├── dashboard/              → DashboardTopBar, DashboardStatCards, DashboardCategoryDonut, DashboardYearChart,
 │   │                             DashboardSavingsGoals, DashboardRecentTx, DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore
 │   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold, SettingsProfile, SettingsSaldo,
-│                                 SettingsPreferences, SettingsCategories, SettingsDataManagement, SettingsNotifications,
-│                                 SettingsAbout, SettingsAdmin
+│                                 SettingsPreferences, SettingsCategories, SettingsDataManagement, SettingsDeleteAccount,
+│                                 SettingsNotifications, SettingsAbout, SettingsAdmin
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
 │   ├── DashboardPage.jsx
@@ -131,11 +142,13 @@ src/
 │   ├── BudgetsPage.jsx
 │   ├── FixedPage.jsx
 │   ├── SettingsPage.jsx
+│   ├── PrivacyPage.jsx         → Statische privacy policy pagina (/privacy, geen login vereist)
 │   └── CalendarPage.jsx        (premium only)
 │
 ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 ├── hooks/
-│   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, onAuthStateChange)
+│   ├── cacheManager.js         → In-memory cache utilities voor alle data-hooks
+│   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, Google OAuth via signInWithGoogle, onAuthStateChange)
 │   ├── useHousehold.js         → Household_id ophalen van ingelogde user
 │   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
 │   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
@@ -153,8 +166,9 @@ src/
 │
 ├── utils/
 │   ├── csvParser.js            → Bankdetectie (detectBank) + parseCSV + markDuplicates + matchFixedExpenses
+│   ├── validation.js           → Centrale invoervalidatie: validateBedrag/Datum/Tekst/Categorie/Soort/Type/Wie
 │   └── parsers/                → Per bank een eigen parser + helpers.js
-│       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx
+│       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx, stripIBANs
 │       ├── parseRabobank.js
 │       ├── parseING.js
 │       ├── parseABNAmro.js
@@ -208,7 +222,7 @@ src/
 ### Hooks als single source of truth
 
 Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
-- `useAuth.js` — authenticatie (login, logout, sessie)
+- `useAuth.js` — authenticatie (login, logout, sessie, Google OAuth via `signInWithGoogle`)
 - `useHousehold.js` — household_id van ingelogde user; gebruikt door alle data-hooks
 - `useSettings.js` — centrale user settings per user (Supabase `user_settings`)
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
@@ -378,7 +392,15 @@ AFTER INSERT op `auth.users` — functie `handle_new_user()` met SECURITY DEFINE
 3. Maakt GZ-profiel aan (`is_deletable: false`)
 4. Maakt `user_settings` rij aan met defaults
 
-Dit is de **enige** uitzondering op de "geen SECURITY DEFINER" regel.
+Dit is de **eerste** uitzondering op de "geen SECURITY DEFINER" regel.
+
+### RPC: delete_my_account()
+
+Verwijdert alle gebruikersdata + auth-account in volgorde van foreign key-afhankelijkheden:
+transactions → fixed_expenses → budgets → savings_goals → profiles → user_settings → household_members → households → auth.users
+
+Aangeroepen vanuit `SettingsDeleteAccount.jsx` via `supabase.rpc('delete_my_account')`.
+Dit is de **tweede** uitzondering op de "geen SECURITY DEFINER" regel.
 
 ---
 
@@ -397,7 +419,7 @@ Dit is de **enige** uitzondering op de "geen SECURITY DEFINER" regel.
 
 1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
-3. **Performance** — bij 250+ transacties is laden merkbaar trager dan localStorage — caching in hooks nodig
+3. **Account verwijderen bij gedeeld huishouden** — `delete_my_account()` verwijdert het hele huishouden; bij meerdere gebruikers in één huishouden moet de logica aangepast worden
 
 ---
 

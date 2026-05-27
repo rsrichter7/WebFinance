@@ -1,4 +1,4 @@
-# Webfinance — Projectsamenvatting v10
+# Webfinance — Projectsamenvatting v11
 
 Plak dit samen met de stijlgids aan het begin van elke nieuwe chat.
 
@@ -25,19 +25,21 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Geen Tailwind, geen TypeScript, geen Redux
 - **Backend: Supabase** (PostgreSQL database, authenticatie, RLS) — Central EU (Frankfurt)
 - `.env` met `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` (staat in `.gitignore`)
-- Hosting: nog niet live (later Vercel)
+- Hosting: Vercel deployment geconfigureerd (`vercel.json` in repo-root)
 
 ---
 
 ## Huidige status
 
-### ✅ Afgerond — alle 7 pagina's + authenticatie + Supabase + CSV import
+### ✅ Afgerond — alle 7 pagina's + authenticatie + Supabase + CSV import + security
 
 **Supabase backend volledig werkend:**
-- Authenticatie via email/wachtwoord, `useAuth` hook, `LoginPage`, `ProtectedRoute`
+- Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
+- Email-verificatie verplicht bij registratie (Supabase email confirm)
+- Wachtwoord minimaal 8 tekens (client-side validatie + Supabase policy)
 - `useHousehold` hook — haalt household_id op van ingelogde user; gebruikt door alle data-hooks
 - `useSettings` hook — centrale instellingen per user (Supabase `user_settings` tabel)
-- Auto-setup trigger bij registratie: huishouden + GZ-profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER (enige uitzondering op de regel)
+- Auto-setup trigger bij registratie: huishouden + GZ-profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER
 - RLS-policies op alle 8 tabellen — gebruikers zien alleen eigen huishouden-data
 - `household_members` RLS: directe `user_id = auth.uid()` check (niet via `get_my_household_id()` wegens circulaire afhankelijkheid)
 - GRANT op alle tabellen voor de `authenticated` rol (nodig omdat "Automatically expose new tables" uit staat)
@@ -50,8 +52,9 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - **Vaste Lasten** — CRUD, auto-transacties, donut chart, gegroepeerde tabellen per categorie; tabelkolommen consistent met transactietabel: Volgende Afschrijving, Bedrag, Omschrijving, Winkel/Bron, Categorie (+ subcategorie), Soort, Wie
 - **Budgetten** — 50/30/20 + handmatige modus, categorie-tabel, spaardoelen met storten
 - **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters, premium sectie; drag-and-drop volgorde-opslag gefixt (swap ipv splice)
-- **Instellingen** — profiel (naam + email via Supabase Auth, wachtwoord via `supabase.auth.updateUser`), huishouden, saldo, voorkeuren, categorieën, data beheer (incl. importknop), admin
+- **Instellingen** — profiel (naam + email via Supabase Auth, wachtwoord via `supabase.auth.updateUser`), huishouden, saldo, voorkeuren, categorieën, data beheer (incl. importknop + Excel-export + account verwijderen), admin
 - **Kalender** — premium-only, maand/week view, verwacht vs. werkelijk, detailpaneel
+- **Privacy policy** — statische pagina op `/privacy`, toegankelijk zonder login (AVG)
 
 **CSV Import volledig werkend:**
 - Import-flow: CSV uploaden → bankdetectie → parsing → duplicaat-check → vaste lasten matching → preview-tabel → importeren
@@ -68,6 +71,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Info-knop met downloadinstructies per bank (`BankInstructies` component)
 - Geïmporteerde transacties krijgen `bron: 'import'`
 - Admin instelling: `import_max_regels` (default 1000)
+- **IBAN-nummers worden automatisch gestript bij import** (`stripIBANs` in helpers.js)
 
 **Profielensysteem volledig werkend:**
 - `useProfiles` hook — data uit Supabase, CRUD
@@ -77,12 +81,23 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 **Supabase migratie volledig:**
 - Alle data in PostgreSQL, localStorage alleen voor backward-compat caches
+- In-memory caching in alle data-hooks via `cacheManager.js`
+
+**Security-hardening afgerond:**
+- Centrale invoervalidatie (`src/utils/validation.js`) — 7 functies voor bedragen, datums, tekst, categorieën, soort, type en wie
+- IBAN-stripping bij CSV-import
+- Content Security Policy + security headers geconfigureerd in `vercel.json`
+- Privacy policy pagina (`/privacy`) — toegankelijk zonder login
+- Account verwijderen (AVG) via `delete_my_account()` database-functie met SECURITY DEFINER
+- Data-export als Excel (.xlsx) via Instellingen → Data beheer (SheetJS, 6 tabbladen)
+- Vercel deployment configuratie volledig (`vercel.json`: CSP, rewrites, build config)
 
 ### 🔮 Volgende stap
 
-- **Performance optimalisatie** — caching in hooks zodat data niet bij elke pagina-wissel opnieuw wordt opgehaald
-- **Bugfixes na import-testing** — CSV parsers voor niet-Rabobank banken zijn ongetest; afhankelijk van gebruikersfeedback
 - **Feedback-knop** — gebruikers kunnen feedback/bugs melden, admin kan inzien in de admin-sectie
+- **SMTP-provider configureren** — Supabase default heeft 2/uur limiet; voor productie een externe SMTP nodig (bijv. Resend)
+- **Productie-URLs instellen** — Site URL en redirect URLs aanpassen naar productie-domein bij Vercel deployment
+- **Bugfixes na import-testing** — CSV parsers voor niet-Rabobank banken zijn ongetest; afhankelijk van gebruikersfeedback
 - **Meerdere bankrekeningen** (premium feature) — extra tabel `accounts` + `account_id` op transactions
 
 ### 🔮 Later (niet nu)
@@ -93,83 +108,87 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Paginering in tabellen
 - Dark mode (toggle bestaat al, styling niet actief)
 - Notificaties uitwerken
-- Hosting op Vercel
-- Privacy policy pagina
-- Account verwijderen functie (AVG)
 - Huishouden uitnodigingssysteem (Anne toevoegen via email-link)
+- Cookie-banner bij analytics-implementatie
 
 ---
 
 ## Mappenstructuur
 
 ```
-src/
-├── components/
-│   ├── ui/Card.jsx             → Herbruikbare UI (Card, StatCard, Badge, Toggle, ProgressBar, PctBadge, etc.)
-│   ├── ui/Icons.jsx            → Alle iconen (Lucide-stijl, ICONS object)
-│   ├── ui/DatePicker.jsx       → Custom datumkiezer (kalenderweergave)
-│   ├── auth/
-│   │   ├── LoginPage.jsx       → Login + registratie pagina (toggle)
-│   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
-│   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust)
-│   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
-│   │                             ImportFlow, ImportPreviewTable, ImportAiModal, BankInstructies
-│   ├── fixed/                  → FixedTopBar, FixedStats, FixedCategoryGroup, FixedForm, FixedLoanSection
-│   ├── budgets/                → BudgetTopBar, BudgetStats, BudgetRuleSection, BudgetCategoryTable, BudgetSavingsGoals, BudgetForm
-│   ├── analytics/              → AnalyticsTopBar, AnalyticsPeriodFilter, AnalyticsChartCard, AnalyticsTopCategories,
-│   │                             AnalyticsTopSubcategories, AnalyticsSoortDonut, AnalyticsIncomeExpense, AnalyticsPremiumSection
-│   ├── calendar/               → CalendarTopBar, CalendarMonthNav, CalendarGrid, CalendarDayCell, CalendarWeekView,
-│   │                             CalendarDayDetail, CalendarStats, CalendarLegend
-│   ├── dashboard/              → DashboardTopBar, DashboardStatCards, DashboardCategoryDonut, DashboardYearChart,
-│   │                             DashboardSavingsGoals, DashboardRecentTx, DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore
-│   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold, SettingsProfile, SettingsSaldo,
-│                                 SettingsPreferences, SettingsCategories, SettingsDataManagement, SettingsNotifications,
-│                                 SettingsAbout, SettingsAdmin
-│
-├── pages/                      → Eén bestand per pagina (max 100 regels)
-│   ├── DashboardPage.jsx
-│   ├── TransactionsPage.jsx
-│   ├── AnalyticsPage.jsx
-│   ├── BudgetsPage.jsx
-│   ├── FixedPage.jsx
-│   ├── SettingsPage.jsx
-│   └── CalendarPage.jsx        (premium only)
-│
-├── layouts/MainLayout.jsx      → Sidebar + content wrapper
-├── hooks/
-│   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, onAuthStateChange)
-│   ├── useHousehold.js         → Household_id ophalen van ingelogde user
-│   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
-│   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
-│   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase)
-│   ├── useBudgets.js           → Alle budget state & logica (Supabase)
-│   ├── usePremium.js           → Centrale premium-status app-breed (via useSettings)
-│   └── useProfiles.js          → Centrale profielen app-breed (Supabase)
-│
-├── data/
-│   ├── categories.js           → CATEGORIES + getMergedCategories(customCategories?) + SOORTEN
-│   ├── categoryConfig.js       → Icoon- en kleurkoppeling per categorie (voor UI)
-│   ├── transactions.js         → Sample data (niet geïmporteerd, alleen referentie)
-│   ├── fixed.js                → Sample data (niet geïmporteerd, alleen referentie)
-│   └── budgets.js              → Sample data (niet geïmporteerd, alleen referentie)
-│
-├── utils/
-│   ├── csvParser.js            → Bankdetectie (detectBank) + parseCSV + markDuplicates + matchFixedExpenses
-│   └── parsers/                → Per bank een eigen parser + helpers.js
-│       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx
-│       ├── parseRabobank.js
-│       ├── parseING.js
-│       ├── parseABNAmro.js
-│       ├── parseVolksbank.js   → ASN Bank, SNS Bank, RegioBank (zelfde formaat)
-│       ├── parseBunq.js        → NL en EN headers, komma of puntkomma
-│       ├── parseKnab.js
-│       ├── parseTriodos.js
-│       └── parseRevolut.js
-│
-├── styles/index.css            → Basis CSS
-├── supabaseClient.js           → Supabase client configuratie
-├── tokens.js                   → Design tokens + fmt() + fmtShort() + fmtDate(dateStr, format?)
-└── App.jsx                     → Routing (met ProtectedRoute)
+webfinance/          ← React-app submap (zit in root van de repo)
+├── src/
+│   ├── components/
+│   │   ├── ui/Card.jsx             → Herbruikbare UI (Card, StatCard, Badge, Toggle, ProgressBar, PctBadge, etc.)
+│   │   ├── ui/Icons.jsx            → Alle iconen (Lucide-stijl, ICONS object)
+│   │   ├── ui/DatePicker.jsx       → Custom datumkiezer (kalenderweergave)
+│   │   ├── auth/
+│   │   │   ├── LoginPage.jsx       → Login + registratie + Google OAuth + email-verificatie flow
+│   │   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
+│   │   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust)
+│   │   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
+│   │   │                             ImportFlow, ImportPreviewTable, ImportAiModal, BankInstructies
+│   │   ├── fixed/                  → FixedTopBar, FixedStats, FixedCategoryGroup, FixedForm, FixedLoanSection
+│   │   ├── budgets/                → BudgetTopBar, BudgetStats, BudgetRuleSection, BudgetCategoryTable, BudgetSavingsGoals, BudgetForm
+│   │   ├── analytics/              → AnalyticsTopBar, AnalyticsPeriodFilter, AnalyticsChartCard, AnalyticsTopCategories,
+│   │   │                             AnalyticsTopSubcategories, AnalyticsSoortDonut, AnalyticsIncomeExpense, AnalyticsPremiumSection
+│   │   ├── calendar/               → CalendarTopBar, CalendarMonthNav, CalendarGrid, CalendarDayCell, CalendarWeekView,
+│   │   │                             CalendarDayDetail, CalendarStats, CalendarLegend
+│   │   ├── dashboard/              → DashboardTopBar, DashboardStatCards, DashboardCategoryDonut, DashboardYearChart,
+│   │   │                             DashboardSavingsGoals, DashboardRecentTx, DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore
+│   │   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold, SettingsProfile, SettingsSaldo,
+│   │                                 SettingsPreferences, SettingsCategories, SettingsDataManagement, SettingsDeleteAccount,
+│   │                                 SettingsNotifications, SettingsAbout, SettingsAdmin
+│   │
+│   ├── pages/                      → Eén bestand per pagina (max 100 regels)
+│   │   ├── DashboardPage.jsx
+│   │   ├── TransactionsPage.jsx
+│   │   ├── AnalyticsPage.jsx
+│   │   ├── BudgetsPage.jsx
+│   │   ├── FixedPage.jsx
+│   │   ├── SettingsPage.jsx
+│   │   ├── PrivacyPage.jsx         → Statische privacy policy pagina (/privacy, geen login vereist)
+│   │   └── CalendarPage.jsx        (premium only)
+│   │
+│   ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
+│   ├── hooks/
+│   │   ├── cacheManager.js         → In-memory cache utilities voor alle data-hooks
+│   │   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, Google OAuth, onAuthStateChange)
+│   │   ├── useHousehold.js         → Household_id ophalen van ingelogde user
+│   │   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
+│   │   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
+│   │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase)
+│   │   ├── useBudgets.js           → Alle budget state & logica (Supabase)
+│   │   ├── usePremium.js           → Centrale premium-status app-breed (via useSettings)
+│   │   └── useProfiles.js          → Centrale profielen app-breed (Supabase)
+│   │
+│   ├── data/
+│   │   ├── categories.js           → CATEGORIES + getMergedCategories(customCategories?) + SOORTEN
+│   │   ├── categoryConfig.js       → Icoon- en kleurkoppeling per categorie (voor UI)
+│   │   ├── transactions.js         → Sample data (niet geïmporteerd, alleen referentie)
+│   │   ├── fixed.js                → Sample data (niet geïmporteerd, alleen referentie)
+│   │   └── budgets.js              → Sample data (niet geïmporteerd, alleen referentie)
+│   │
+│   ├── utils/
+│   │   ├── csvParser.js            → Bankdetectie (detectBank) + parseCSV + markDuplicates + matchFixedExpenses
+│   │   ├── validation.js           → Centrale invoervalidatie: validateBedrag/Datum/Tekst/Categorie/Soort/Type/Wie
+│   │   └── parsers/                → Per bank een eigen parser + helpers.js
+│   │       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx, stripIBANs
+│   │       ├── parseRabobank.js
+│   │       ├── parseING.js
+│   │       ├── parseABNAmro.js
+│   │       ├── parseVolksbank.js   → ASN Bank, SNS Bank, RegioBank (zelfde formaat)
+│   │       ├── parseBunq.js        → NL en EN headers, komma of puntkomma
+│   │       ├── parseKnab.js
+│   │       ├── parseTriodos.js
+│   │       └── parseRevolut.js
+│   │
+│   ├── styles/index.css            → Basis CSS
+│   ├── supabaseClient.js           → Supabase client configuratie
+│   ├── tokens.js                   → Design tokens + fmt() + fmtShort() + fmtDate(dateStr, format?)
+│   └── App.jsx                     → Routing (met ProtectedRoute; /privacy buiten ProtectedRoute)
+
+vercel.json          ← In de root van de repo (naast webfinance/)
 ```
 
 ---
@@ -210,7 +229,7 @@ src/
 ### Hooks als single source of truth
 
 Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
-- `useAuth.js` — authenticatie (login, logout, sessie)
+- `useAuth.js` — authenticatie (login, logout, sessie, Google OAuth via `signInWithGoogle`)
 - `useHousehold.js` — household_id van ingelogde user; gebruikt door alle data-hooks
 - `useSettings.js` — centrale user settings per user (Supabase `user_settings`)
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
@@ -233,6 +252,7 @@ Alle data-hooks gebruiken hetzelfde patroon:
 - Exporteren altijd `loading` en `error` states
 - `fetchX` via `useCallback` met householdId als dependency
 - DB-mapping: `dbNaarFrontend(row)` + `frontendNaarDb(data)` functies
+- In-memory caching via `cacheManager.js` — data blijft beschikbaar bij pagina-wisselingen
 
 ### Bron-veld op transacties
 
@@ -372,15 +392,30 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 - `user_settings.analytics_order` — default `["categories","subcategories","soort","inkexp"]` (niet `[0,1,2,3]`)
 - `user_settings.import_max_regels` — INTEGER, default 1000 (admin-instelling)
 
-### Trigger: on_auth_user_created
+### Database-functies met SECURITY DEFINER
 
-AFTER INSERT op `auth.users` — functie `handle_new_user()` met SECURITY DEFINER:
+Er zijn precies **twee** functies met SECURITY DEFINER — bewuste uitzonderingen op de regel:
+
+**1. Trigger: on_auth_user_created → `handle_new_user()`**
+AFTER INSERT op `auth.users`:
 1. Maakt een `households` rij aan
 2. Koppelt de user als eigenaar in `household_members`
 3. Maakt GZ-profiel aan (`is_deletable: false`)
 4. Maakt `user_settings` rij aan met defaults
 
-Dit is de **enige** uitzondering op de "geen SECURITY DEFINER" regel.
+**2. RPC: `delete_my_account()`**
+Verwijdert alle gebruikersdata in volgorde van foreign key-afhankelijkheden:
+1. `transactions` (waar household_id = user's household)
+2. `fixed_expenses`
+3. `budgets`
+4. `savings_goals`
+5. `profiles`
+6. `user_settings` (waar user_id = auth.uid())
+7. `household_members`
+8. `households`
+9. `auth.users` (vereist SECURITY DEFINER voor toegang tot auth schema)
+
+Aangeroepen vanuit `SettingsDeleteAccount.jsx` via `supabase.rpc('delete_my_account')`.
 
 ---
 
@@ -399,7 +434,7 @@ Dit is de **enige** uitzondering op de "geen SECURITY DEFINER" regel.
 
 1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
-3. **Performance** — bij 250+ transacties is laden merkbaar trager dan localStorage — caching in hooks nodig
+3. **Account verwijderen bij gedeeld huishouden** — `delete_my_account()` verwijdert het hele huishouden; bij meerdere gebruikers in één huishouden moet de logica aangepast worden
 
 ---
 

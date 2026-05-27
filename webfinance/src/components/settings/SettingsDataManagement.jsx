@@ -1,13 +1,17 @@
 // ─── SettingsDataManagement ───
-// Exporteer, importeer of wis lokale Webfinance-instellingen.
-// Transactie- en financiële data staat nu in Supabase.
+// Data beheer: exporteer alle Supabase-data, importeer transacties,
+// herstel lokale instellingen en verwijder je account.
 
 import React, { useState, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
+import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
+import { useHousehold } from '../../hooks/useHousehold'
 import ImportFlow from '../transactions/ImportFlow'
+import SettingsDeleteAccount from './SettingsDeleteAccount'
 
-// Alleen lokale keys die niet in Supabase staan
 const WF_KEYS = [
   'webfinance_admin_unlocked',
   'webfinance_datumformaat',
@@ -16,16 +20,99 @@ const WF_KEYS = [
 ]
 
 export default function SettingsDataManagement() {
-  const [deleteInput,       setDeleteInput]       = useState('')
-  const [showConfirm,       setShowConfirm]       = useState(false)
+  const { user }                              = useAuth()
+  const { householdId }                       = useHousehold()
+  const [deleteInput,       setDeleteInput]   = useState('')
+  const [showConfirm,       setShowConfirm]   = useState(false)
   const [showImportConfirm, setShowImportConfirm] = useState(false)
-  const [importData,        setImportData]        = useState(null)
-  const [csvImportOpen,     setCsvImportOpen]     = useState(false)
+  const [importData,        setImportData]    = useState(null)
+  const [csvImportOpen,     setCsvImportOpen] = useState(false)
+  const [exporting,         setExporting]     = useState(false)
   const importRef = useRef()
+
+  async function exportAlleGegevens() {
+    if (!householdId) return
+    setExporting(true)
+    const vandaag = new Date().toISOString().split('T')[0]
+
+    const [
+      { data: transacties },
+      { data: vasteLasten },
+      { data: budgetten },
+      { data: spaardoelen },
+      { data: profielen },
+      { data: instellingen },
+    ] = await Promise.all([
+      supabase.from('transactions').select('*').eq('household_id', householdId),
+      supabase.from('fixed_expenses').select('*').eq('household_id', householdId),
+      supabase.from('budgets').select('*').eq('household_id', householdId),
+      supabase.from('savings_goals').select('*').eq('household_id', householdId),
+      supabase.from('profiles').select('*').eq('household_id', householdId),
+      supabase.from('user_settings').select('*').eq('user_id', user?.id),
+    ])
+
+    const wb = XLSX.utils.book_new()
+
+    XLSX.utils.book_append_sheet(wb,
+      XLSX.utils.json_to_sheet((transacties || []).map(r => ({
+        'Datum': r.datum ?? '', 'Bedrag': r.bedrag ?? 0, 'Type': r.type ?? '',
+        'Winkel': r.winkel ?? '', 'Categorie': r.categorie ?? '',
+        'Subcategorie': r.subcategorie ?? '', 'Soort': r.soort ?? '',
+        'Wie': r.wie ?? '', 'Beschrijving': r.beschrijving ?? '', 'Bron': r.bron ?? '',
+      }))),
+      'Transacties'
+    )
+
+    XLSX.utils.book_append_sheet(wb,
+      XLSX.utils.json_to_sheet((vasteLasten || []).map(r => ({
+        'Naam': r.naam ?? '', 'Bedrag': r.bedrag ?? 0, 'Frequentie': r.frequentie ?? '',
+        'Categorie': r.categorie ?? '', 'Subcategorie': r.subcategorie ?? '',
+        'Soort': r.soort ?? '', 'Wie': r.wie ?? '', 'Afschrijfdag': r.afschrijfdag ?? '',
+      }))),
+      'Vaste Lasten'
+    )
+
+    XLSX.utils.book_append_sheet(wb,
+      XLSX.utils.json_to_sheet((budgetten || []).map(r => ({
+        'Categorie': r.categorie ?? '', 'Bedrag': r.bedrag ?? 0, 'Modus': r.modus ?? '',
+      }))),
+      'Budgetten'
+    )
+
+    XLSX.utils.book_append_sheet(wb,
+      XLSX.utils.json_to_sheet((spaardoelen || []).map(r => ({
+        'Naam': r.naam ?? '', 'Doelbedrag': r.doelbedrag ?? 0, 'Deadline': r.deadline ?? '',
+      }))),
+      'Spaardoelen'
+    )
+
+    XLSX.utils.book_append_sheet(wb,
+      XLSX.utils.json_to_sheet((profielen || []).map(r => ({
+        'Naam': r.naam ?? '', 'Initialen': r.initialen ?? '',
+        'Kleur': typeof r.kleur === 'object' ? JSON.stringify(r.kleur) : (r.kleur ?? ''),
+      }))),
+      'Profielen'
+    )
+
+    const META = new Set(['id', 'user_id', 'household_id', 'created_at', 'updated_at'])
+    const instRows = Object.entries(instellingen?.[0] || {})
+      .filter(([k]) => !META.has(k))
+      .map(([k, v]) => ({
+        'Instelling': k,
+        'Waarde': typeof v === 'object' ? JSON.stringify(v) : String(v ?? ''),
+      }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(instRows), 'Instellingen')
+
+    XLSX.writeFile(wb, `webfinance-export-${vandaag}.xlsx`)
+    setExporting(false)
+  }
 
   function exportJSON() {
     const data = {}
-    WF_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { try { data[k] = JSON.parse(v) } catch { data[k] = v } } })
+    WF_KEYS.forEach(k => {
+      const v = localStorage.getItem(k)
+      if (v !== null) { try { data[k] = JSON.parse(v) } catch { data[k] = v } }
+    })
     dl(JSON.stringify(data, null, 2), 'webfinance-instellingen.json', 'application/json')
   }
 
@@ -65,16 +152,25 @@ export default function SettingsDataManagement() {
     <div>
       <div style={{ marginBottom: 22 }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>Data beheer</div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Exporteer of wis je lokale instellingen</div>
+        <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Exporteer, importeer of verwijder je gegevens</div>
       </div>
 
-      <div style={{ marginBottom: 20, padding: 14, background: T.blueSoft, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12.5, color: T.blueText, lineHeight: 1.5 }}>
-        <strong>Let op:</strong> Transacties, vaste lasten en budgetten staan nu in Supabase en worden hier niet geëxporteerd. Alleen lokale instellingen (datumformaat, categorieën) worden opgeslagen.
-      </div>
-
-      <SubSection title="Exporteren">
+      <SubSection title="Gegevens exporteren">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <DataRow icon={ICONS.download} title="Instellingen (JSON)" desc="Lokale instellingen: datumformaat, custom categorieën" action="Exporteer JSON" onAction={exportJSON} />
+          <DataRow
+            icon={ICONS.download}
+            title="Alle gegevens (Excel)"
+            desc="Transacties, budgetten, spaardoelen en meer — 6 tabbladen"
+            action={exporting ? 'Bezig…' : 'Download Excel'}
+            onAction={exportAlleGegevens}
+          />
+          <DataRow
+            icon={ICONS.download}
+            title="Lokale instellingen (JSON)"
+            desc="Datumformaat en aangepaste categorieën"
+            action="Exporteer JSON"
+            onAction={exportJSON}
+          />
         </div>
       </SubSection>
 
@@ -83,12 +179,18 @@ export default function SettingsDataManagement() {
           <DataRow
             icon={ICONS.upload}
             title="Transacties importeren (CSV)"
-            desc="Importeer transacties vanuit Rabobank CSV-bestand"
+            desc="Importeer transacties vanuit bankafschrift"
             action="Importeren"
             onAction={() => setCsvImportOpen(true)}
           />
           <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFile} />
-          <DataRow icon={ICONS.upload} title="Instellingen terugzetten" desc="Selecteer een eerder geëxporteerd JSON-bestand" action="Bestand kiezen" onAction={() => importRef.current?.click()} />
+          <DataRow
+            icon={ICONS.upload}
+            title="Instellingen terugzetten"
+            desc="Selecteer een eerder geëxporteerd JSON-bestand"
+            action="Bestand kiezen"
+            onAction={() => importRef.current?.click()}
+          />
         </div>
       </SubSection>
 
@@ -103,6 +205,11 @@ export default function SettingsDataManagement() {
           </button>
         </div>
       </SubSection>
+
+      {/* Scheiding voor account-verwijdering */}
+      <div style={{ height: 1, background: T.border, margin: '8px 0 24px' }} />
+
+      <SettingsDeleteAccount />
 
       {showConfirm && (
         <Overlay onClose={() => { setShowConfirm(false); setDeleteInput('') }}>
@@ -133,10 +240,7 @@ export default function SettingsDataManagement() {
         </Overlay>
       )}
 
-      <ImportFlow
-        open={csvImportOpen}
-        onClose={() => setCsvImportOpen(false)}
-      />
+      <ImportFlow open={csvImportOpen} onClose={() => setCsvImportOpen(false)} />
     </div>
   )
 }
@@ -174,5 +278,5 @@ function Overlay({ children, onClose }) {
   )
 }
 
-const secBtn = { flex: 1, padding: '8px 14px', borderRadius: 8, background: T.card, color: T.ink, border: `1px solid ${T.border}`, fontSize: 13, fontWeight: 500, cursor: 'pointer' }
+const secBtn    = { flex: 1, padding: '8px 14px', borderRadius: 8, background: T.card, color: T.ink, border: `1px solid ${T.border}`, fontSize: 13, fontWeight: 500, cursor: 'pointer' }
 const dangerBtn = { flex: 1, padding: '8px 14px', borderRadius: 8, background: T.red, color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }
