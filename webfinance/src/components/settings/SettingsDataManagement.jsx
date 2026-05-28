@@ -11,6 +11,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useHousehold } from '../../hooks/useHousehold'
 import ImportFlow from '../transactions/ImportFlow'
 import SettingsDeleteAccount from './SettingsDeleteAccount'
+import useTransactions from '../../hooks/useTransactions'
 
 const WF_KEYS = [
   'webfinance_admin_unlocked',
@@ -22,13 +23,28 @@ const WF_KEYS = [
 export default function SettingsDataManagement() {
   const { user }                              = useAuth()
   const { householdId }                       = useHousehold()
-  const [deleteInput,       setDeleteInput]   = useState('')
-  const [showConfirm,       setShowConfirm]   = useState(false)
-  const [showImportConfirm, setShowImportConfirm] = useState(false)
-  const [importData,        setImportData]    = useState(null)
-  const [csvImportOpen,     setCsvImportOpen] = useState(false)
-  const [exporting,         setExporting]     = useState(false)
+  const { allTransactions, deleteAllTransactions } = useTransactions()
+  const [deleteInput,           setDeleteInput]           = useState('')
+  const [showConfirm,           setShowConfirm]           = useState(false)
+  const [showImportConfirm,     setShowImportConfirm]     = useState(false)
+  const [importData,            setImportData]            = useState(null)
+  const [csvImportOpen,         setCsvImportOpen]         = useState(false)
+  const [exporting,             setExporting]             = useState(false)
+  const [showDeleteTxConfirm,   setShowDeleteTxConfirm]   = useState(false)
+  const [deletingTx,            setDeletingTx]            = useState(false)
+  const [deleteTxSuccess,       setDeleteTxSuccess]       = useState(false)
   const importRef = useRef()
+
+  async function handleDeleteAllTx() {
+    setDeletingTx(true)
+    const { error: err } = await deleteAllTransactions()
+    setDeletingTx(false)
+    setShowDeleteTxConfirm(false)
+    if (!err) {
+      setDeleteTxSuccess(true)
+      setTimeout(() => setDeleteTxSuccess(false), 4000)
+    }
+  }
 
   async function exportAlleGegevens() {
     if (!householdId) return
@@ -195,14 +211,35 @@ export default function SettingsDataManagement() {
       </SubSection>
 
       <SubSection title="Gevarenzone" description="Niet ongedaan te maken">
-        <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, background: T.redSoft, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Lokale instellingen wissen</div>
-            <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert lokale instellingen. Data in Supabase blijft bewaard.</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Alle transacties verwijderen */}
+          <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Alle transacties verwijderen</div>
+              <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>
+                {deleteTxSuccess
+                  ? <span style={{ color: T.green, fontWeight: 500 }}>✓ Alle transacties zijn verwijderd</span>
+                  : `Verwijdert alle ${allTransactions.length} transacties permanent uit Supabase.`
+                }
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDeleteTxConfirm(true)}
+              style={{ padding: '8px 14px', borderRadius: 8, background: 'transparent', color: T.red, border: `1px solid ${T.red}`, fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+            >
+              {ICONS.trash} Verwijderen
+            </button>
           </div>
-          <button onClick={() => setShowConfirm(true)} style={{ padding: '8px 14px', borderRadius: 8, background: T.card, color: T.red, border: '1px solid #FECACA', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {ICONS.trash} Wissen
-          </button>
+          {/* Lokale instellingen wissen */}
+          <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, background: T.redSoft, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Lokale instellingen wissen</div>
+              <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert lokale instellingen. Data in Supabase blijft bewaard.</div>
+            </div>
+            <button onClick={() => setShowConfirm(true)} style={{ padding: '8px 14px', borderRadius: 8, background: T.card, color: T.red, border: '1px solid #FECACA', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {ICONS.trash} Wissen
+            </button>
+          </div>
         </div>
       </SubSection>
 
@@ -210,6 +247,24 @@ export default function SettingsDataManagement() {
       <div style={{ height: 1, background: T.border, margin: '8px 0 24px' }} />
 
       <SettingsDeleteAccount />
+
+      {showDeleteTxConfirm && (
+        <Overlay onClose={() => !deletingTx && setShowDeleteTxConfirm(false)}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: T.redSoft, color: T.red, display: 'grid', placeItems: 'center', marginBottom: 12 }}>{ICONS.trash}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 4 }}>Alle transacties verwijderen?</div>
+          <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 20 }}>
+            Dit verwijdert <strong style={{ color: T.ink }}>{allTransactions.length} transacties</strong> permanent,
+            inclusief automatische transacties en spaardoel-stortingen.{' '}
+            Dit kan niet ongedaan worden gemaakt.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowDeleteTxConfirm(false)} disabled={deletingTx} style={secBtn}>Annuleren</button>
+            <button onClick={handleDeleteAllTx} disabled={deletingTx} style={{ ...dangerBtn, opacity: deletingTx ? 0.6 : 1 }}>
+              {deletingTx ? 'Verwijderen…' : 'Verwijderen'}
+            </button>
+          </div>
+        </Overlay>
+      )}
 
       {showConfirm && (
         <Overlay onClose={() => { setShowConfirm(false); setDeleteInput('') }}>

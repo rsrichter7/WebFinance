@@ -151,6 +151,19 @@ export default function useTransactions() {
     }
   }, [])
 
+  // ─── Alle transacties verwijderen — cache wissen en state resetten ───
+  const deleteAllTransactions = useCallback(async () => {
+    if (!householdId) return { error: 'Geen huishouden gevonden' }
+    const { error: err } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('household_id', householdId)
+    if (err) return { error: err.message }
+    txCache = { data: [], householdId }
+    setTransactions([])
+    return { error: null }
+  }, [householdId])
+
   // ─── Filter updaten ───
   const updateFilter = useCallback((key, value) => {
     setFilters(prev => {
@@ -239,6 +252,7 @@ export default function useTransactions() {
     addTransaction,
     removeTransaction,
     updateTransaction,
+    deleteAllTransactions,
     fetchTransactions,
 
     // Filters
