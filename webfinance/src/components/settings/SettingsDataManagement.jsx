@@ -219,7 +219,7 @@ export default function SettingsDataManagement() {
               <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>
                 {deleteTxSuccess
                   ? <span style={{ color: T.green, fontWeight: 500 }}>✓ Alle transacties zijn verwijderd</span>
-                  : `Verwijdert alle ${allTransactions.length} transacties permanent uit Supabase.`
+                  : `Verwijdert alle ${allTransactions.length} transacties permanent.`
                 }
               </div>
             </div>
@@ -234,7 +234,7 @@ export default function SettingsDataManagement() {
           <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, background: T.redSoft, display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Lokale instellingen wissen</div>
-              <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert lokale instellingen. Data in Supabase blijft bewaard.</div>
+              <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert lokale instellingen. Je gegevens blijven bewaard.</div>
             </div>
             <button onClick={() => setShowConfirm(true)} style={{ padding: '8px 14px', borderRadius: 8, background: T.card, color: T.red, border: '1px solid #FECACA', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               {ICONS.trash} Wissen
@@ -271,7 +271,7 @@ export default function SettingsDataManagement() {
           <div style={{ width: 38, height: 38, borderRadius: 10, background: T.redSoft, color: T.red, display: 'grid', placeItems: 'center', marginBottom: 12 }}>{ICONS.warn}</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 4 }}>Weet je het zeker?</div>
           <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 16 }}>
-            Hiermee verwijder je <strong style={{ color: T.ink }}>lokale instellingen</strong>. Data in Supabase blijft bewaard.
+            Hiermee verwijder je <strong style={{ color: T.ink }}>lokale instellingen</strong>. Je gegevens blijven bewaard.
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
             <label style={{ fontSize: 12, color: T.ink2 }}>Typ <span style={{ fontFamily: 'monospace', color: T.red }}>DELETE</span> om te bevestigen</label>
