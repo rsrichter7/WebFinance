@@ -6,6 +6,7 @@ import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import usePremium from '../../hooks/usePremium'
 import useSettings from '../../hooks/useSettings'
+import SettingsFeedback from './SettingsFeedback'
 
 const ADMIN_KEY = 'webfinance_admin_unlocked'
 
@@ -25,6 +26,9 @@ export default function SettingsAdmin({ onAdminLock }) {
         <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>Admin</div>
         <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Verborgen ontwikkelaars-instellingen</div>
       </div>
+
+      {/* Gebruikersfeedback — bovenaan, meest relevante admin-functie */}
+      <SettingsFeedback />
 
       {/* Waarschuwingsbanner */}
       <div style={{

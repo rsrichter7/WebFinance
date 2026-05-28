@@ -8,6 +8,10 @@ import { T } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import usePremium from '../../hooks/usePremium'
 import { useAuth } from '../../hooks/useAuth'
+import useFeedback from '../../hooks/useFeedback'
+import FeedbackForm from '../feedback/FeedbackForm'
+import useProfiles, { genInitialen } from '../../hooks/useProfiles'
+import useSettings from '../../hooks/useSettings'
 
 const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
@@ -20,9 +24,14 @@ const NAV_ITEMS = [
 ]
 
 export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed]       = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [profielHover, setProfielHover] = useState(false)
   const { isPremium } = usePremium()
   const { user, signOut } = useAuth()
+  const { unreadCount, isAdmin, submitFeedback } = useFeedback()
+  const { persons } = useProfiles()
+  const { settings } = useSettings()
   const navigate = useNavigate()
   const w = collapsed ? 64 : 240
 
@@ -31,8 +40,14 @@ export default function Sidebar() {
     navigate('/login')
   }
 
-  const userEmail    = user?.email ?? ''
-  const userInitials = userEmail.slice(0, 2).toUpperCase()
+  // Naam + kleur ophalen uit het passende profiel
+  const profielNaam = settings.profiel_naam || ''
+  const mijnProfiel = profielNaam
+    ? (persons.find(p => p.naam === profielNaam) || persons[0] || null)
+    : (persons[0] || null)
+  const avatarKleur = mijnProfiel?.kleur || { bg: '#E0E7FF', fg: '#3730A3' }
+  const initialen   = mijnProfiel?.initialen || genInitialen(profielNaam) || (user?.email?.slice(0, 2).toUpperCase() ?? '?')
+  const displayNaam = profielNaam || user?.email || ''
 
   return (
     <aside style={{
@@ -102,22 +117,69 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Profile + uitloggen */}
+      {/* Onderin sidebar: profiel → feedback → uitloggen */}
       <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E0E7FF', color: '#3730A3', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{userInitials}</div>
+
+        {/* 1. Profiel-sectie — klikbaar → /instellingen */}
+        <div
+          onClick={() => navigate('/instellingen')}
+          onMouseEnter={() => setProfielHover(true)}
+          onMouseLeave={() => setProfielHover(false)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '6px 8px', borderRadius: 8, cursor: 'pointer',
+            background: profielHover ? T.bg : 'transparent',
+            transition: 'background 0.15s',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            marginBottom: 2,
+          }}
+        >
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: avatarKleur.bg, color: avatarKleur.fg, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+            {initialen}
+          </div>
           {!collapsed && (
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, wordBreak: 'break-word', lineHeight: 1.3 }}>{displayNaam}</div>
                 {isPremium
-                  ? <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.blueSoft, color: T.blueText, border: `1px solid ${T.blue}33`, letterSpacing: 0.3 }}>PREMIUM</span>
-                  : <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.bg, color: T.ink3, border: `1px solid ${T.border}`, letterSpacing: 0.3 }}>GRATIS</span>
+                  ? <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.blueSoft, color: T.blueText, border: `1px solid ${T.blue}33`, letterSpacing: 0.3, flexShrink: 0 }}>PREMIUM</span>
+                  : <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.bg, color: T.ink3, border: `1px solid ${T.border}`, letterSpacing: 0.3, flexShrink: 0 }}>GRATIS</span>
                 }
               </div>
             </div>
           )}
         </div>
+
+        {/* 2. Feedback-knop */}
+        <button
+          onClick={() => setFeedbackOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            width: '100%', padding: collapsed ? '8px' : '8px 10px',
+            borderRadius: 8, border: 'none', background: 'transparent',
+            fontSize: 14, color: T.ink3, cursor: 'pointer',
+            fontFamily: "'Inter', sans-serif",
+            justifyContent: collapsed ? 'center' : 'flex-start',
+          }}
+        >
+          <span style={{ color: T.ink3, display: 'inline-flex', position: 'relative' }}>
+            {ICONS.messageSquare}
+            {isAdmin && unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -5, right: -6,
+                background: T.red, color: '#fff', fontSize: 11,
+                minWidth: 18, height: 18, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 600, pointerEvents: 'none',
+              }}>
+                {unreadCount}
+              </span>
+            )}
+          </span>
+          {!collapsed && <span>Feedback</span>}
+        </button>
+
+        {/* 3. Uitloggen-knop */}
         {!collapsed && (
           <button
             onClick={handleSignOut}
@@ -140,7 +202,9 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Collapse button */}
+      <FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSubmit={submitFeedback} />
+
+      {/* 4. Inklappen-knop */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         style={{

@@ -61,5 +61,6 @@ export const ICONS = {
   close:      <Ico size={16} d={<><path d="M18 6L6 18"/><path d="M6 6l12 12"/></>} />,
   clock:      <Ico size={12} d={<><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></>} />,
   check:      <Ico size={12} d={<path d="M5 12l5 5 9-12"/>} />,
-  sparkle:    <Ico size={14} d={<><path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5Z"/><path d="M19 3l.9 2.6L22.5 6.5l-2.6.9L19 10l-.9-2.6L15.5 6.5l2.6-.9Z"/></>} />,
+  sparkle:       <Ico size={14} d={<><path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5Z"/><path d="M19 3l.9 2.6L22.5 6.5l-2.6.9L19 10l-.9-2.6L15.5 6.5l2.6-.9Z"/></>} />,
+  messageSquare: <Ico size={16} d={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>} />,
 }
