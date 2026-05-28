@@ -24,7 +24,7 @@ const EMPTY_FORM = {
   wie: 'GZ',
 }
 
-export default function FixedForm({ open, editingItem, onClose, onSave }) {
+export default function FixedForm({ open, editingItem, onClose, onSave, initialType = 'Uitgave' }) {
   const { profiles } = useProfiles()
   const [form, setForm] = useState(EMPTY_FORM)
 
@@ -44,9 +44,9 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
         wie: editingItem.wie || 'GZ',
       })
     } else {
-      setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0] })
+      setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], type: initialType })
     }
-  }, [open, editingItem])
+  }, [open, editingItem, initialType])
 
   const allCats = getMergedCategories()
   const currentCat = allCats.find(c => c.name === form.categorie)
@@ -188,21 +188,23 @@ export default function FixedForm({ open, editingItem, onClose, onSave }) {
             </div>
           </div>
 
-          {/* Soort */}
-          <div>
-            <label style={L}>Soort *</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {SOORTEN.map(s => (
-                <button key={s} onClick={() => update('soort', s)} style={{
-                  flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  border: `1.5px solid ${form.soort === s ? T.blue : T.border}`,
-                  background: form.soort === s ? T.blueSoft : T.card,
-                  color: form.soort === s ? T.blueText : T.ink3,
-                }}>{s}</button>
-              ))}
+          {/* Soort — alleen voor uitgaven */}
+          {form.type === 'Uitgave' && (
+            <div>
+              <label style={L}>Soort *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {SOORTEN.map(s => (
+                  <button key={s} onClick={() => update('soort', s)} style={{
+                    flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    border: `1.5px solid ${form.soort === s ? T.blue : T.border}`,
+                    background: form.soort === s ? T.blueSoft : T.card,
+                    color: form.soort === s ? T.blueText : T.ink3,
+                  }}>{s}</button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Wie */}
           <div>

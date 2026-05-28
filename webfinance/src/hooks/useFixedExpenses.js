@@ -10,7 +10,7 @@ import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
 
-const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, created_at'
+const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, type, winkel, created_at'
 
 let feCache = { data: null, householdId: null }
 function clearCache() { feCache = { data: null, householdId: null } }
@@ -39,8 +39,8 @@ function dbNaarFrontend(row) {
     wie:          row.wie ?? 'GZ',
     afschrijfdag: row.afschrijfdag ?? 1,
     actief:       row.actief ?? true,
-    type:         'Uitgave',
-    winkel:       '',
+    type:         row.type ?? 'Uitgave',
+    winkel:       row.winkel ?? '',
     startdatum:   maakStartdatum(row.created_at, row.afschrijfdag),
     createdAt:    row.created_at,
   }
@@ -61,6 +61,8 @@ function frontendNaarDb(item) {
     wie:          item.wie ?? 'GZ',
     afschrijfdag: dag,
     actief:       item.actief !== false,
+    type:         item.type ?? 'Uitgave',
+    winkel:       item.winkel ?? '',
   }
 }
 
@@ -72,47 +74,62 @@ function toMonthly(item) {
   return item.bedrag
 }
 
-// Vroegste datum waarvoor we auto-transacties aanmaken (max 1 maand terug)
-function earliestAutoDate() {
-  const d = new Date()
-  d.setMonth(d.getMonth() - 1)
-  return d.toISOString().split('T')[0]
+// Groepeer items per categorie voor weergave
+function groupByCategorie(items) {
+  const map = {}
+  for (const item of items) {
+    const cat = item.categorie
+    if (!cat) continue
+    if (!map[cat]) map[cat] = []
+    map[cat].push(item)
+  }
+  return CATEGORIES
+    .filter(cat => map[cat.name] && map[cat.name].length > 0)
+    .map(cat => {
+      const cfg = CATEGORY_CONFIG[cat.name] || { icon: 'grip', colorKey: 'ink3', softKey: 'rule' }
+      const catItems = map[cat.name]
+      return {
+        name:      cat.name,
+        items:     catItems,
+        icon:      cfg.icon,
+        color:     T[cfg.colorKey] || T.ink3,
+        colorSoft: T[cfg.softKey] || T.rule,
+        subtotal:  catItems.reduce((s, i) => s + toMonthly(i), 0),
+      }
+    })
 }
 
-// Genereer verwachte datums voor een vaste last binnen [minDate, today]
-function berekenVerwachteDatums(item, minDate, today) {
+// Genereer de verwachte datum voor een vaste last — alleen vandaag of later
+function berekenVerwachteDatums(item, today) {
   const dates = []
   const dag = item.afschrijfdag ?? 1
   const now = new Date()
 
   if (item.herhaling === 'Maandelijks') {
-    for (let offset = -1; offset <= 0; offset++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-      const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
-      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-      if (dateStr >= minDate && dateStr <= today) dates.push(dateStr)
-    }
+    // Alleen huidige maand — als de afschrijfdag nog niet voorbij is
+    const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
+    if (dateStr >= today) dates.push(dateStr)
   } else if (item.herhaling === 'Kwartaal') {
-    for (let offset = -3; offset <= 0; offset += 3) {
-      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-      const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
-      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-      if (dateStr >= minDate && dateStr <= today) dates.push(dateStr)
-    }
+    // Alleen huidige maand — als de afschrijfdag nog niet voorbij is
+    const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
+    if (dateStr >= today) dates.push(dateStr)
   } else if (item.herhaling === 'Jaarlijks') {
     const base = new Date(item.createdAt || now)
     const maxDay = new Date(now.getFullYear(), base.getMonth() + 1, 0).getDate()
     const dateStr = `${now.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr >= minDate && dateStr <= today) dates.push(dateStr)
+    if (dateStr >= today) dates.push(dateStr)
   } else if (item.herhaling === 'Wekelijks') {
-    let cur = new Date(item.startdatum || item.createdAt || minDate)
+    // Schuif door naar de eerstvolgende datum >= vandaag
+    let cur = new Date(item.startdatum || item.createdAt || today)
     let safety = 0
-    while (cur.toISOString().split('T')[0] <= today && safety < 10) {
-      const dateStr = cur.toISOString().split('T')[0]
-      if (dateStr >= minDate) dates.push(dateStr)
+    while (cur.toISOString().split('T')[0] < today && safety < 200) {
       cur.setDate(cur.getDate() + 7)
       safety++
     }
+    const dateStr = cur.toISOString().split('T')[0]
+    if (dateStr >= today) dates.push(dateStr)
   }
 
   return dates
@@ -129,15 +146,14 @@ export default function useFixedExpenses() {
   const [formOpen, setFormOpen]         = useState(false)
   const [editingItem, setEditingItem]   = useState(null)
 
-  // ─── Auto-transacties aanmaken voor gemiste periodes ───
+  // ─── Auto-transacties aanmaken voor vandaag of toekomst ───
   const verwerkAutoTransacties = useCallback(async (fixedItems) => {
     if (!householdId || fixedItems.length === 0) return
     const today = new Date().toISOString().split('T')[0]
-    const minDate = earliestAutoDate()
 
     for (const item of fixedItems) {
       if (!item.actief) continue
-      const dates = berekenVerwachteDatums(item, minDate, today)
+      const dates = berekenVerwachteDatums(item, today)
 
       for (const datum of dates) {
         const { data: existing } = await supabase
@@ -152,11 +168,12 @@ export default function useFixedExpenses() {
             datum,
             beschrijving:  item.omschrijving,
             bedrag:        item.bedrag,
-            type:          'Uitgave',
+            type:          item.type ?? 'Uitgave',
             categorie:     item.categorie,
             subcategorie:  item.sub ?? '',
             soort:         item.soort ?? 'Noodzaak',
             wie:           item.wie ?? 'GZ',
+            winkel:        item.winkel ?? '',
             bron:          'auto',
             vaste_last_id: item.id,
           })
@@ -242,33 +259,9 @@ export default function useFixedExpenses() {
     setEditingItem(null)
   }, [])
 
-  // ─── Groepeer per categorie ───
-  const grouped = useMemo(() => {
-    if (!items || items.length === 0) return []
-
-    const map = {}
-    for (const item of items) {
-      const cat = item.categorie
-      if (!cat) continue
-      if (!map[cat]) map[cat] = []
-      map[cat].push(item)
-    }
-
-    return CATEGORIES
-      .filter(cat => map[cat.name] && map[cat.name].length > 0)
-      .map(cat => {
-        const cfg = CATEGORY_CONFIG[cat.name] || { icon: 'grip', colorKey: 'ink3', softKey: 'rule' }
-        const catItems = map[cat.name]
-        return {
-          name:      cat.name,
-          items:     catItems,
-          icon:      cfg.icon,
-          color:     T[cfg.colorKey] || T.ink3,
-          colorSoft: T[cfg.softKey] || T.rule,
-          subtotal:  catItems.reduce((s, i) => s + toMonthly(i), 0),
-        }
-      })
-  }, [items])
+  // ─── Groepeer per categorie (gesplitst op type) ───
+  const groupedUitgaven  = useMemo(() => groupByCategorie(items.filter(i => i.type === 'Uitgave')),  [items])
+  const groupedInkomsten = useMemo(() => groupByCategorie(items.filter(i => i.type === 'Inkomst')), [items])
 
   // ─── Totalen ───
   const totals = useMemo(() => {
@@ -291,7 +284,8 @@ export default function useFixedExpenses() {
 
   return {
     items,
-    grouped,
+    groupedUitgaven,
+    groupedInkomsten,
     totals,
     donutData,
     addItem,
