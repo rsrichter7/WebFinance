@@ -213,7 +213,7 @@ export default function SettingsDataManagement() {
       <SubSection title="Gevarenzone" description="Niet ongedaan te maken">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Alle transacties verwijderen */}
-          <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, background: T.redSoft, display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Alle transacties verwijderen</div>
               <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>
@@ -225,19 +225,19 @@ export default function SettingsDataManagement() {
             </div>
             <button
               onClick={() => setShowDeleteTxConfirm(true)}
-              style={{ padding: '8px 14px', borderRadius: 8, background: 'transparent', color: T.red, border: `1px solid ${T.red}`, fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+              style={{ padding: '8px 14px', borderRadius: 8, background: T.card, color: T.red, border: '1px solid #FECACA', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               {ICONS.trash} Verwijderen
             </button>
           </div>
-          {/* Lokale instellingen wissen */}
+          {/* Lokale instellingen resetten */}
           <div style={{ border: '1px solid #FECACA', borderRadius: 10, padding: 14, background: T.redSoft, display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Lokale instellingen wissen</div>
-              <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Verwijdert lokale instellingen. Je gegevens blijven bewaard.</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: T.redText }}>Lokale instellingen resetten</div>
+              <div style={{ fontSize: 12, color: T.ink2, marginTop: 2 }}>Reset lokale instellingen naar standaardwaarden. Je gegevens blijven bewaard.</div>
             </div>
             <button onClick={() => setShowConfirm(true)} style={{ padding: '8px 14px', borderRadius: 8, background: T.card, color: T.red, border: '1px solid #FECACA', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {ICONS.trash} Wissen
+              {ICONS.trash} Resetten
             </button>
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function SettingsDataManagement() {
           <div style={{ width: 38, height: 38, borderRadius: 10, background: T.redSoft, color: T.red, display: 'grid', placeItems: 'center', marginBottom: 12 }}>{ICONS.warn}</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 4 }}>Weet je het zeker?</div>
           <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 16 }}>
-            Hiermee verwijder je <strong style={{ color: T.ink }}>lokale instellingen</strong>. Je gegevens blijven bewaard.
+            Hiermee reset je de <strong style={{ color: T.ink }}>lokale instellingen</strong> naar standaardwaarden. Je gegevens blijven bewaard.
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
             <label style={{ fontSize: 12, color: T.ink2 }}>Typ <span style={{ fontFamily: 'monospace', color: T.red }}>DELETE</span> om te bevestigen</label>
@@ -279,7 +279,7 @@ export default function SettingsDataManagement() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setShowConfirm(false); setDeleteInput('') }} style={secBtn}>Annuleer</button>
-            <button onClick={wipeAll} disabled={deleteInput !== 'DELETE'} style={{ ...dangerBtn, opacity: deleteInput !== 'DELETE' ? 0.45 : 1 }}>Wissen</button>
+            <button onClick={wipeAll} disabled={deleteInput !== 'DELETE'} style={{ ...dangerBtn, opacity: deleteInput !== 'DELETE' ? 0.45 : 1 }}>Resetten</button>
           </div>
         </Overlay>
       )}
