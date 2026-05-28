@@ -2,7 +2,7 @@
 // Placeholder sectie — notificaties zijn nog niet beschikbaar.
 
 import React from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 
 const TOEKOMSTIG = [
@@ -13,6 +13,7 @@ const TOEKOMSTIG = [
 ]
 
 export default function SettingsNotifications() {
+  const { T } = useTheme()
   return (
     <div>
       <div style={{ marginBottom: 22 }}>
@@ -21,12 +22,7 @@ export default function SettingsNotifications() {
       </div>
 
       <div style={{ border: `1px dashed ${T.borderHi}`, borderRadius: 12, padding: 36, textAlign: 'center', background: T.cardAlt, marginBottom: 24 }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 12,
-          background: T.amberSoft, color: T.amber,
-          display: 'grid', placeItems: 'center',
-          margin: '0 auto 14px',
-        }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: T.amberSoft, color: T.amber, display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
           {ICONS.bell}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
@@ -35,7 +31,6 @@ export default function SettingsNotifications() {
         </div>
         <div style={{ fontSize: 13, color: T.ink3, maxWidth: 360, margin: '0 auto', lineHeight: 1.55 }}>
           Notificaties worden geactiveerd zodra je een Webfinance-account hebt aangemaakt.
-          Voor nu draait alles lokaal in je browser.
         </div>
       </div>
 
@@ -44,25 +39,15 @@ export default function SettingsNotifications() {
 
       <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden' }}>
         {TOEKOMSTIG.map((n, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '14px 16px',
-              borderBottom: i < TOEKOMSTIG.length - 1 ? `1px solid ${T.rule}` : 'none',
-              opacity: 0.55,
-            }}
-          >
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+            borderBottom: i < TOEKOMSTIG.length - 1 ? `1px solid ${T.rule}` : 'none', opacity: 0.55,
+          }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>{n.label}</div>
               <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>{n.desc}</div>
             </div>
-            <div style={{
-              width: 36, height: 20, borderRadius: 10,
-              background: T.borderHi, padding: 2,
-              display: 'flex', alignItems: 'center',
-              cursor: 'not-allowed', flexShrink: 0,
-            }}>
+            <div style={{ width: 36, height: 20, borderRadius: 10, background: T.borderHi, padding: 2, display: 'flex', alignItems: 'center', cursor: 'not-allowed', flexShrink: 0 }}>
               <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
             </div>
           </div>

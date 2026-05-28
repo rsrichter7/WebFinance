@@ -3,10 +3,10 @@
 
 import React, { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { useTheme } from '../hooks/useTheme'
 import useTransactions    from '../hooks/useTransactions'
 import useFixedExpenses   from '../hooks/useFixedExpenses'
 import usePremium         from '../hooks/usePremium'
-import { T }              from '../tokens'
 import CalendarTopBar     from '../components/calendar/CalendarTopBar'
 import CalendarMonthNav   from '../components/calendar/CalendarMonthNav'
 import CalendarGrid, { buildDayMap } from '../components/calendar/CalendarGrid'
@@ -17,10 +17,11 @@ import CalendarStats      from '../components/calendar/CalendarStats'
 import CalendarLegend     from '../components/calendar/CalendarLegend'
 import TransactionForm    from '../components/transactions/TransactionForm'
 
-const now    = new Date()
-const padZ   = n => String(n).padStart(2, '0')
+const now  = new Date()
+const padZ = n => String(n).padStart(2, '0')
 
 export default function CalendarPage() {
+  const { T, resolvedTheme } = useTheme()
   const { allTransactions, addTransaction } = useTransactions()
   const { items }      = useFixedExpenses()
   const { isPremium }  = usePremium()
@@ -42,6 +43,7 @@ export default function CalendarPage() {
       setSelDay(1)
     }
   }
+
   function nextPeriod() {
     if (viewMode === 'Week') {
       const mon = getMondayOfWeek(year, month, selDay)
@@ -69,6 +71,7 @@ export default function CalendarPage() {
     [dayMap])
 
   const initialDate = `${year}-${padZ(month + 1)}-${padZ(selDay)}`
+  const overlayBg = resolvedTheme === 'dark' ? 'rgba(15,17,23,0.88)' : 'rgba(255,255,255,0.82)'
 
   return (
     <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -76,7 +79,6 @@ export default function CalendarPage() {
 
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ display: 'flex', gap: 20 }}>
-          {/* Kalender grid of weekweergave */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <CalendarMonthNav year={year} month={month} selDay={selDay} viewMode={viewMode} onPrev={prevPeriod} onNext={nextPeriod} />
             {viewMode === 'Maand'
@@ -85,8 +87,6 @@ export default function CalendarPage() {
             }
             <CalendarStats totalExpected={totalExpected} totalActual={totalActual} />
           </div>
-
-          {/* Detailpaneel + legenda */}
           <div style={{ width: 280, flexShrink: 0 }}>
             <CalendarDayDetail day={selDay} month={month} year={year} dayData={dayMap[selDay]} onAdd={() => setShowForm(true)} />
             <CalendarLegend />
@@ -94,44 +94,31 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* TransactionForm slide-in via portal */}
       {showForm && createPortal(
-        <TransactionForm
-          open={showForm}
-          onClose={() => setShowForm(false)}
+        <TransactionForm open={showForm} onClose={() => setShowForm(false)}
           onSave={tx => { addTransaction(tx); setShowForm(false) }}
-          initialDate={initialDate}
-        />,
+          initialDate={initialDate} />,
         document.body,
       )}
 
-      {/* Premium overlay voor niet-premium gebruikers */}
       {!isPremium && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 10,
-          background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(6px)',
+          background: overlayBg, backdropFilter: 'blur(6px)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14, marginBottom: 16,
-            background: T.amberSoft, border: '1px solid #FDE68A',
-            display: 'grid', placeItems: 'center', color: T.amber,
-          }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, marginBottom: 16, background: T.amberSoft, border: '1px solid #FDE68A', display: 'grid', placeItems: 'center', color: T.amber }}>
             <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="11" width="16" height="10" rx="2"/>
-              <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+              <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
             </svg>
           </div>
           <div style={{ fontSize: 17, fontWeight: 600, color: T.ink, marginBottom: 6 }}>Upgrade naar Premium</div>
           <div style={{ fontSize: 13, color: T.ink3, marginBottom: 20, textAlign: 'center', maxWidth: 300, lineHeight: 1.5 }}>
             De financiële kalender is een premium feature. Bekijk verwachte en werkelijke uitgaven per dag.
           </div>
-          <button style={{
-            padding: '9px 24px', borderRadius: 8, border: 'none',
-            background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500,
-            cursor: 'pointer', fontFamily: 'inherit',
-            boxShadow: '0 1px 2px rgba(37,99,235,0.18)',
-          }}>Bekijk Premium</button>
+          <button style={{ padding: '9px 24px', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 2px rgba(37,99,235,0.18)' }}>
+            Bekijk Premium
+          </button>
         </div>
       )}
     </div>

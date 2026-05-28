@@ -2,7 +2,8 @@
 // Inkomstenoverzicht: donut per persoon, categoriegroepen en inkomensverdeling.
 
 import React, { useMemo } from 'react'
-import { T, TAB, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { TAB, fmt } from '../../tokens'
 import { Card, StatCard } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 import useProfiles from '../../hooks/useProfiles'
@@ -18,6 +19,7 @@ function toMonthly(item) {
 }
 
 function WieDonut({ items, profiles, size = 130 }) {
+  const { T } = useTheme()
   const perWie = useMemo(() => {
     const map = {}
     for (const item of items) {
@@ -37,17 +39,13 @@ function WieDonut({ items, profiles, size = 130 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 28, flex: 1 }}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, marginBottom: 14 }}>
-          Inkomen per persoon
-        </div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, marginBottom: 14 }}>Inkomen per persoon</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {perWie.map((e, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: e.color, flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: T.ink2 }}>{e.wie}</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: T.ink, ...TAB, marginLeft: 'auto' }}>
-                {fmt(e.value)}
-              </span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: T.ink, ...TAB, marginLeft: 'auto' }}>{fmt(e.value)}</span>
             </div>
           ))}
         </div>
@@ -59,11 +57,8 @@ function WieDonut({ items, profiles, size = 130 }) {
           const el = (
             <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none"
               stroke={seg.color} strokeWidth="10"
-              strokeDasharray={`${dash} ${circ - dash}`}
-              strokeDashoffset={-offset}
-              transform={`rotate(-90 ${size / 2} ${size / 2})`}
-              strokeLinecap="round"
-            />
+              strokeDasharray={`${dash} ${circ - dash}`} strokeDashoffset={-offset}
+              transform={`rotate(-90 ${size / 2} ${size / 2})`} strokeLinecap="round" />
           )
           offset += dash
           return el
@@ -82,17 +77,14 @@ function WieDonut({ items, profiles, size = 130 }) {
 }
 
 export default function FixedInkomstSection({ groupedInkomsten, onEdit, onRemove }) {
+  const { T } = useTheme()
   const { profiles } = useProfiles()
   const allItems = useMemo(() => groupedInkomsten.flatMap(g => g.items), [groupedInkomsten])
 
   if (groupedInkomsten.length === 0) {
     return (
       <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 48, gap: 12 }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 12,
-          background: T.greenSoft, display: 'grid', placeItems: 'center',
-          color: T.green, marginBottom: 4,
-        }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: T.greenSoft, display: 'grid', placeItems: 'center', color: T.green, marginBottom: 4 }}>
           {ICONS.coin}
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, color: T.ink }}>Geen vaste inkomsten</div>
@@ -108,19 +100,10 @@ export default function FixedInkomstSection({ groupedInkomsten, onEdit, onRemove
       <Card style={{ padding: 22, display: 'flex', alignItems: 'center', gap: 28 }}>
         <WieDonut items={allItems} profiles={profiles} />
       </Card>
-
       {groupedInkomsten.map(group => (
-        <FixedCategoryGroup
-          key={group.name}
-          icon={group.icon}
-          title={group.name}
-          color={group.color}
-          colorSoft={group.colorSoft}
-          items={group.items}
-          subtotal={group.subtotal}
-          onEdit={onEdit}
-          onRemove={onRemove}
-        />
+        <FixedCategoryGroup key={group.name} icon={group.icon} title={group.name}
+          color={group.color} colorSoft={group.colorSoft} items={group.items}
+          subtotal={group.subtotal} onEdit={onEdit} onRemove={onRemove} />
       ))}
     </div>
   )

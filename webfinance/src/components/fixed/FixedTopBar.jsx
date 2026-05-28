@@ -2,10 +2,11 @@
 // Titelbalk voor de Vaste Lasten pagina met actieknop en info-tooltip.
 
 import React, { useState } from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 
 export default function FixedTopBar({ onAdd }) {
+  const { T } = useTheme()
   const [showInfo, setShowInfo] = useState(false)
 
   return (
@@ -38,7 +39,7 @@ export default function FixedTopBar({ onAdd }) {
                 position: 'absolute', top: 28, left: -8,
                 width: 340, padding: 18, borderRadius: 10,
                 background: T.card, border: `1px solid ${T.border}`,
-                boxShadow: '0 8px 24px rgba(17,24,39,0.10)',
+                boxShadow: '0 8px 24px rgba(17,24,39,0.15)',
                 zIndex: 50, fontSize: 13, color: T.ink2, lineHeight: 1.6,
               }}>
                 <div style={{ fontWeight: 600, color: T.ink, marginBottom: 8, fontSize: 14 }}>
@@ -76,9 +77,7 @@ export default function FixedTopBar({ onAdd }) {
             )}
           </div>
         </div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}>
-          
-        </div>
+        <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}></div>
       </div>
       <button
         onClick={onAdd}

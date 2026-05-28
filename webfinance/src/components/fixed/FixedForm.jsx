@@ -2,29 +2,22 @@
 // Slide-in formulier voor toevoegen en bewerken van vaste lasten.
 
 import React, { useState, useEffect } from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { getMergedCategories, SOORTEN } from '../../data/categories'
 import useProfiles from '../../hooks/useProfiles'
 import DatePicker from '../ui/DatePicker'
 
 const HERHALINGEN = ['Wekelijks', 'Maandelijks', 'Jaarlijks']
-
 const CATS = getMergedCategories()
 
 const EMPTY_FORM = {
-  type: 'Uitgave',
-  bedrag: '',
-  startdatum: new Date().toISOString().split('T')[0],
-  omschrijving: '',
-  categorie: CATS[0].name,
-  sub: CATS[0].subs[0],
-  winkel: '',
-  herhaling: 'Maandelijks',
-  soort: 'Noodzaak',
-  wie: 'GZ',
+  type: 'Uitgave', bedrag: '', startdatum: new Date().toISOString().split('T')[0],
+  omschrijving: '', categorie: CATS[0].name, sub: CATS[0].subs[0],
+  winkel: '', herhaling: 'Maandelijks', soort: 'Noodzaak', wie: 'GZ',
 }
 
 export default function FixedForm({ open, editingItem, onClose, onSave, initialType = 'Uitgave' }) {
+  const { T } = useTheme()
   const { profiles } = useProfiles()
   const [form, setForm] = useState(EMPTY_FORM)
 
@@ -32,16 +25,11 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
     if (!open) return
     if (editingItem) {
       setForm({
-        type: editingItem.type,
-        bedrag: String(editingItem.bedrag),
-        startdatum: editingItem.startdatum,
-        omschrijving: editingItem.omschrijving,
-        categorie: editingItem.categorie,
-        sub: editingItem.sub,
-        winkel: editingItem.winkel || '',
-        herhaling: editingItem.herhaling,
-        soort: editingItem.soort || 'Noodzaak',
-        wie: editingItem.wie || 'GZ',
+        type: editingItem.type, bedrag: String(editingItem.bedrag),
+        startdatum: editingItem.startdatum, omschrijving: editingItem.omschrijving,
+        categorie: editingItem.categorie, sub: editingItem.sub,
+        winkel: editingItem.winkel || '', herhaling: editingItem.herhaling,
+        soort: editingItem.soort || 'Noodzaak', wie: editingItem.wie || 'GZ',
       })
     } else {
       setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], type: initialType })
@@ -68,16 +56,10 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
     const bedrag = parseFloat(form.bedrag)
     if (!bedrag || !form.omschrijving.trim()) return
     onSave({
-      type: form.type,
-      bedrag,
-      startdatum: form.startdatum,
-      omschrijving: form.omschrijving.trim(),
-      categorie: form.categorie,
-      sub: form.sub,
-      winkel: form.winkel.trim(),
-      herhaling: form.herhaling,
-      soort: form.soort,
-      wie: form.wie,
+      type: form.type, bedrag, startdatum: form.startdatum,
+      omschrijving: form.omschrijving.trim(), categorie: form.categorie,
+      sub: form.sub, winkel: form.winkel.trim(), herhaling: form.herhaling,
+      soort: form.soort, wie: form.wie,
     }, isEdit)
     setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0] })
     if (!keepOpen) onClose()
@@ -85,32 +67,32 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
 
   if (!open) return null
 
+  const L = { display: 'block', fontSize: 13, fontWeight: 500, color: T.ink2, marginBottom: 6 }
+  const I = {
+    width: '100%', padding: '9px 12px', borderRadius: 8,
+    border: `1.5px solid ${T.border}`, background: T.card,
+    fontSize: 13, color: T.ink, outline: 'none',
+    fontFamily: "'Inter', system-ui, sans-serif",
+  }
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.15)', zIndex: 90 }} />
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 420,
         background: T.card, borderLeft: `1px solid ${T.border}`,
-        boxShadow: '-8px 0 32px rgba(0,0,0,0.08)',
+        boxShadow: '-8px 0 32px rgba(0,0,0,0.12)',
         zIndex: 100, display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
-        {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>
-              {isEdit ? 'Vaste last bewerken' : 'Nieuwe vaste last'}
-            </div>
-            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
-              {isEdit ? 'Wijzig de gegevens' : 'Voeg een terugkerende post toe'}
-            </div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>{isEdit ? 'Vaste last bewerken' : 'Nieuwe vaste last'}</div>
+            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>{isEdit ? 'Wijzig de gegevens' : 'Voeg een terugkerende post toe'}</div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: 20, color: T.ink3, cursor: 'pointer', padding: '4px 8px', borderRadius: 6 }}>×</button>
         </div>
 
-        {/* Formulier */}
         <div style={{ flex: 1, overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Type toggle */}
           <div>
             <label style={L}>Type *</label>
             <div style={{ display: 'flex', gap: 0, border: `1px solid ${T.border}`, borderRadius: 8, overflow: 'hidden' }}>
@@ -125,7 +107,6 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
             </div>
           </div>
 
-          {/* Bedrag + Startdatum */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={L}>Bedrag *</label>
@@ -142,21 +123,18 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
             </div>
           </div>
 
-          {/* Omschrijving */}
           <div>
             <label style={L}>Omschrijving *</label>
             <input type="text" placeholder="Bijv. Hypotheek" value={form.omschrijving}
               onChange={e => update('omschrijving', e.target.value)} style={I} />
           </div>
 
-          {/* Winkel / Bron */}
           <div>
             <label style={L}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
             <input type="text" placeholder="Bijv. Essent" value={form.winkel}
               onChange={e => update('winkel', e.target.value)} style={I} />
           </div>
 
-          {/* Categorie + Subcategorie */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={L}>Categorie *</label>
@@ -172,7 +150,6 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
             </div>
           </div>
 
-          {/* Herhaling */}
           <div>
             <label style={L}>Herhaling *</label>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -188,7 +165,6 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
             </div>
           </div>
 
-          {/* Soort — alleen voor uitgaven */}
           {form.type === 'Uitgave' && (
             <div>
               <label style={L}>Soort *</label>
@@ -206,7 +182,6 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
             </div>
           )}
 
-          {/* Wie */}
           <div>
             <label style={L}>Wie *</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -229,7 +204,6 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
           </div>
         </div>
 
-        {/* Footer */}
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10 }}>
           <button onClick={() => handleSave(false)} style={{
             flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
@@ -252,12 +226,4 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
       </div>
     </>
   )
-}
-
-const L = { display: 'block', fontSize: 13, fontWeight: 500, color: T.ink2, marginBottom: 6 }
-const I = {
-  width: '100%', padding: '9px 12px', borderRadius: 8,
-  border: `1.5px solid ${T.border}`, background: T.card,
-  fontSize: 13, color: T.ink, outline: 'none',
-  fontFamily: "'Inter', system-ui, sans-serif",
 }

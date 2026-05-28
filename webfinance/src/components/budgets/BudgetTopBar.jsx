@@ -1,9 +1,8 @@
 // ─── BudgetTopBar ───
 // Paginatitel met maand/jaar selector.
 
-import React, { useState } from 'react'
-import { T } from '../../tokens'
-import { ICONS } from '../ui/Icons'
+import React from 'react'
+import { useTheme } from '../../hooks/useTheme'
 
 const MAANDEN = [
   'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
@@ -11,6 +10,7 @@ const MAANDEN = [
 ]
 
 export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
+  const { T } = useTheme()
   const { maand, jaar } = geselecteerdeMaand
 
   function vorige() {
@@ -29,15 +29,12 @@ export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
       padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card,
     }}>
       <div>
-        <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
-          Budgetten
-        </div>
+        <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Budgetten</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button onClick={vorige} style={{
           width: 32, height: 32, borderRadius: 6, border: `1px solid ${T.border}`,
-          background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center',
-          color: T.ink3, fontSize: 14,
+          background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center', color: T.ink3, fontSize: 14,
         }}>‹</button>
         <div style={{
           padding: '6px 16px', borderRadius: 6, border: `1px solid ${T.border}`,
@@ -48,8 +45,7 @@ export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
         </div>
         <button onClick={volgende} style={{
           width: 32, height: 32, borderRadius: 6, border: `1px solid ${T.border}`,
-          background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center',
-          color: T.ink3, fontSize: 14,
+          background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center', color: T.ink3, fontSize: 14,
         }}>›</button>
       </div>
     </div>

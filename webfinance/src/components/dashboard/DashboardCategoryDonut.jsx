@@ -2,7 +2,8 @@
 // Donut chart uitgaven per hoofdcategorie + legenda voor de geselecteerde maand.
 
 import React from 'react'
-import { T, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { fmt } from '../../tokens'
 import { Card, CardTitle } from '../ui/Card'
 import { CATEGORY_CONFIG } from '../../data/categoryConfig'
 import { ICONS } from '../ui/Icons'
@@ -13,42 +14,32 @@ const MAANDEN = [
 ]
 
 function DonutChart({ segmenten, totaal, size = 140, dikte = 26 }) {
+  const { T } = useTheme()
   const r   = (size - dikte) / 2
   const omtrek = 2 * Math.PI * r
   const cx = size / 2
   const cy = size / 2
-
   let offset = 0
   const gaps = segmenten.length > 1 ? 2 : 0
 
   return (
     <svg width={size} height={size} style={{ flexShrink: 0 }}>
-      {/* Achtergrond ring */}
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={T.rule} strokeWidth={dikte} />
-
       {segmenten.map((seg, i) => {
         const pct    = totaal > 0 ? seg.bedrag / totaal : 0
         const lengte = pct * omtrek - gaps
         const dash   = `${Math.max(0, lengte)} ${omtrek}`
         const rotatie = -90 + (offset / omtrek) * 360
         offset += pct * omtrek
-
         return (
-          <circle
-            key={seg.cat}
-            cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke={seg.kleur}
-            strokeWidth={dikte}
-            strokeDasharray={dash}
-            strokeDashoffset={0}
+          <circle key={seg.cat} cx={cx} cy={cy} r={r} fill="none"
+            stroke={seg.kleur} strokeWidth={dikte}
+            strokeDasharray={dash} strokeDashoffset={0}
             strokeLinecap="butt"
             transform={`rotate(${rotatie} ${cx} ${cy})`}
           />
         )
       })}
-
-      {/* Midden label */}
       <text x={cx} y={cy - 7} textAnchor="middle" fontSize={13} fontWeight={700} fill={T.ink} fontFamily="Inter, sans-serif">
         {totaal >= 1000 ? `€${(totaal / 1000).toFixed(1)}k` : `€${Math.round(totaal)}`}
       </text>
@@ -60,9 +51,9 @@ function DonutChart({ segmenten, totaal, size = 140, dikte = 26 }) {
 }
 
 export default function DashboardCategoryDonut({ categoryTotals, maand }) {
+  const { T } = useTheme()
   const maandNaam = MAANDEN[maand - 1]
 
-  // Alleen categorieën met bedrag > 0, gesorteerd op bedrag
   const segmenten = categoryTotals
     .filter(c => c.bedrag > 0)
     .sort((a, b) => b.bedrag - a.bedrag)
@@ -86,8 +77,6 @@ export default function DashboardCategoryDonut({ categoryTotals, maand }) {
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <DonutChart segmenten={segmenten} totaal={totaal} />
-
-          {/* Legenda */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {segmenten.map(seg => (
               <div key={seg.cat} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

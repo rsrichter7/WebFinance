@@ -3,9 +3,11 @@
 
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { T, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { fmt } from '../../tokens'
 
 export default function DashboardIncomeModal({ persons, inkomen, onSave, onClose }) {
+  const { T } = useTheme()
   const [waarden, setWaarden] = useState(() => {
     const init = {}
     for (const p of persons) init[p.initialen] = inkomen[p.initialen] || ''
@@ -27,13 +29,22 @@ export default function DashboardIncomeModal({ persons, inkomen, onSave, onClose
     setWaarden(prev => ({ ...prev, [initialen]: val }))
   }
 
+  const inputStyle = {
+    width: '100%', padding: '9px 12px', borderRadius: 8,
+    border: `1.5px solid ${T.border}`, background: T.card,
+    fontSize: 13, color: T.ink, outline: 'none',
+    fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box',
+  }
+  const primaryBtn   = { flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+  const secondaryBtn = { flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+
   return createPortal(
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 200 }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200 }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14,
-        boxShadow: '0 20px 60px rgba(17,24,39,0.15)',
+        background: T.card, border: `1px solid ${T.border}`, borderRadius: 14,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
         padding: 28, width: 380, zIndex: 201,
       }}>
         <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 6 }}>
@@ -68,7 +79,6 @@ export default function DashboardIncomeModal({ persons, inkomen, onSave, onClose
           ))}
         </div>
 
-        {/* Totaal */}
         {totaal > 0 && (
           <div style={{ padding: '10px 14px', background: T.bg, borderRadius: 8, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: T.ink3 }}>Totaal netto inkomen</span>
@@ -85,12 +95,3 @@ export default function DashboardIncomeModal({ persons, inkomen, onSave, onClose
     document.body
   )
 }
-
-const inputStyle = {
-  width: '100%', padding: '9px 12px', borderRadius: 8,
-  border: `1.5px solid ${T.border}`, background: '#fff',
-  fontSize: 13, color: T.ink, outline: 'none',
-  fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box',
-}
-const primaryBtn   = { flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
-const secondaryBtn = { flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${T.border}`, background: '#fff', color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }

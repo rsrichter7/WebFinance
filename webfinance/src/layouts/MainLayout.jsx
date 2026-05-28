@@ -5,20 +5,16 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/sidebar/Sidebar'
-import { T } from '../tokens'
+import { useTheme } from '../hooks/useTheme'
 
 export default function MainLayout() {
+  const { T } = useTheme()
   return (
     <div style={{
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
+      width: '100vw', height: '100vh', display: 'flex',
       fontFamily: "'Inter', system-ui, sans-serif",
-      background: T.bg,
-      color: T.ink,
-      fontWeight: 400,
-      letterSpacing: -0.05,
-      WebkitFontSmoothing: 'antialiased',
+      background: T.bg, color: T.ink, fontWeight: 400,
+      letterSpacing: -0.05, WebkitFontSmoothing: 'antialiased',
       overflow: 'hidden',
     }}>
       <Sidebar />

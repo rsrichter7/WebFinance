@@ -4,22 +4,18 @@
 import React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+  const { T } = useTheme()
 
   if (loading) {
     return (
       <div style={{
-        minHeight: '100vh',
-        background: T.bg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: "'Inter', sans-serif",
-        fontSize: 14,
-        color: T.ink3,
+        minHeight: '100vh', background: T.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Inter', sans-serif", fontSize: 14, color: T.ink3,
       }}>
         Laden…
       </div>
@@ -27,6 +23,5 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!user) return <Navigate to="/login" replace />
-
   return children
 }

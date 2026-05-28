@@ -2,7 +2,7 @@
 // Alle kleuren, schaduwen en formatting op één plek.
 // Importeer dit in elk component: import { T, TAB, fmt, fmtDate } from '../../tokens'
 
-export const T = {
+export const lightTokens = {
   bg:        '#F8F9FA',
   card:      '#FFFFFF',
   cardAlt:   '#FAFBFC',
@@ -34,6 +34,46 @@ export const T = {
 
   shadow:    '0 1px 3px rgba(17,24,39,0.04), 0 1px 2px rgba(17,24,39,0.03)',
 }
+
+export const darkTokens = {
+  bg:        '#0F1117',
+  card:      '#1E2130',
+  cardAlt:   '#252838',
+  border:    '#2A2D3A',
+  borderHi:  '#363A4A',
+  ink:       '#F1F3F5',
+  ink2:      '#A0A4B0',
+  ink3:      '#6B7080',
+  ink4:      '#484C5E',
+  rule:      '#252838',
+
+  blue:      '#2563EB',
+  blueHi:    '#1D4ED8',
+  blueSoft:  'rgba(59,130,246,0.15)',
+  blueText:  '#93C5FD',
+  green:     '#059669',
+  greenSoft: 'rgba(5,150,105,0.15)',
+  greenText: '#6EE7B7',
+  red:       '#DC2626',
+  redSoft:   'rgba(220,38,38,0.15)',
+  redText:   '#FCA5A5',
+  amber:     '#B45309',
+  amberSoft: 'rgba(180,83,9,0.18)',
+  amberText: '#FCD34D',
+  violet:    '#7C3AED',
+  violetSoft:'rgba(124,58,237,0.15)',
+  teal:      '#0D9488',
+  tealSoft:  'rgba(13,148,136,0.15)',
+
+  shadow:    '0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4)',
+}
+
+export function getTokens(theme) {
+  return theme === 'dark' ? darkTokens : lightTokens
+}
+
+// Backward compat: statische light tokens voor niet-component code (fmt, fmtDate, etc.)
+export const T = lightTokens
 
 // Tabular numbers — gebruik als: style={{ ...TAB }}
 export const TAB = { fontVariantNumeric: 'tabular-nums' }

@@ -7,8 +7,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+[data-theme="dark"] body {
+  background: #0F1117;
+  color: #F1F3F5;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #363A4A; }
+
 input, select, button { font-family: inherit; }
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+::selection { background: rgba(37,99,235,0.2); }
+[data-theme="dark"] ::selection { background: rgba(37,99,235,0.35); }

@@ -2,12 +2,13 @@
 // Bovenste balk van de transactiepagina met titel en actieknoppen.
 
 import React from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import { Badge } from '../ui/Card'
 import usePremium from '../../hooks/usePremium'
 
 export default function TransactionTopBar({ onNewClick, onImportClick }) {
+  const { T } = useTheme()
   const { isPremium } = usePremium()
   return (
     <div style={{
@@ -21,7 +22,6 @@ export default function TransactionTopBar({ onNewClick, onImportClick }) {
         <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}></div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Importeren knop: actief voor premium, grayed-out met badge voor niet-premium */}
         {isPremium ? (
           <button onClick={onImportClick} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -45,8 +45,6 @@ export default function TransactionTopBar({ onNewClick, onImportClick }) {
             <Badge color={T.amber} bg={T.amberSoft}>PREMIUM</Badge>
           </button>
         )}
-
-        {/* Nieuwe transactie knop */}
         <button
           onClick={onNewClick}
           style={{

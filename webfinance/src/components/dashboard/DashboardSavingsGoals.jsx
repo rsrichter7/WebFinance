@@ -2,11 +2,22 @@
 // Spaardoelen met voortgangsbalken. huidigBedrag berekend uit transacties.
 
 import React from 'react'
-import { T, fmt, fmtDate } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { fmt, fmtDate } from '../../tokens'
 import { Card, CardTitle, ProgressBar } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 
 export default function DashboardSavingsGoals({ spaardoelen, onNaarBudgetten }) {
+  const { T } = useTheme()
+
+  const plusBtnStyle = {
+    display: 'flex', alignItems: 'center', gap: 4,
+    height: 28, padding: '0 10px', borderRadius: 6,
+    border: `1px solid ${T.border}`, background: T.card,
+    color: T.ink2, fontSize: 12, fontWeight: 500,
+    cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+  }
+
   return (
     <Card style={{ overflow: 'visible' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -28,8 +39,8 @@ export default function DashboardSavingsGoals({ spaardoelen, onNaarBudgetten }) 
           {spaardoelen.map(doel => {
             const huidig = doel.huidigBedrag || 0
             const pct = doel.doelBedrag > 0
-            ? Math.min((huidig / doel.doelBedrag) * 100, 100)
-            : 0
+              ? Math.min((huidig / doel.doelBedrag) * 100, 100)
+              : 0
             return (
               <div key={doel.id}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -71,12 +82,4 @@ export default function DashboardSavingsGoals({ spaardoelen, onNaarBudgetten }) 
       )}
     </Card>
   )
-}
-
-const plusBtnStyle = {
-  display: 'flex', alignItems: 'center', gap: 4,
-  height: 28, padding: '0 10px', borderRadius: 6,
-  border: `1px solid ${T.border}`, background: T.card,
-  color: T.ink2, fontSize: 12, fontWeight: 500,
-  cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
 }

@@ -2,20 +2,16 @@
 // Topbar voor de instellingen pagina — alleen de titel, geen subtitel.
 
 import React from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 
 export default function SettingsTopBar() {
+  const { T } = useTheme()
   return (
     <div style={{
       display: 'flex', alignItems: 'center',
-      padding: '18px 28px',
-      borderBottom: `1px solid ${T.border}`,
-      background: T.card,
-      flexShrink: 0,
+      padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card, flexShrink: 0,
     }}>
-      <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
-        Instellingen
-      </div>
+      <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Instellingen</div>
     </div>
   )
 }

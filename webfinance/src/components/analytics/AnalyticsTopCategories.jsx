@@ -2,7 +2,8 @@
 // Horizontale bar chart van uitgaven per categorie, gesorteerd op bedrag.
 
 import React from 'react'
-import { T, TAB, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { TAB, fmt } from '../../tokens'
 import { CATEGORY_CONFIG } from '../../data/categoryConfig'
 import { CATEGORIES } from '../../data/categories'
 import { ICONS } from '../ui/Icons'
@@ -22,6 +23,7 @@ function filterPeriod(transactions, period) {
 }
 
 export default function AnalyticsTopCategories({ allTransactions, period }) {
+  const { T } = useTheme()
   const filtered = filterPeriod(allTransactions, period)
 
   const totals = Object.fromEntries(ALL_CATS.map(c => [c, 0]))
@@ -29,10 +31,7 @@ export default function AnalyticsTopCategories({ allTransactions, period }) {
     if (totals[t.categorie] !== undefined) totals[t.categorie] += t.bedrag
   }
 
-  const sorted = ALL_CATS
-    .map(cat => ({ cat, value: totals[cat] }))
-    .sort((a, b) => b.value - a.value)
-
+  const sorted = ALL_CATS.map(cat => ({ cat, value: totals[cat] })).sort((a, b) => b.value - a.value)
   const max = Math.max(...sorted.map(s => s.value), 1)
 
   return (
@@ -46,22 +45,13 @@ export default function AnalyticsTopCategories({ allTransactions, period }) {
           <div key={cat}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  width: 24, height: 24, borderRadius: 6,
-                  background: soft, color, flexShrink: 0,
-                  display: 'grid', placeItems: 'center',
-                }}>{icon}</span>
+                <span style={{ width: 24, height: 24, borderRadius: 6, background: soft, color, flexShrink: 0, display: 'grid', placeItems: 'center' }}>{icon}</span>
                 <span style={{ fontSize: 13, color: T.ink2 }}>{cat}</span>
               </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, ...TAB }}>{fmt(value)}</span>
             </div>
             <div style={{ height: 7, background: T.rule, borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: 4,
-                width: `${value === 0 ? 0 : Math.max((value / max) * 100, 1.5)}%`,
-                background: color,
-                transition: 'width 0.35s ease',
-              }} />
+              <div style={{ height: '100%', borderRadius: 4, width: `${value === 0 ? 0 : Math.max((value / max) * 100, 1.5)}%`, background: color, transition: 'width 0.35s ease' }} />
             </div>
           </div>
         )

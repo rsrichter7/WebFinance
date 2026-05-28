@@ -2,7 +2,7 @@
 // Eigen navigatie-sidebar binnen de instellingen pagina.
 
 import React from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 
 const SECTIONS = [
@@ -17,6 +17,7 @@ const SECTIONS = [
 ]
 
 export default function SettingsSidebar({ active, onSelect, adminUnlocked }) {
+  const { T } = useTheme()
   const sections = adminUnlocked
     ? [...SECTIONS, { k: 'admin', label: 'Admin', icon: ICONS.shield, isAdmin: true }]
     : SECTIONS
@@ -26,24 +27,16 @@ export default function SettingsSidebar({ active, onSelect, adminUnlocked }) {
 
   return (
     <aside style={{
-      width: 220, flex: '0 0 220px',
-      background: T.cardAlt,
-      borderRight: `1px solid ${T.border}`,
-      padding: '20px 12px',
-      display: 'flex', flexDirection: 'column',
-      overflow: 'auto',
+      width: 220, flex: '0 0 220px', background: T.cardAlt,
+      borderRight: `1px solid ${T.border}`, padding: '20px 12px',
+      display: 'flex', flexDirection: 'column', overflow: 'auto',
     }}>
-      <div style={{
-        padding: '0 10px 16px',
-        fontSize: 11, fontWeight: 600, color: T.ink4,
-        letterSpacing: 0.4, textTransform: 'uppercase',
-      }}>
+      <div style={{ padding: '0 10px 16px', fontSize: 11, fontWeight: 600, color: T.ink4, letterSpacing: 0.4, textTransform: 'uppercase' }}>
         Instellingen
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {regularSections.map(s => <SectionItem key={s.k} s={s} active={active} onSelect={onSelect} />)}
-
         {adminSection && (
           <>
             <div style={{ height: 1, background: T.border, margin: '8px 4px 6px' }} />
@@ -53,11 +46,7 @@ export default function SettingsSidebar({ active, onSelect, adminUnlocked }) {
       </nav>
 
       <div style={{ flex: 1 }} />
-      <div style={{
-        padding: '10px 10px 0',
-        borderTop: `1px solid ${T.border}`,
-        fontSize: 11, color: T.ink4,
-      }}>
+      <div style={{ padding: '10px 10px 0', borderTop: `1px solid ${T.border}`, fontSize: 11, color: T.ink4 }}>
         Lokaal opgeslagen · v0.1.0
       </div>
     </aside>
@@ -65,30 +54,24 @@ export default function SettingsSidebar({ active, onSelect, adminUnlocked }) {
 }
 
 function SectionItem({ s, active, onSelect }) {
+  const { T } = useTheme()
   const isActive = s.k === active
   return (
-    <button
-      onClick={() => onSelect(s.k)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '8px 10px', borderRadius: 8,
-        background: isActive ? T.card : 'transparent',
-        color: isActive ? T.ink : T.ink2,
-        fontSize: 13.5, fontWeight: isActive ? 500 : 400,
-        border: isActive ? `1px solid ${T.border}` : '1px solid transparent',
-        cursor: 'pointer', textAlign: 'left', width: '100%',
-      }}
-    >
+    <button onClick={() => onSelect(s.k)} style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '8px 10px', borderRadius: 8,
+      background: isActive ? T.card : 'transparent',
+      color: isActive ? T.ink : T.ink2,
+      fontSize: 13.5, fontWeight: isActive ? 500 : 400,
+      border: isActive ? `1px solid ${T.border}` : '1px solid transparent',
+      cursor: 'pointer', textAlign: 'left', width: '100%',
+    }}>
       <span style={{ color: isActive ? T.blue : (s.isAdmin ? T.amber : T.ink3), display: 'inline-flex' }}>
         {s.icon}
       </span>
       <span style={{ flex: 1 }}>{s.label}</span>
       {s.isAdmin && (
-        <span style={{
-          fontSize: 9.5, fontWeight: 600, letterSpacing: 0.3,
-          padding: '2px 5px', borderRadius: 4,
-          background: T.amberSoft, color: T.amber,
-        }}>DEV</span>
+        <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: 0.3, padding: '2px 5px', borderRadius: 4, background: T.amberSoft, color: T.amber }}>DEV</span>
       )}
     </button>
   )

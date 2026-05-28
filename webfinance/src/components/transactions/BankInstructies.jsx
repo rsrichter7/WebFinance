@@ -2,49 +2,22 @@
 // Inklapbaar overzicht van downloadinstructies per ondersteunde bank
 
 import React, { useState } from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 
 const BANKEN = [
-  {
-    naam: 'Rabobank',
-    stappen: 'Log in op rabobank.nl → Downloads en documenten → Transacties downloaden → Kies CSV',
-  },
-  {
-    naam: 'ING',
-    stappen: "Log in op mijn.ing.nl → Betalen → Transacties → Download → Kies 'Kommagescheiden CSV'",
-  },
-  {
-    naam: 'ABN AMRO',
-    stappen: 'Log in op abnamro.nl → Zelf regelen → Bij- en afschrijvingen downloaden → Kies TXT',
-    ext: '.txt',
-  },
-  {
-    naam: 'ASN Bank / SNS Bank / RegioBank',
-    stappen: 'Log in op mijn.asnbank.nl of mijn.snsbank.nl → Betaalrekening → Download transacties → Kies CSV',
-  },
-  {
-    naam: 'bunq',
-    stappen: 'Open de bunq app → Profiel → Rekeningoverzicht → Exporteer → Kies CSV',
-  },
-  {
-    naam: 'Knab',
-    stappen: 'Log in op knab.nl → Transactieoverzicht → Download → Kies CSV',
-  },
-  {
-    naam: 'Triodos Bank',
-    stappen: 'Log in op bankieren.triodos.nl → Overzichten → Downloaden → Kies CSV',
-  },
-  {
-    naam: 'Revolut',
-    stappen: 'Open de Revolut app → Account → Statements → Kies CSV',
-  },
-  {
-    naam: 'Van Lanschot',
-    stappen: null,
-  },
+  { naam: 'Rabobank', stappen: 'Log in op rabobank.nl → Downloads en documenten → Transacties downloaden → Kies CSV' },
+  { naam: 'ING', stappen: "Log in op mijn.ing.nl → Betalen → Transacties → Download → Kies 'Kommagescheiden CSV'" },
+  { naam: 'ABN AMRO', stappen: 'Log in op abnamro.nl → Zelf regelen → Bij- en afschrijvingen downloaden → Kies TXT', ext: '.txt' },
+  { naam: 'ASN Bank / SNS Bank / RegioBank', stappen: 'Log in op mijn.asnbank.nl of mijn.snsbank.nl → Betaalrekening → Download transacties → Kies CSV' },
+  { naam: 'bunq', stappen: 'Open de bunq app → Profiel → Rekeningoverzicht → Exporteer → Kies CSV' },
+  { naam: 'Knab', stappen: 'Log in op knab.nl → Transactieoverzicht → Download → Kies CSV' },
+  { naam: 'Triodos Bank', stappen: 'Log in op bankieren.triodos.nl → Overzichten → Downloaden → Kies CSV' },
+  { naam: 'Revolut', stappen: 'Open de Revolut app → Account → Statements → Kies CSV' },
+  { naam: 'Van Lanschot', stappen: null },
 ]
 
 export default function BankInstructies() {
+  const { T } = useTheme()
   const [open, setOpen] = useState(false)
 
   return (

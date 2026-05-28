@@ -2,7 +2,8 @@
 // 50/30/20 voortgangsbalken op basis van inkomsten en soort-veld transacties.
 
 import React from 'react'
-import { T, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { fmt } from '../../tokens'
 import { Card, CardTitle, ProgressBar } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 
@@ -13,6 +14,7 @@ const REGELS = [
 ]
 
 export default function DashboardRuleScore({ ruleData, inkomsten }) {
+  const { T } = useTheme()
   return (
     <Card>
       <CardTitle sub="Hoe scoor je deze maand?">

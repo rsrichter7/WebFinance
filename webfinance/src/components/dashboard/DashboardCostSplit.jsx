@@ -3,7 +3,8 @@
 // Dynamisch via useProfiles. Berekent over alle beschikbare maanden.
 
 import React, { useState, useMemo } from 'react'
-import { T, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { fmt } from '../../tokens'
 import { Card } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 import useProfiles from '../../hooks/useProfiles'
@@ -11,6 +12,7 @@ import useSettings from '../../hooks/useSettings'
 import DashboardIncomeModal from './DashboardIncomeModal'
 
 export default function DashboardCostSplit({ allTransactions }) {
+  const { T } = useTheme()
   const { persons } = useProfiles()
   const { settings, updateSetting } = useSettings()
   const [showModal, setShowModal] = useState(false)
@@ -21,7 +23,6 @@ export default function DashboardCostSplit({ allTransactions }) {
   const totaalInkomen = persons.reduce((s, p) => s + (inkomen[p.initialen] || 0), 0)
   const heeftInkomen  = totaalInkomen > 0
 
-  // ─── Unieke maanden met minstens 1 uitgave ───
   const aantalMaanden = useMemo(() => {
     const set = new Set()
     for (const t of allTransactions) {
@@ -33,13 +34,11 @@ export default function DashboardCostSplit({ allTransactions }) {
     return set.size || 1
   }, [allTransactions])
 
-  // ─── Gemiddelde maandelijkse kosten (over alle maanden) ───
   const gemKosten = useMemo(() => {
     const totaal = allTransactions.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
     return totaal / aantalMaanden
   }, [allTransactions, aantalMaanden])
 
-  // ─── Werkelijk betaald per persoon (gem. per maand, GZ gedeeld) ───
   const betaaldMap = useMemo(() => {
     const map = {}
     for (const p of persons) map[p.initialen] = 0
@@ -65,13 +64,13 @@ export default function DashboardCostSplit({ allTransactions }) {
     return gemKosten * ((inkomen[p.initialen] || 0) / totaalInkomen)
   }
 
-  function wisselMethode(m) {
-    updateSetting('verdeel_methode', m)
-  }
+  function wisselMethode(m) { updateSetting('verdeel_methode', m) }
+
+  const editBtn    = { display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.card, color: T.ink3, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }
+  const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
 
   return (
     <Card style={{ overflow: 'visible' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>Kostenverdeling</div>
@@ -95,7 +94,6 @@ export default function DashboardCostSplit({ allTransactions }) {
         </div>
       ) : (
         <>
-          {/* Gemiddelde maandkosten */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: T.ink3, marginBottom: 2 }}>Gem. maandelijkse kosten</div>
             <div style={{ fontSize: 24, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5 }}>
@@ -104,7 +102,6 @@ export default function DashboardCostSplit({ allTransactions }) {
             <div style={{ fontSize: 11, color: T.ink4, marginTop: 1 }}>op basis van {aantalMaanden} maand{aantalMaanden !== 1 ? 'en' : ''}</div>
           </div>
 
-          {/* Persoon blokken */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             {persons.map(p => {
               const pct      = pctVoor(p)
@@ -134,7 +131,6 @@ export default function DashboardCostSplit({ allTransactions }) {
             })}
           </div>
 
-          {/* Verhoudingsbalk */}
           <div style={{ height: 7, borderRadius: 4, overflow: 'hidden', display: 'flex', marginBottom: 12 }}>
             {persons.map(p => (
               <div key={p.initialen} style={{ width: `${pctVoor(p)}%`, background: p.kleur.fg, opacity: 0.85, transition: 'width 0.4s' }} />
@@ -143,7 +139,6 @@ export default function DashboardCostSplit({ allTransactions }) {
         </>
       )}
 
-      {/* Footer: methode toggle */}
       <div style={{ paddingTop: 10, borderTop: `1px solid ${T.rule}`, display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', gap: 3, padding: 3, background: T.rule, borderRadius: 8 }}>
           {[['ratio', 'Naar ratio'], ['50/50', '50/50']].map(([m, label]) => (
@@ -174,6 +169,3 @@ function Row({ label, waarde, kleur }) {
     </div>
   )
 }
-
-const editBtn    = { display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.card, color: T.ink3, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }
-const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }

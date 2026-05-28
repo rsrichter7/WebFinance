@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { useAuth } from '../../hooks/useAuth'
 
 function GoogleLogo() {
@@ -19,6 +19,7 @@ function GoogleLogo() {
 }
 
 export default function LoginPage() {
+  const { T } = useTheme()
   const navigate = useNavigate()
   const { signIn, signUp, signInWithGoogle } = useAuth()
   const [searchParams]      = useSearchParams()
@@ -39,22 +40,12 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setFout('')
-    setWachtwoordFout('')
-
+    setFout(''); setWachtwoordFout('')
     if (modus === 'registreren') {
-      if (wachtwoord.length < 8) {
-        setWachtwoordFout('Wachtwoord moet minimaal 8 tekens bevatten.')
-        return
-      }
-      if (wachtwoord !== bevestig) {
-        setFout('Wachtwoorden komen niet overeen.')
-        return
-      }
+      if (wachtwoord.length < 8) { setWachtwoordFout('Wachtwoord moet minimaal 8 tekens bevatten.'); return }
+      if (wachtwoord !== bevestig) { setFout('Wachtwoorden komen niet overeen.'); return }
     }
-
     setBezig(true)
-
     if (modus === 'inloggen') {
       const { error } = await signIn(email, wachtwoord)
       if (error) setFout(vertaalFout(error.message))
@@ -65,96 +56,46 @@ export default function LoginPage() {
       else if (needsConfirmation) setNeedsBevestiging(true)
       else navigate('/')
     }
-
     setBezig(false)
   }
 
-  function wisselModus() {
-    setModus(m => m === 'inloggen' ? 'registreren' : 'inloggen')
-    setFout('')
-    setWachtwoordFout('')
-  }
+  function wisselModus() { setModus(m => m === 'inloggen' ? 'registreren' : 'inloggen'); setFout(''); setWachtwoordFout('') }
+  function terug() { setNeedsBevestiging(false); setModus('inloggen'); setEmail(''); setWachtwoord(''); setBevestig('') }
 
-  function terug() {
-    setNeedsBevestiging(false)
-    setModus('inloggen')
-    setEmail('')
-    setWachtwoord('')
-    setBevestig('')
-  }
+  const labelStyle = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 500, color: T.ink2 }
+  const inputStyle = { padding: '9px 12px', border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 14, color: T.ink, background: T.card, outline: 'none', fontFamily: "'Inter', sans-serif", transition: 'border-color 0.15s' }
+  const knopStyle  = { background: T.blue, color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 14, fontWeight: 600, fontFamily: "'Inter', sans-serif", width: '100%' }
+  const linkKnopStyle = { background: 'none', border: 'none', padding: 0, fontSize: 13, color: T.blue, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 500 }
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: T.bg,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Inter', sans-serif",
-      padding: '24px',
+      minHeight: '100vh', background: T.bg,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Inter', sans-serif", padding: '24px',
     }}>
-      {/* Logo / titel */}
       <div style={{ marginBottom: 32, textAlign: 'center' }}>
-        <div style={{
-          width: 40, height: 40,
-          background: T.blue, borderRadius: 10,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 12px',
-        }}>
+        <div style={{ width: 40, height: 40, background: T.blue, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-              stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <span style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: '-0.3px' }}>
-          Webfinance
-        </span>
+        <span style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: '-0.3px' }}>Webfinance</span>
       </div>
 
-      {/* Kaart */}
-      <div style={{
-        background: T.card,
-        border: `1px solid ${T.border}`,
-        borderRadius: 16,
-        padding: '36px 40px',
-        width: '100%',
-        maxWidth: 400,
-        boxShadow: T.shadow,
-      }}>
+      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: '36px 40px', width: '100%', maxWidth: 400, boxShadow: T.shadow }}>
         {accountVerwijderd && (
-          <div style={{
-            background: T.greenSoft,
-            border: `1px solid ${T.green}22`,
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontSize: 13,
-            color: T.greenText,
-            marginBottom: 20,
-          }}>
+          <div style={{ background: T.greenSoft, border: `1px solid ${T.green}22`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: T.greenText, marginBottom: 20 }}>
             Je account en alle gegevens zijn succesvol verwijderd.
           </div>
         )}
 
         {needsBevestiging ? (
           <>
-            <div style={{
-              background: T.blueSoft,
-              border: `1px solid ${T.blue}22`,
-              borderRadius: 10,
-              padding: '20px 18px',
-              fontSize: 14,
-              color: T.blueText,
-              lineHeight: 1.6,
-              marginBottom: 20,
-            }}>
+            <div style={{ background: T.blueSoft, border: `1px solid ${T.blue}22`, borderRadius: 10, padding: '20px 18px', fontSize: 14, color: T.blueText, lineHeight: 1.6, marginBottom: 20 }}>
               <strong style={{ display: 'block', marginBottom: 6 }}>Bijna klaar!</strong>
-              We hebben een bevestigingsmail gestuurd naar <strong>{email}</strong>.
-              Controleer je inbox en klik op de link om je account te activeren.
+              We hebben een bevestigingsmail gestuurd naar <strong>{email}</strong>. Controleer je inbox en klik op de link om je account te activeren.
             </div>
-            <button onClick={terug} style={S.linkKnop}>
-              ← Terug naar inloggen
-            </button>
+            <button onClick={terug} style={linkKnopStyle}>← Terug naar inloggen</button>
           </>
         ) : (
           <>
@@ -162,132 +103,62 @@ export default function LoginPage() {
               {modus === 'inloggen' ? 'Inloggen' : 'Account aanmaken'}
             </h1>
             <p style={{ fontSize: 13, color: T.ink3, margin: '0 0 28px' }}>
-              {modus === 'inloggen'
-                ? 'Log in op je Webfinance account.'
-                : 'Maak een nieuw account aan.'}
+              {modus === 'inloggen' ? 'Log in op je Webfinance account.' : 'Maak een nieuw account aan.'}
             </p>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <label style={S.label}>
+              <label style={labelStyle}>
                 E-mailadres
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  style={S.input}
-                  placeholder="jij@voorbeeld.nl"
-                />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" style={inputStyle} placeholder="jij@voorbeeld.nl" />
               </label>
 
-              <label style={S.label}>
+              <label style={labelStyle}>
                 Wachtwoord
-                <input
-                  type="password"
-                  value={wachtwoord}
-                  onChange={e => setWachtwoord(e.target.value)}
-                  required
-                  autoComplete={modus === 'inloggen' ? 'current-password' : 'new-password'}
-                  style={S.input}
-                  placeholder="••••••••"
-                />
-                {wachtwoordFout && (
-                  <span style={{ fontSize: 12, color: T.redText, marginTop: 2 }}>
-                    {wachtwoordFout}
-                  </span>
-                )}
+                <input type="password" value={wachtwoord} onChange={e => setWachtwoord(e.target.value)} required autoComplete={modus === 'inloggen' ? 'current-password' : 'new-password'} style={inputStyle} placeholder="••••••••" />
+                {wachtwoordFout && <span style={{ fontSize: 12, color: T.redText, marginTop: 2 }}>{wachtwoordFout}</span>}
               </label>
 
               {modus === 'registreren' && (
-                <label style={S.label}>
+                <label style={labelStyle}>
                   Wachtwoord bevestigen
-                  <input
-                    type="password"
-                    value={bevestig}
-                    onChange={e => setBevestig(e.target.value)}
-                    required
-                    autoComplete="new-password"
-                    style={S.input}
-                    placeholder="••••••••"
-                  />
+                  <input type="password" value={bevestig} onChange={e => setBevestig(e.target.value)} required autoComplete="new-password" style={inputStyle} placeholder="••••••••" />
                 </label>
               )}
 
               {fout && (
-                <div style={{
-                  background: T.redSoft,
-                  border: `1px solid ${T.red}22`,
-                  borderRadius: 8,
-                  padding: '10px 14px',
-                  fontSize: 13,
-                  color: T.redText,
-                }}>
+                <div style={{ background: T.redSoft, border: `1px solid ${T.red}22`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: T.redText }}>
                   {fout}
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={bezig}
-                style={{
-                  ...S.knop,
-                  opacity: bezig ? 0.7 : 1,
-                  cursor: bezig ? 'not-allowed' : 'pointer',
-                  marginTop: 4,
-                }}
-              >
+              <button type="submit" disabled={bezig} style={{ ...knopStyle, opacity: bezig ? 0.7 : 1, cursor: bezig ? 'not-allowed' : 'pointer', marginTop: 4 }}>
                 {bezig ? 'Even wachten…' : modus === 'inloggen' ? 'Inloggen' : 'Account aanmaken'}
               </button>
             </form>
 
-            {/* Divider */}
             <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0', gap: 10 }}>
               <div style={{ flex: 1, height: 1, background: T.border }} />
               <span style={{ fontSize: 12, color: T.ink4 }}>of</span>
               <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
 
-            {/* Google login */}
-            <button
-              type="button"
-              onClick={() => signInWithGoogle()}
-              onMouseEnter={() => setGoogleHover(true)}
-              onMouseLeave={() => setGoogleHover(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                width: '100%',
-                padding: '10px 16px',
-                background: googleHover ? T.rule : T.card,
-                border: `1px solid ${T.border}`,
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: T.ink,
-                fontFamily: "'Inter', sans-serif",
-                cursor: 'pointer',
-                transition: 'background 0.15s',
-              }}
-            >
+            <button type="button" onClick={() => signInWithGoogle()}
+              onMouseEnter={() => setGoogleHover(true)} onMouseLeave={() => setGoogleHover(false)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '10px 16px', background: googleHover ? T.rule : T.card, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 14, fontWeight: 500, color: T.ink, fontFamily: "'Inter', sans-serif", cursor: 'pointer', transition: 'background 0.15s' }}>
               <GoogleLogo />
               Inloggen met Google
             </button>
 
             <p style={{ textAlign: 'center', fontSize: 13, color: T.ink3, marginTop: 22, marginBottom: 0 }}>
               {modus === 'inloggen' ? 'Nog geen account?' : 'Al een account?'}{' '}
-              <button onClick={wisselModus} style={S.linkKnop}>
+              <button onClick={wisselModus} style={linkKnopStyle}>
                 {modus === 'inloggen' ? 'Registreren' : 'Inloggen'}
               </button>
             </p>
 
             <p style={{ textAlign: 'center', fontSize: 13, color: T.ink4, marginTop: 14, marginBottom: 0 }}>
               Door in te loggen ga je akkoord met ons{' '}
-              <Link to="/privacy" style={{ color: T.blue, textDecoration: 'none', fontWeight: 500 }}>
-                privacybeleid
-              </Link>
+              <Link to="/privacy" style={{ color: T.blue, textDecoration: 'none', fontWeight: 500 }}>privacybeleid</Link>
             </p>
           </>
         )}
@@ -302,47 +173,4 @@ function vertaalFout(msg) {
   if (msg.includes('User already registered'))    return 'Dit e-mailadres is al in gebruik.'
   if (msg.includes('Password should be'))         return 'Wachtwoord moet minimaal 8 tekens bevatten.'
   return 'Er is iets misgegaan. Probeer het opnieuw.'
-}
-
-const S = {
-  label: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    fontSize: 13,
-    fontWeight: 500,
-    color: T.ink2,
-  },
-  input: {
-    padding: '9px 12px',
-    border: `1px solid ${T.border}`,
-    borderRadius: 8,
-    fontSize: 14,
-    color: T.ink,
-    background: T.card,
-    outline: 'none',
-    fontFamily: "'Inter', sans-serif",
-    transition: 'border-color 0.15s',
-  },
-  knop: {
-    background: T.blue,
-    color: T.card,
-    border: 'none',
-    borderRadius: 8,
-    padding: '10px 16px',
-    fontSize: 14,
-    fontWeight: 600,
-    fontFamily: "'Inter', sans-serif",
-    width: '100%',
-  },
-  linkKnop: {
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    fontSize: 13,
-    color: T.blue,
-    cursor: 'pointer',
-    fontFamily: "'Inter', sans-serif",
-    fontWeight: 500,
-  },
 }

@@ -32,6 +32,7 @@ function syncLocalStorage(data) {
   if (data.datumformaat)      localStorage.setItem('webfinance_datumformaat', data.datumformaat)
   if (data.custom_categories) localStorage.setItem('webfinance_custom_categories', JSON.stringify(data.custom_categories))
   if (typeof data.premium === 'boolean') localStorage.setItem('webfinance_premium', JSON.stringify(data.premium))
+  if (data.thema)             localStorage.setItem('webfinance_thema', data.thema)
 }
 
 export default function useSettings() {

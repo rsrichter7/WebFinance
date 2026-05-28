@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import usePremium from '../../hooks/usePremium'
 import { useAuth } from '../../hooks/useAuth'
@@ -24,6 +24,7 @@ const NAV_ITEMS = [
 ]
 
 export default function Sidebar() {
+  const { T } = useTheme()
   const [collapsed, setCollapsed]       = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [profielHover, setProfielHover] = useState(false)
@@ -35,12 +36,8 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const w = collapsed ? 64 : 240
 
-  async function handleSignOut() {
-    await signOut()
-    navigate('/login')
-  }
+  async function handleSignOut() { await signOut(); navigate('/login') }
 
-  // Naam + kleur ophalen uit het passende profiel
   const profielNaam = settings.profiel_naam || ''
   const mijnProfiel = profielNaam
     ? (persons.find(p => p.naam === profielNaam) || persons[0] || null)
@@ -51,41 +48,32 @@ export default function Sidebar() {
 
   return (
     <aside style={{
-      width: w, flex: `0 0 ${w}px`,
-      background: T.card,
+      width: w, flex: `0 0 ${w}px`, background: T.card,
       borderRight: `1px solid ${T.border}`,
       display: 'flex', flexDirection: 'column',
       padding: collapsed ? '20px 8px' : '20px 14px',
-      transition: 'width 0.2s ease, padding 0.2s ease',
-      overflow: 'hidden',
+      transition: 'width 0.2s ease, padding 0.2s ease', overflow: 'hidden',
     }}>
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '4px 4px 18px' : '4px 8px 18px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: T.ink, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 16, fontWeight: 600, flexShrink: 0 }}>€</div>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: T.ink, color: T.bg, display: 'grid', placeItems: 'center', fontSize: 16, fontWeight: 600, flexShrink: 0 }}>€</div>
         {!collapsed && <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>Webfinance</div>}
       </div>
 
-      {/* Menu label */}
       {!collapsed && (
         <div style={{ fontSize: 11, fontWeight: 500, color: T.ink4, padding: '4px 10px', letterSpacing: 0.4, textTransform: 'uppercase' }}>Menu</div>
       )}
 
-      {/* Nav items */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
         {NAV_ITEMS.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
+          <NavLink key={item.to} to={item.to} end={item.to === '/'}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: collapsed ? '8px' : '8px 10px',
-              borderRadius: 8,
+              padding: collapsed ? '8px' : '8px 10px', borderRadius: 8,
               background: isActive ? T.bg : 'transparent',
               color: isActive ? T.ink : T.ink2,
               fontSize: 14, fontWeight: isActive ? 500 : 400,
-              position: 'relative', cursor: 'pointer',
-              textDecoration: 'none',
+              position: 'relative', cursor: 'pointer', textDecoration: 'none',
               justifyContent: collapsed ? 'center' : 'flex-start',
             })}
           >
@@ -105,7 +93,6 @@ export default function Sidebar() {
 
       <div style={{ flex: 1 }} />
 
-      {/* Upgrade banner — alleen voor niet-premium gebruikers */}
       {!collapsed && !isPremium && (
         <div style={{ margin: '12px 4px', padding: 12, border: `1px solid ${T.border}`, borderRadius: 10, background: T.bg }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -117,10 +104,8 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Onderin sidebar: profiel → feedback → uitloggen */}
       <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
-
-        {/* 1. Profiel-sectie — klikbaar → /instellingen */}
+        {/* Profiel */}
         <div
           onClick={() => navigate('/instellingen')}
           onMouseEnter={() => setProfielHover(true)}
@@ -150,28 +135,19 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* 2. Feedback-knop */}
-        <button
-          onClick={() => setFeedbackOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            width: '100%', padding: collapsed ? '8px' : '8px 10px',
-            borderRadius: 8, border: 'none', background: 'transparent',
-            fontSize: 14, color: T.ink3, cursor: 'pointer',
-            fontFamily: "'Inter', sans-serif",
-            justifyContent: collapsed ? 'center' : 'flex-start',
-          }}
-        >
+        {/* Feedback */}
+        <button onClick={() => setFeedbackOpen(true)} style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          width: '100%', padding: collapsed ? '8px' : '8px 10px',
+          borderRadius: 8, border: 'none', background: 'transparent',
+          fontSize: 14, color: T.ink3, cursor: 'pointer',
+          fontFamily: "'Inter', sans-serif",
+          justifyContent: collapsed ? 'center' : 'flex-start',
+        }}>
           <span style={{ color: T.ink3, display: 'inline-flex', position: 'relative' }}>
             {ICONS.messageSquare}
             {isAdmin && unreadCount > 0 && (
-              <span style={{
-                position: 'absolute', top: -5, right: -6,
-                background: T.red, color: '#fff', fontSize: 11,
-                minWidth: 18, height: 18, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 600, pointerEvents: 'none',
-              }}>
+              <span style={{ position: 'absolute', top: -5, right: -6, background: T.red, color: '#fff', fontSize: 11, minWidth: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, pointerEvents: 'none' }}>
                 {unreadCount}
               </span>
             )}
@@ -179,24 +155,21 @@ export default function Sidebar() {
           {!collapsed && <span>Feedback</span>}
         </button>
 
-        {/* 3. Uitloggen-knop */}
+        {/* Uitloggen */}
         {!collapsed && (
-          <button
-            onClick={handleSignOut}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              width: '100%', padding: '6px 8px', marginBottom: 4,
-              borderRadius: 6, border: 'none', background: 'transparent',
-              fontSize: 13, color: T.ink3, cursor: 'pointer',
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            <span style={{ display: 'inline-flex' }}>{ICONS.logout ?? (
+          <button onClick={handleSignOut} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            width: '100%', padding: '6px 8px', marginBottom: 4,
+            borderRadius: 6, border: 'none', background: 'transparent',
+            fontSize: 13, color: T.ink3, cursor: 'pointer',
+            fontFamily: "'Inter', sans-serif",
+          }}>
+            <span style={{ display: 'inline-flex' }}>
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
                   stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            )}</span>
+            </span>
             Uitloggen
           </button>
         )}
@@ -204,16 +177,12 @@ export default function Sidebar() {
 
       <FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSubmit={submitFeedback} />
 
-      {/* 4. Inklappen-knop */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          marginTop: 4, padding: '6px 8px', borderRadius: 6,
-          fontSize: 11.5, color: T.ink3, cursor: 'pointer',
-          border: `1px solid ${T.border}`, background: 'transparent',
-        }}
-      >
+      <button onClick={() => setCollapsed(!collapsed)} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        marginTop: 4, padding: '6px 8px', borderRadius: 6,
+        fontSize: 11.5, color: T.ink3, cursor: 'pointer',
+        border: `1px solid ${T.border}`, background: 'transparent',
+      }}>
         <span style={{ display: 'inline-flex', transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>{ICONS.collapse}</span>
         {!collapsed && <span>Inklappen</span>}
       </button>

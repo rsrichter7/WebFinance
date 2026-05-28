@@ -2,7 +2,7 @@
 // Begroeting op basis van tijdstip + maandselector + transactie-knop.
 
 import React from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 
 const MAANDEN = [
@@ -18,6 +18,8 @@ function begroeting() {
 }
 
 export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx }) {
+  const { T } = useTheme()
+
   function vorige() {
     if (maand === 1) onMaandWijzig({ maand: 12, jaar: jaar - 1 })
     else onMaandWijzig({ maand: maand - 1, jaar })
@@ -26,6 +28,24 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx })
   function volgende() {
     if (maand === 12) onMaandWijzig({ maand: 1, jaar: jaar + 1 })
     else onMaandWijzig({ maand: maand + 1, jaar })
+  }
+
+  const navBtnStyle = {
+    width: 32, height: 32, borderRadius: 6, border: `1px solid ${T.border}`,
+    background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center',
+    color: T.ink3, fontSize: 14,
+  }
+
+  const maandLabelStyle = {
+    padding: '6px 16px', borderRadius: 6, border: `1px solid ${T.border}`,
+    background: T.bg, fontSize: 13, fontWeight: 500, color: T.ink,
+    minWidth: 148, textAlign: 'center', textTransform: 'capitalize',
+  }
+
+  const addBtnStyle = {
+    height: 32, padding: '0 14px', borderRadius: 8, border: 'none',
+    background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500,
+    cursor: 'pointer', fontFamily: 'inherit',
   }
 
   return (
@@ -38,7 +58,6 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx })
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Maandselector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button onClick={vorige} style={navBtnStyle}>‹</button>
           <div style={maandLabelStyle}>
@@ -46,8 +65,6 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx })
           </div>
           <button onClick={volgende} style={navBtnStyle}>›</button>
         </div>
-
-        {/* Transactie knop */}
         <button onClick={onAddTx} style={addBtnStyle}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {ICONS.plus}
@@ -57,22 +74,4 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx })
       </div>
     </div>
   )
-}
-
-const navBtnStyle = {
-  width: 32, height: 32, borderRadius: 6, border: `1px solid ${T.border}`,
-  background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center',
-  color: T.ink3, fontSize: 14,
-}
-
-const maandLabelStyle = {
-  padding: '6px 16px', borderRadius: 6, border: `1px solid ${T.border}`,
-  background: T.bg, fontSize: 13, fontWeight: 500, color: T.ink,
-  minWidth: 148, textAlign: 'center', textTransform: 'capitalize',
-}
-
-const addBtnStyle = {
-  height: 32, padding: '0 14px', borderRadius: 8, border: 'none',
-  background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500,
-  cursor: 'pointer', fontFamily: 'inherit',
 }

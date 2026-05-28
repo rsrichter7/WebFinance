@@ -4,7 +4,7 @@
 
 import React, { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import { supabase } from '../../supabaseClient'
 import { useHousehold } from '../../hooks/useHousehold'
@@ -16,6 +16,7 @@ import ImportAiModal from './ImportAiModal'
 import BankInstructies from './BankInstructies'
 
 export default function ImportFlow({ open, onClose, onImportComplete }) {
+  const { T } = useTheme()
   const { householdId } = useHousehold()
   const { profiles }    = useProfiles()
   const { settings }    = useSettings()
@@ -33,6 +34,9 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   const contentRef                        = useRef()
 
   const maxRows = settings.import_max_regels ?? 1000
+
+  const secBtn = { padding: '9px 18px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+  const priBtn = { padding: '9px 20px', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
 
   function reset() {
     setStap(1); setRows([]); setError(''); setValidationError('')
@@ -60,27 +64,22 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
     setError('')
     const text   = await file.text()
     const result = parseCSV(text)
-
     if (result.error || !result.transactions.length) {
       setError(result.error ?? 'Geen transacties gevonden in dit bestand.')
       return
     }
-
     let limited = result.transactions
     let limitWarning = ''
     if (result.transactions.length > maxRows) {
       limited = result.transactions.slice(0, maxRows)
       limitWarning = `CSV bevat ${result.transactions.length} regels — alleen de eerste ${maxRows} worden geladen.`
     }
-
     const [{ data: existing }, { data: fixedItems }] = await Promise.all([
       supabase.from('transactions').select('datum, bedrag, winkel').eq('household_id', householdId),
       supabase.from('fixed_expenses').select('id, naam, categorie, subcategorie, soort, wie').eq('household_id', householdId).eq('actief', true),
     ])
-
     let processed = markDuplicates(limited, existing ?? [])
     processed     = matchFixedExpenses(processed, fixedItems ?? [])
-
     setDetectedBank(result.bankLabel)
     setRows(processed)
     if (limitWarning) setError(limitWarning)
@@ -107,7 +106,6 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   async function handleImport() {
     const selected = rows.filter(r => r.selected)
     if (!selected.length || !householdId) return
-
     const incomplete = selected.filter(r => !r.categorie || !r.subcategorie || !r.soort)
     if (incomplete.length > 0) {
       const ev = incomplete.length === 1
@@ -124,29 +122,17 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
       }, 50)
       return
     }
-
     setValidationError('')
     setImporting(true)
-
     const toInsert = selected.map(r => ({
-      household_id:  householdId,
-      datum:         r.datum,
-      bedrag:        r.bedrag,
-      type:          r.type,
-      beschrijving:  r.beschrijving,
-      winkel:        r.winkel,
-      categorie:     r.categorie || '',
-      subcategorie:  r.subcategorie || '',
-      soort:         r.soort || null,
-      wie:           r.wie,
-      bron:          'import',
-      vaste_last_id: r.vaste_last_id ?? null,
+      household_id: householdId, datum: r.datum, bedrag: r.bedrag, type: r.type,
+      beschrijving: r.beschrijving, winkel: r.winkel, categorie: r.categorie || '',
+      subcategorie: r.subcategorie || '', soort: r.soort || null, wie: r.wie,
+      bron: 'import', vaste_last_id: r.vaste_last_id ?? null,
     }))
-
     const { error: err } = await supabase.from('transactions').insert(toInsert)
     setImporting(false)
     if (err) { setError('Fout bij importeren: ' + err.message); return }
-
     setImportedCount(selected.length)
     onImportComplete?.()
     setTimeout(handleClose, 1800)
@@ -158,15 +144,14 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
 
   return createPortal(
     <>
-      <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.45)', zIndex: 200 }} />
+      <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200 }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
         width: 'min(1100px, 95vw)', maxHeight: '90vh',
-        background: T.card, borderRadius: 14, boxShadow: '0 30px 80px rgba(0,0,0,0.22)',
+        background: T.card, borderRadius: 14, boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
         zIndex: 201, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         border: `1px solid ${T.border}`,
       }}>
-        {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>
@@ -177,10 +162,11 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
           <button onClick={handleClose} style={{ border: 'none', background: 'transparent', fontSize: 20, color: T.ink3, cursor: 'pointer', padding: '4px 8px', borderRadius: 6 }}>×</button>
         </div>
 
-        {/* Content */}
         <div ref={contentRef} style={{ flex: 1, overflow: 'auto', padding: 24 }}>
           {stap === 1 && (
             <UploadStap
+              T={T}
+              secBtn={secBtn}
               isDragging={isDragging}
               onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
               onDragLeave={() => setIsDragging(false)}
@@ -221,7 +207,6 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
           )}
         </div>
 
-        {/* Footer stap 2 */}
         {stap === 2 && importedCount === 0 && (
           <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button onClick={() => { setStap(1); setError(''); setValidationError('') }} style={secBtn}>← Terug</button>
@@ -243,7 +228,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
   )
 }
 
-function UploadStap({ isDragging, onDragOver, onDragLeave, onDrop, onPickFile, fileRef, onFileInput, error }) {
+function UploadStap({ T, secBtn, isDragging, onDragOver, onDragLeave, onDrop, onPickFile, fileRef, onFileInput, error }) {
   return (
     <div style={{ maxWidth: 580, margin: '0 auto' }}>
       <div
@@ -265,15 +250,10 @@ function UploadStap({ isDragging, onDragOver, onDragLeave, onDrop, onPickFile, f
           <span style={{ display: 'inline-flex' }}>{ICONS.folder}</span>Bestand kiezen
         </button>
       </div>
-
       {error && (
         <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: T.redSoft, color: T.redText, fontSize: 13, border: '1px solid #FECACA' }}>{error}</div>
       )}
-
       <BankInstructies />
     </div>
   )
 }
-
-const secBtn = { padding: '9px 18px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
-const priBtn = { padding: '9px 20px', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }

@@ -2,7 +2,7 @@
 // Instellingen pagina: eigen sidebar links, sectie-content rechts.
 
 import React, { useState } from 'react'
-import { T } from '../tokens'
+import { useTheme } from '../hooks/useTheme'
 import SettingsTopBar         from '../components/settings/SettingsTopBar'
 import SettingsSidebar        from '../components/settings/SettingsSidebar'
 import SettingsProfile        from '../components/settings/SettingsProfile'
@@ -20,18 +20,12 @@ function isAdminUnlocked() {
 }
 
 export default function SettingsPage() {
+  const { T } = useTheme()
   const [section,       setSection]       = useState('profiel')
   const [adminUnlocked, setAdminUnlocked] = useState(isAdminUnlocked)
 
-  function handleAdminUnlock() {
-    setAdminUnlocked(true)
-    // Gebruiker navigeert zelf via de sidebar naar de admin-sectie
-  }
-
-  function handleAdminLock() {
-    setAdminUnlocked(false)
-    setSection('over')
-  }
+  function handleAdminUnlock() { setAdminUnlocked(true) }
+  function handleAdminLock()   { setAdminUnlocked(false); setSection('over') }
 
   const CONTENT = {
     profiel:      <SettingsProfile />,
@@ -49,16 +43,8 @@ export default function SettingsPage() {
     <>
       <SettingsTopBar />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <SettingsSidebar
-          active={section}
-          onSelect={setSection}
-          adminUnlocked={adminUnlocked}
-        />
-        <div style={{
-          flex: 1, overflow: 'auto',
-          padding: 32,
-          background: T.bg,
-        }}>
+        <SettingsSidebar active={section} onSelect={setSection} adminUnlocked={adminUnlocked} />
+        <div style={{ flex: 1, overflow: 'auto', padding: 32, background: T.bg }}>
           <div style={{ maxWidth: 660 }}>
             {CONTENT[section] ?? null}
           </div>

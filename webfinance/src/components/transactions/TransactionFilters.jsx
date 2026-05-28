@@ -3,7 +3,8 @@
 // Alle filterlogica leeft in useTransactions — dit component toont alleen de UI.
 
 import React, { useState, useRef, useEffect } from 'react'
-import { T, TAB, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { TAB, fmt } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import { getMergedCategories, SOORTEN } from '../../data/categories'
 import useProfiles from '../../hooks/useProfiles'
@@ -17,12 +18,11 @@ const MAANDEN = [
   { value: '10', label: 'November' }, { value: '11', label: 'December' },
 ]
 
-// ─── Herbruikbare custom dropdown (zelfde stijl als CategoryDropdown) ───
 function CustomDropdown({ label, value, allLabel, options, onChange }) {
+  const { T } = useTheme()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
-  // Sluit dropdown bij klik erbuiten
   useEffect(() => {
     function handleClick(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
@@ -31,24 +31,15 @@ function CustomDropdown({ label, value, allLabel, options, onChange }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  // Label op de knop
   const activeOption = options.find(o => o.value === value)
   const buttonLabel = activeOption ? activeOption.label : allLabel
 
-  function select(val) {
-    onChange(val)
-    setOpen(false)
-  }
+  function select(val) { onChange(val); setOpen(false) }
 
   const itemStyle = (isActive) => ({
-    padding: '8px 14px',
-    fontSize: 13,
-    color: isActive ? T.blue : T.ink,
-    fontWeight: isActive ? 600 : 400,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    borderRadius: 6,
+    padding: '8px 14px', fontSize: 13,
+    color: isActive ? T.blue : T.ink, fontWeight: isActive ? 600 : 400,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', borderRadius: 6,
     background: isActive ? T.blueSoft : 'transparent',
   })
 
@@ -58,12 +49,10 @@ function CustomDropdown({ label, value, allLabel, options, onChange }) {
         onClick={() => setOpen(!open)}
         style={{
           padding: '7px 12px', borderRadius: 8,
-          border: `1px solid ${open ? T.blue : T.border}`,
-          background: T.card,
+          border: `1px solid ${open ? T.blue : T.border}`, background: T.card,
           fontSize: 13, color: value ? T.ink : T.ink3,
           cursor: 'pointer', fontFamily: 'inherit',
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          whiteSpace: 'nowrap',
+          display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
         }}
       >
         <span>{buttonLabel}</span>
@@ -78,7 +67,6 @@ function CustomDropdown({ label, value, allLabel, options, onChange }) {
           minWidth: 180, zIndex: 50, overflow: 'hidden',
         }}>
           <div style={{ padding: '6px 6px' }}>
-            {/* "Alles" optie */}
             <div
               onClick={() => select('')}
               onMouseEnter={e => e.currentTarget.style.background = T.rule}
@@ -87,10 +75,7 @@ function CustomDropdown({ label, value, allLabel, options, onChange }) {
             >
               {allLabel}
             </div>
-
             <div style={{ height: 1, background: T.rule, margin: '4px 0' }} />
-
-            {/* Opties */}
             {options.map(o => (
               <div
                 key={o.value}
@@ -109,107 +94,57 @@ function CustomDropdown({ label, value, allLabel, options, onChange }) {
   )
 }
 
-// ─── Twee-staps categorie dropdown ───
 function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubChange }) {
+  const { T } = useTheme()
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('main')
   const ref = useRef(null)
 
-  // Sluit dropdown bij klik erbuiten
   useEffect(() => {
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false)
-        setView('main')
-      }
+      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setView('main') }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
   const allCats = getMergedCategories()
-
-  // Huidige geselecteerde categorie-object
   const activeCat = allCats.find(c => c.name === categorie)
+  const buttonLabel = subcategorie ? `${categorie} › ${subcategorie}` : categorie || 'Categorie: Alle'
 
-  // Label voor de knop
-  const buttonLabel = subcategorie
-    ? `${categorie} › ${subcategorie}`
-    : categorie || 'Categorie: Alle'
+  function selectCategory(catName) { setView(catName) }
+  function selectCategoryOnly(catName) { onCategorieChange(catName); onSubChange(''); setOpen(false); setView('main') }
+  function selectSub(catName, subName) { onCategorieChange(catName); onSubChange(subName); setOpen(false); setView('main') }
+  function clearAll() { onCategorieChange(''); onSubChange(''); setOpen(false); setView('main') }
+  function goBack() { setView('main') }
 
-  // Klik op een hoofdcategorie → toon subcategorieën
-  function selectCategory(catName) {
-    setView(catName)
-  }
-
-  // Klik op "Alle [categorie]" → filter alleen op hoofdcategorie
-  function selectCategoryOnly(catName) {
-    onCategorieChange(catName)
-    onSubChange('')
-    setOpen(false)
-    setView('main')
-  }
-
-  // Klik op een subcategorie → filter op subcategorie
-  function selectSub(catName, subName) {
-    onCategorieChange(catName)
-    onSubChange(subName)
-    setOpen(false)
-    setView('main')
-  }
-
-  // Alles wissen
-  function clearAll() {
-    onCategorieChange('')
-    onSubChange('')
-    setOpen(false)
-    setView('main')
-  }
-
-  // Terug naar hoofdmenu
-  function goBack() {
-    setView('main')
-  }
-
-  // Welke categorie wordt getoond in submenu?
   const subCat = allCats.find(c => c.name === view)
 
   const itemStyle = (isActive) => ({
-    padding: '8px 14px',
-    fontSize: 13,
-    color: isActive ? T.blue : T.ink,
-    fontWeight: isActive ? 600 : 400,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 6,
+    padding: '8px 14px', fontSize: 13,
+    color: isActive ? T.blue : T.ink, fontWeight: isActive ? 600 : 400,
+    cursor: 'pointer', display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', borderRadius: 6,
     background: isActive ? T.blueSoft : 'transparent',
   })
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      {/* Trigger knop */}
       <button
         onClick={() => { setOpen(!open); setView('main') }}
         style={{
           padding: '7px 12px', borderRadius: 8,
-          border: `1px solid ${open ? T.blue : T.border}`,
-          background: T.card,
+          border: `1px solid ${open ? T.blue : T.border}`, background: T.card,
           fontSize: 13, color: categorie ? T.ink : T.ink3,
           cursor: 'pointer', fontFamily: 'inherit',
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {buttonLabel}
-        </span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{buttonLabel}</span>
         <span style={{ fontSize: 10, color: T.ink4, flexShrink: 0 }}>▼</span>
       </button>
 
-      {/* Dropdown menu */}
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, marginTop: 4,
@@ -218,81 +153,47 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
           minWidth: 220, zIndex: 50, overflow: 'hidden',
         }}>
           {view === 'main' ? (
-            // ─── Hoofdcategorieën ───
             <div style={{ padding: '6px 6px' }}>
-              {/* Alles wissen optie */}
-              <div
-                onClick={clearAll}
+              <div onClick={clearAll}
                 onMouseEnter={e => e.currentTarget.style.background = T.rule}
                 onMouseLeave={e => e.currentTarget.style.background = !categorie ? T.blueSoft : 'transparent'}
-                style={itemStyle(!categorie)}
-              >
+                style={itemStyle(!categorie)}>
                 Alle categorieën
               </div>
-
-              {/* Scheidingslijn */}
               <div style={{ height: 1, background: T.rule, margin: '4px 0' }} />
-
-              {/* Categorieën */}
               {allCats.map(c => (
-                <div
-                  key={c.name}
-                  onClick={() => selectCategory(c.name)}
+                <div key={c.name} onClick={() => selectCategory(c.name)}
                   onMouseEnter={e => e.currentTarget.style.background = T.rule}
                   onMouseLeave={e => e.currentTarget.style.background = categorie === c.name ? T.blueSoft : 'transparent'}
-                  style={itemStyle(categorie === c.name)}
-                >
+                  style={itemStyle(categorie === c.name)}>
                   <span>{c.name}</span>
                   <span style={{ fontSize: 11, color: T.ink4 }}>›</span>
                 </div>
               ))}
             </div>
           ) : subCat ? (
-            // ─── Subcategorieën ───
             <div style={{ padding: '6px 6px' }}>
-              {/* Terug knop */}
-              <div
-                onClick={goBack}
+              <div onClick={goBack}
                 onMouseEnter={e => e.currentTarget.style.background = T.rule}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                style={{ ...itemStyle(false), color: T.ink3, fontSize: 12 }}
-              >
+                style={{ ...itemStyle(false), color: T.ink3, fontSize: 12 }}>
                 <span>← Terug</span>
               </div>
-
-              {/* Categorie titel */}
-              <div style={{
-                padding: '6px 14px 4px', fontSize: 11, fontWeight: 600,
-                color: T.ink4, textTransform: 'uppercase', letterSpacing: 0.5,
-              }}>
+              <div style={{ padding: '6px 14px 4px', fontSize: 11, fontWeight: 600, color: T.ink4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 {subCat.name}
               </div>
-
-              {/* Alle [categorie] optie */}
-              <div
-                onClick={() => selectCategoryOnly(subCat.name)}
+              <div onClick={() => selectCategoryOnly(subCat.name)}
                 onMouseEnter={e => e.currentTarget.style.background = T.rule}
-                onMouseLeave={e => {
-                  const isActive = categorie === subCat.name && !subcategorie
-                  e.currentTarget.style.background = isActive ? T.blueSoft : 'transparent'
-                }}
-                style={itemStyle(categorie === subCat.name && !subcategorie)}
-              >
+                onMouseLeave={e => { const isActive = categorie === subCat.name && !subcategorie; e.currentTarget.style.background = isActive ? T.blueSoft : 'transparent' }}
+                style={itemStyle(categorie === subCat.name && !subcategorie)}>
                 Alle {subCat.name.toLowerCase()}
               </div>
-
-              {/* Scheidingslijn */}
               <div style={{ height: 1, background: T.rule, margin: '4px 0' }} />
-
-              {/* Subcategorieën */}
               {subCat.subs.map(s => (
-                <div
-                  key={s}
-                  onClick={() => selectSub(subCat.name, s)}
+                <div key={s} onClick={() => selectSub(subCat.name, s)}
                   onMouseEnter={e => e.currentTarget.style.background = T.rule}
                   onMouseLeave={e => e.currentTarget.style.background = subcategorie === s ? T.blueSoft : 'transparent'}
-                  style={itemStyle(subcategorie === s)}
-                >
+                  style={itemStyle(subcategorie === s)}>
                   {s}
                 </div>
               ))}
@@ -305,13 +206,11 @@ function CategoryDropdown({ categorie, subcategorie, onCategorieChange, onSubCha
 }
 
 export default function TransactionFilters({ filters, updateFilter, eersteJaar }) {
+  const { T } = useTheme()
   const { profiles } = useProfiles()
   return (
     <div style={{ padding: '0 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Zoekbalk + filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Zoekbalk */}
         <div style={{ position: 'relative', flex: '0 0 280px' }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: T.ink4, display: 'inline-flex' }}>
             {ICONS.search}
@@ -328,59 +227,22 @@ export default function TransactionFilters({ filters, updateFilter, eersteJaar }
             }}
           />
         </div>
-
-        {/* Type */}
-        <CustomDropdown
-          label="Type"
-          value={filters.type}
-          allLabel="Type: Alles"
-          options={[
-            { value: 'Uitgave', label: 'Uitgave' },
-            { value: 'Inkomst', label: 'Inkomst' },
-          ]}
-          onChange={v => updateFilter('type', v)}
-        />
-
-        {/* Categorie */}
+        <CustomDropdown label="Type" value={filters.type} allLabel="Type: Alles"
+          options={[{ value: 'Uitgave', label: 'Uitgave' }, { value: 'Inkomst', label: 'Inkomst' }]}
+          onChange={v => updateFilter('type', v)} />
         <CategoryDropdown
-          categorie={filters.categorie}
-          subcategorie={filters.subcategorie}
+          categorie={filters.categorie} subcategorie={filters.subcategorie}
           onCategorieChange={v => updateFilter('categorie', v)}
-          onSubChange={v => updateFilter('subcategorie', v)}
-        />
-
-        {/* Soort */}
-        <CustomDropdown
-          label="Soort"
-          value={filters.soort}
-          allLabel="Soort: Alles"
+          onSubChange={v => updateFilter('subcategorie', v)} />
+        <CustomDropdown label="Soort" value={filters.soort} allLabel="Soort: Alles"
           options={SOORTEN.map(s => ({ value: s, label: s }))}
-          onChange={v => updateFilter('soort', v)}
-        />
-
-        {/* Wie */}
-        <CustomDropdown
-          label="Wie"
-          value={filters.wie}
-          allLabel="Wie: Iedereen"
+          onChange={v => updateFilter('soort', v)} />
+        <CustomDropdown label="Wie" value={filters.wie} allLabel="Wie: Iedereen"
           options={profiles.map(p => ({ value: p.initialen, label: p.naam }))}
-          onChange={v => updateFilter('wie', v)}
-        />
-
-        {/* Maand */}
-        <CustomDropdown
-          label="Maand"
-          value={filters.maand}
-          allLabel="Alle maanden"
-          options={MAANDEN}
-          onChange={v => updateFilter('maand', v)}
-        />
-
-        {/* Jaar */}
-        <CustomDropdown
-          label="Jaar"
-          value={filters.jaar}
-          allLabel="Alle jaren"
+          onChange={v => updateFilter('wie', v)} />
+        <CustomDropdown label="Maand" value={filters.maand} allLabel="Alle maanden"
+          options={MAANDEN} onChange={v => updateFilter('maand', v)} />
+        <CustomDropdown label="Jaar" value={filters.jaar} allLabel="Alle jaren"
           options={(() => {
             const huidigJaar = new Date().getFullYear()
             const jaren = []
@@ -389,8 +251,7 @@ export default function TransactionFilters({ filters, updateFilter, eersteJaar }
             }
             return jaren
           })()}
-          onChange={v => updateFilter('jaar', v)}
-        />
+          onChange={v => updateFilter('jaar', v)} />
       </div>
     </div>
   )

@@ -1,8 +1,9 @@
 // ─── SettingsPreferences ───
-// Voorkeuren: taal, valuta, datumformaat en donkere modus.
+// Voorkeuren: taal, valuta, datumformaat en thema (Licht / Donker / Automatisch).
 
 import React, { useState, useEffect } from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { ICONS } from '../ui/Icons'
 import useSettings from '../../hooks/useSettings'
 
 const DATE_OPTIONS = [
@@ -11,9 +12,16 @@ const DATE_OPTIONS = [
   { val: 'iso',  label: '2026-05-08',  desc: 'ISO 8601' },
 ]
 
+const THEME_OPTIONS = [
+  { val: 'light', label: 'Licht',       icon: 'sun'     },
+  { val: 'dark',  label: 'Donker',      icon: 'moon'    },
+  { val: 'auto',  label: 'Automatisch', icon: 'monitor' },
+]
+
 export default function SettingsPreferences() {
+  const { T, theme, setTheme } = useTheme()
   const { settings, loading, updateSettings } = useSettings()
-  const [prefs, setPrefs] = useState({ datumformaat: 'long', taal: 'nl', thema: 'light' })
+  const [prefs, setPrefs] = useState({ datumformaat: 'long', taal: 'nl' })
   const [saved, setSaved]  = useState(false)
 
   useEffect(() => {
@@ -21,35 +29,34 @@ export default function SettingsPreferences() {
       setPrefs({
         datumformaat: settings.datumformaat,
         taal:         settings.taal,
-        thema:        settings.thema,
       })
     }
-  }, [loading, settings.datumformaat, settings.taal, settings.thema])
+  }, [loading, settings.datumformaat, settings.taal])
 
   function set(key, val) { setPrefs(p => ({ ...p, [key]: val })); setSaved(false) }
 
   async function saveAll() {
-    await updateSettings({ datumformaat: prefs.datumformaat, taal: prefs.taal, thema: prefs.thema })
+    await updateSettings({ datumformaat: prefs.datumformaat, taal: prefs.taal })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   return (
     <div>
-      <SectionHeader title="Voorkeuren" description="Taal, valuta, datumformaat en thema" />
+      <SectionHeader title="Voorkeuren" description="Taal, valuta, datumformaat en thema" T={T} />
 
-      <SubSection title="Regio">
+      <SubSection title="Regio" T={T}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <Field label="Taal" hint="Meer talen worden later toegevoegd">
-            <FakeSelect value="Nederlands" />
+          <Field label="Taal" hint="Meer talen worden later toegevoegd" T={T}>
+            <FakeSelect value="Nederlands" T={T} />
           </Field>
-          <Field label="Valuta">
-            <FakeSelect value="EUR (€)" />
+          <Field label="Valuta" T={T}>
+            <FakeSelect value="EUR (€)" T={T} />
           </Field>
         </div>
       </SubSection>
 
-      <SubSection title="Datumformaat">
+      <SubSection title="Datumformaat" T={T}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {DATE_OPTIONS.map(o => (
             <div
@@ -80,22 +87,34 @@ export default function SettingsPreferences() {
         </div>
       </SubSection>
 
-      <SubSection title="Thema" description="Styling van het donkere thema komt later — toggle werkt al">
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 16px', border: `1px solid ${T.border}`, borderRadius: 10,
-        }}>
-          <div>
-            <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Donkere modus</div>
-            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Gebruik een donkere achtergrond</div>
-          </div>
-          <Toggle on={prefs.thema === 'dark'} onClick={() => set('thema', prefs.thema === 'dark' ? 'light' : 'dark')} />
+      <SubSection title="Thema" T={T}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {THEME_OPTIONS.map(o => {
+            const isActive = theme === o.val
+            return (
+              <button
+                key={o.val}
+                onClick={() => setTheme(o.val)}
+                style={{
+                  flex: 1, padding: '14px 10px', borderRadius: 10, cursor: 'pointer',
+                  fontFamily: 'inherit', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', gap: 8,
+                  border: `1.5px solid ${isActive ? T.blue : T.border}`,
+                  background: isActive ? T.blueSoft : T.card,
+                  color: isActive ? T.blue : T.ink3,
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <span style={{ display: 'inline-flex', color: isActive ? T.blue : T.ink3 }}>
+                  {ICONS[o.icon]}
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: isActive ? T.blueText : T.ink2 }}>
+                  {o.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
-        {prefs.thema === 'dark' && (
-          <div style={{ marginTop: 8, fontSize: 12, color: T.ink3, padding: '8px 12px', background: T.bg, borderRadius: 8 }}>
-            Donkere modus styling wordt in een toekomstige update geactiveerd.
-          </div>
-        )}
       </SubSection>
 
       <button
@@ -116,7 +135,7 @@ export default function SettingsPreferences() {
   )
 }
 
-function SectionHeader({ title, description }) {
+function SectionHeader({ title, description, T }) {
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>{title}</div>
@@ -125,7 +144,7 @@ function SectionHeader({ title, description }) {
   )
 }
 
-function SubSection({ title, description, children }) {
+function SubSection({ title, description, children, T }) {
   return (
     <div style={{ marginBottom: 28 }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: T.ink2, marginBottom: description ? 4 : 12 }}>{title}</div>
@@ -135,7 +154,7 @@ function SubSection({ title, description, children }) {
   )
 }
 
-function Field({ label, hint, children }) {
+function Field({ label, hint, children, T }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label style={{ fontSize: 12.5, fontWeight: 500, color: T.ink2 }}>{label}</label>
@@ -145,7 +164,7 @@ function Field({ label, hint, children }) {
   )
 }
 
-function FakeSelect({ value }) {
+function FakeSelect({ value, T }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -154,25 +173,6 @@ function FakeSelect({ value }) {
       background: T.cardAlt, fontSize: 13, color: T.ink, opacity: 0.75,
     }}>
       <span>{value}</span>
-    </div>
-  )
-}
-
-function Toggle({ on, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        width: 36, height: 20, borderRadius: 10,
-        background: on ? T.blue : T.borderHi,
-        padding: 2, cursor: 'pointer',
-        display: 'flex', alignItems: 'center',
-        justifyContent: on ? 'flex-end' : 'flex-start',
-        transition: 'background 0.2s',
-        flexShrink: 0,
-      }}
-    >
-      <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
     </div>
   )
 }

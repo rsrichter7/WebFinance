@@ -2,11 +2,13 @@
 // Laatste 5 transacties ongeacht geselecteerde maand.
 
 import React from 'react'
-import { T, fmt, fmtDate } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { fmt, fmtDate } from '../../tokens'
 import { Card, CardTitle } from '../ui/Card'
 import useProfiles from '../../hooks/useProfiles'
 
 function Avatar({ wie }) {
+  const { T } = useTheme()
   const { getByInitialen } = useProfiles()
   const p = getByInitialen(wie)
   const colors = p ? p.kleur : { bg: T.rule, fg: T.ink3 }
@@ -23,6 +25,7 @@ function Avatar({ wie }) {
 }
 
 export default function DashboardRecentTx({ recentTx }) {
+  const { T } = useTheme()
   return (
     <Card>
       <CardTitle sub="Laatste 5 uitgaven">

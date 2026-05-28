@@ -2,7 +2,7 @@
 // Navigatiebalk: pijltjes links/rechts + maand- of weeklabel in het midden.
 
 import React from 'react'
-import { T } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 
 const MAANDEN = [
@@ -11,7 +11,6 @@ const MAANDEN = [
 ]
 const MAANDEN_KORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec']
 
-// Geeft de maandag van de week voor een gegeven dag (gebruikt voor weeklabel)
 function getMondayOfWeek(year, month, day) {
   const d = new Date(year, month, day)
   const dow = (d.getDay() + 6) % 7
@@ -20,6 +19,8 @@ function getMondayOfWeek(year, month, day) {
 }
 
 export default function CalendarMonthNav({ year, month, selDay, viewMode, onPrev, onNext }) {
+  const { T } = useTheme()
+
   let label
   if (viewMode === 'Week') {
     const mon = getMondayOfWeek(year, month, selDay || 1)
@@ -44,9 +45,7 @@ export default function CalendarMonthNav({ year, month, selDay, viewMode, onPrev
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
       <button onClick={onPrev} style={btnStyle}>{ICONS.chevLeft}</button>
-      <span style={{ fontSize: 17, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>
-        {label}
-      </span>
+      <span style={{ fontSize: 17, fontWeight: 600, color: T.ink, letterSpacing: -0.2 }}>{label}</span>
       <button onClick={onNext} style={btnStyle}>{ICONS.chevRight}</button>
     </div>
   )

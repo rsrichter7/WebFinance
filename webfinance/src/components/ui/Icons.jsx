@@ -63,4 +63,9 @@ export const ICONS = {
   check:      <Ico size={12} d={<path d="M5 12l5 5 9-12"/>} />,
   sparkle:       <Ico size={14} d={<><path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5Z"/><path d="M19 3l.9 2.6L22.5 6.5l-2.6.9L19 10l-.9-2.6L15.5 6.5l2.6-.9Z"/></>} />,
   messageSquare: <Ico size={16} d={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>} />,
+
+  // Thema-iconen
+  sun:        <Ico size={16} d={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M18.66 5.34l1.41-1.41"/></>} />,
+  moon:       <Ico size={16} d={<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>} />,
+  monitor:    <Ico size={16} d={<><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></>} />,
 }

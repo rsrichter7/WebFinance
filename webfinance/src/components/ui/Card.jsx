@@ -2,10 +2,12 @@
 // Kleine herbruikbare bouwblokken voor de hele app.
 
 import React from 'react'
-import { T, TAB, fmt } from '../../tokens'
+import { TAB, fmt } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
 
 // ─── Card ───
 export function Card({ children, style = {} }) {
+  const { T } = useTheme()
   return (
     <div style={{
       background: T.card,
@@ -22,6 +24,7 @@ export function Card({ children, style = {} }) {
 
 // ─── Card titel ───
 export function CardTitle({ children, sub }) {
+  const { T } = useTheme()
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>{children}</div>
@@ -32,6 +35,7 @@ export function CardTitle({ children, sub }) {
 
 // ─── Statistiek card ───
 export function StatCard({ label, value, color, accent, trend, trendGood }) {
+  const { T } = useTheme()
   const trendPositive = trend > 0
   const trendColor = (trendGood === 'up' && trendPositive) || (trendGood === 'down' && !trendPositive) ? T.green : T.red
   const trendBg = trendColor === T.green ? T.greenSoft : T.redSoft
@@ -56,6 +60,7 @@ export function StatCard({ label, value, color, accent, trend, trendGood }) {
 
 // ─── Voortgangsbalk ───
 export function ProgressBar({ pct, size = 8, color }) {
+  const { T } = useTheme()
   const autoColor = pct < 60 ? T.green : pct < 80 ? T.amber : T.red
   return (
     <div style={{ height: size, background: T.rule, borderRadius: size / 2, overflow: 'hidden', flex: 1 }}>
@@ -72,6 +77,7 @@ export function ProgressBar({ pct, size = 8, color }) {
 
 // ─── Percentage badge ───
 export function PctBadge({ pct }) {
+  const { T } = useTheme()
   const color = pct < 60 ? T.greenText : pct < 80 ? T.amberText : T.redText
   const bg = pct < 60 ? T.greenSoft : pct < 80 ? T.amberSoft : T.redSoft
   return (
@@ -96,6 +102,7 @@ export function Badge({ children, color, bg }) {
 
 // ─── Toggle ───
 export function Toggle({ on, onChange }) {
+  const { T } = useTheme()
   return (
     <div onClick={onChange} style={{
       width: 36, height: 20, borderRadius: 10,
@@ -112,6 +119,7 @@ export function Toggle({ on, onChange }) {
 
 // ─── Select dropdown ───
 export function Select({ value, width = 180, onChange, options = [] }) {
+  const { T } = useTheme()
   return (
     <select
       value={value}

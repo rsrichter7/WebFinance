@@ -3,11 +3,13 @@
 // Dit component ontvangt alleen data en callbacks via props.
 
 import React from 'react'
-import { T, TAB, fmt, fmtDate } from '../../tokens'
+import { useTheme } from '../../hooks/useTheme'
+import { TAB, fmt, fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import useProfiles from '../../hooks/useProfiles'
 
 function SortHeader({ label, field, sort, onSort }) {
+  const { T } = useTheme()
   const active = sort.field === field
   const arrow = active ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ' ↕'
   return (
@@ -27,6 +29,7 @@ function SortHeader({ label, field, sort, onSort }) {
 }
 
 function SoortBadge({ soort }) {
+  const { T } = useTheme()
   const styles = {
     Noodzaak: { bg: T.rule, color: T.ink3 },
     Wens: { bg: T.blueSoft, color: T.blueText },
@@ -44,6 +47,7 @@ function SoortBadge({ soort }) {
 }
 
 function WieAvatar({ initials }) {
+  const { T } = useTheme()
   const { getByInitialen } = useProfiles()
   const p = getByInitialen(initials)
   const kleur = p ? p.kleur : { bg: T.rule, fg: T.ink3 }
@@ -60,6 +64,7 @@ function WieAvatar({ initials }) {
 }
 
 export default function TransactionTable({ transactions, sort, onSort, onDelete, onEdit, count }) {
+  const { T } = useTheme()
   return (
     <div style={{
       background: T.card, border: `1px solid ${T.border}`,
@@ -128,12 +133,7 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
                     <button
                       className="row-action"
                       onClick={() => onEdit(tx)}
-                      style={{
-                        border: 'none', background: 'transparent',
-                        padding: 5, borderRadius: 6, cursor: 'pointer',
-                        color: T.ink4, display: 'inline-flex', opacity: 0,
-                        transition: 'opacity 0.15s, color 0.15s',
-                      }}
+                      style={{ border: 'none', background: 'transparent', padding: 5, borderRadius: 6, cursor: 'pointer', color: T.ink4, display: 'inline-flex', opacity: 0, transition: 'opacity 0.15s, color 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.color = T.ink2}
                       onMouseLeave={e => e.currentTarget.style.color = T.ink4}
                     >
@@ -142,12 +142,7 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
                     <button
                       className="row-action"
                       onClick={() => onDelete(tx.id)}
-                      style={{
-                        border: 'none', background: 'transparent',
-                        padding: 5, borderRadius: 6, cursor: 'pointer',
-                        color: T.ink4, display: 'inline-flex', opacity: 0,
-                        transition: 'opacity 0.15s, color 0.15s',
-                      }}
+                      style={{ border: 'none', background: 'transparent', padding: 5, borderRadius: 6, cursor: 'pointer', color: T.ink4, display: 'inline-flex', opacity: 0, transition: 'opacity 0.15s, color 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.color = T.red}
                       onMouseLeave={e => e.currentTarget.style.color = T.ink4}
                     >
@@ -160,12 +155,7 @@ export default function TransactionTable({ transactions, sort, onSort, onDelete,
           </tbody>
         </table>
       </div>
-
-      {/* Footer */}
-      <div style={{
-        padding: '12px 16px', borderTop: `1px solid ${T.border}`,
-        fontSize: 13, color: T.ink3, background: T.cardAlt,
-      }}>
+      <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, fontSize: 13, color: T.ink3, background: T.cardAlt }}>
         {count} transactie{count !== 1 ? 's' : ''}
       </div>
     </div>
