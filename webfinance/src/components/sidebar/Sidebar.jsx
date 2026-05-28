@@ -2,7 +2,7 @@
 // De navigatie-sidebar die op elke pagina verschijnt.
 // Gebruikt React Router's NavLink voor actieve state.
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
@@ -12,6 +12,8 @@ import useFeedback from '../../hooks/useFeedback'
 import FeedbackForm from '../feedback/FeedbackForm'
 import useProfiles, { genInitialen } from '../../hooks/useProfiles'
 import useSettings from '../../hooks/useSettings'
+import useNotifications from '../../hooks/useNotifications'
+import NotificationPanel from '../ui/NotificationPanel'
 
 const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
@@ -25,12 +27,15 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { T } = useTheme()
-  const [collapsed, setCollapsed]       = useState(false)
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
-  const [profielHover, setProfielHover] = useState(false)
+  const [collapsed, setCollapsed]             = useState(false)
+  const [feedbackOpen, setFeedbackOpen]       = useState(false)
+  const [profielHover, setProfielHover]       = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const bellRef = useRef(null)
   const { isPremium } = usePremium()
   const { user, signOut } = useAuth()
-  const { unreadCount, isAdmin, submitFeedback } = useFeedback()
+  const { isAdmin, submitFeedback } = useFeedback()
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
   const { persons } = useProfiles()
   const { settings } = useSettings()
   const navigate = useNavigate()
@@ -135,6 +140,26 @@ export default function Sidebar() {
           )}
         </div>
 
+        {/* Notificaties */}
+        <button ref={bellRef} onClick={() => setNotificationsOpen(o => !o)} style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          width: '100%', padding: collapsed ? '8px' : '8px 10px',
+          borderRadius: 8, border: 'none', background: notificationsOpen ? T.bg : 'transparent',
+          fontSize: 14, color: T.ink3, cursor: 'pointer',
+          fontFamily: "'Inter', sans-serif",
+          justifyContent: collapsed ? 'center' : 'flex-start',
+        }}>
+          <span style={{ color: T.ink3, display: 'inline-flex', position: 'relative' }}>
+            {ICONS.bell}
+            {unreadCount > 0 && (
+              <span style={{ position: 'absolute', top: -5, right: -6, background: T.red, color: '#fff', fontSize: 11, minWidth: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, pointerEvents: 'none' }}>
+                {unreadCount}
+              </span>
+            )}
+          </span>
+          {!collapsed && <span>Notificaties</span>}
+        </button>
+
         {/* Feedback */}
         <button onClick={() => setFeedbackOpen(true)} style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -144,14 +169,7 @@ export default function Sidebar() {
           fontFamily: "'Inter', sans-serif",
           justifyContent: collapsed ? 'center' : 'flex-start',
         }}>
-          <span style={{ color: T.ink3, display: 'inline-flex', position: 'relative' }}>
-            {ICONS.messageSquare}
-            {isAdmin && unreadCount > 0 && (
-              <span style={{ position: 'absolute', top: -5, right: -6, background: T.red, color: '#fff', fontSize: 11, minWidth: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, pointerEvents: 'none' }}>
-                {unreadCount}
-              </span>
-            )}
-          </span>
+          <span style={{ color: T.ink3, display: 'inline-flex' }}>{ICONS.messageSquare}</span>
           {!collapsed && <span>Feedback</span>}
         </button>
 
@@ -175,6 +193,15 @@ export default function Sidebar() {
         )}
       </div>
 
+      <NotificationPanel
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        anchorRef={bellRef}
+      />
       <FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSubmit={submitFeedback} />
 
       <button onClick={() => setCollapsed(!collapsed)} style={{
