@@ -1,5 +1,4 @@
-// ─── FixedLoanSection ───
-// Placeholder voor de leningen sectie. Nog niet werkend.
+// Niet in gebruik — geparkeerd voor toekomstige leningen-feature
 
 import React from 'react'
 import { T } from '../../tokens'

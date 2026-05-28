@@ -8,7 +8,6 @@ import FixedStats, { FixedUitgavenDonut } from '../components/fixed/FixedStats'
 import FixedCategoryGroup from '../components/fixed/FixedCategoryGroup'
 import FixedInkomstSection from '../components/fixed/FixedInkomstSection'
 import FixedForm from '../components/fixed/FixedForm'
-import FixedLoanSection from '../components/fixed/FixedLoanSection'
 import { Card } from '../components/ui/Card'
 import { ICONS } from '../components/ui/Icons'
 import { T } from '../tokens'
@@ -109,7 +108,6 @@ export default function FixedPage() {
                     onRemove={removeItem}
                   />
                 ))}
-                <FixedLoanSection />
               </>
             ) : (
               <FixedInkomstSection
