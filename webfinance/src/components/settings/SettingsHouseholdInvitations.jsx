@@ -1,17 +1,15 @@
 // ─── SettingsHouseholdInvitations ───
-// Drie secties: uitnodigingslink aanmaken, openstaande uitnodigingen, huishoudleden.
+// Drie secties: echte accounts met toegang, uitnodigingslink aanmaken, openstaande uitnodigingen.
 
 import React, { useState } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import useInvitations from '../../hooks/useInvitations'
-import useProfiles from '../../hooks/useProfiles'
 import { fmtDate } from '../../tokens'
 
 export default function SettingsHouseholdInvitations() {
   const { T } = useTheme()
-  const { myInvitations, createInvitation, cancelInvitation } = useInvitations()
-  const { persons } = useProfiles()
+  const { myInvitations, createInvitation, cancelInvitation, householdMembers, membersLoading } = useInvitations()
   const [uitnodigingLink, setUitnodigingLink] = useState(null)
   const [bezig, setBezig] = useState(false)
   const [gekopieerd, setGekopieerd] = useState(false)
@@ -30,18 +28,71 @@ export default function SettingsHouseholdInvitations() {
     setTimeout(() => setGekopieerd(false), 2000)
   }
 
-  const titH  = { fontSize: 15, fontWeight: 600, color: T.ink, marginBottom: 4 }
-  const desc  = { fontSize: 13, color: T.ink3, lineHeight: 1.5, marginBottom: 14 }
-  const row   = { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.card, borderRadius: 10, border: `1px solid ${T.border}` }
+  const titH    = { fontSize: 15, fontWeight: 600, color: T.ink, marginBottom: 2 }
+  const subDesc = { fontSize: 13, color: T.ink3, marginBottom: 14 }
+  const divider = <div style={{ height: 1, background: T.border, margin: '28px 0' }} />
+  const memberRow = { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.card, borderRadius: 10, border: `1px solid ${T.border}` }
+
+  function RolBadge({ role }) {
+    const isEigenaar = role === 'eigenaar'
+    return (
+      <span style={{
+        fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+        background: isEigenaar ? T.blueSoft : T.rule,
+        color: isEigenaar ? T.blue : T.ink3,
+        letterSpacing: 0.2, whiteSpace: 'nowrap',
+      }}>
+        {isEigenaar ? 'Eigenaar' : 'Lid'}
+      </span>
+    )
+  }
 
   return (
     <div>
-      <div style={{ height: 1, background: T.border, margin: '28px 0' }} />
+      {divider}
+
+      {/* Accounts met toegang */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={titH}>Accounts met toegang</div>
+        <div style={subDesc}>Deze accounts kunnen inloggen en data inzien.</div>
+
+        {membersLoading ? (
+          <div style={{ fontSize: 13, color: T.ink3 }}>Laden…</div>
+        ) : householdMembers.length === 0 ? (
+          <div style={{ fontSize: 13, color: T.ink4 }}>Geen accounts gevonden.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {householdMembers.map(m => (
+              <div key={m.user_id} style={memberRow}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                  background: m.role === 'eigenaar' ? T.blueSoft : T.rule,
+                  color: m.role === 'eigenaar' ? T.blue : T.ink3,
+                  display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700,
+                }}>
+                  {m.email[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.email}
+                  </div>
+                  <div style={{ fontSize: 12, color: T.ink4, marginTop: 2 }}>
+                    Lid sinds: {fmtDate(m.created_at, 'long')}
+                  </div>
+                </div>
+                <RolBadge role={m.role} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {divider}
 
       {/* Leden uitnodigen */}
       <div style={{ marginBottom: 24 }}>
         <div style={titH}>Leden uitnodigen</div>
-        <div style={desc}>
+        <div style={subDesc}>
           Deel een uitnodigingslink met iemand die je wil toevoegen aan je huishouden.
           De link is 7 dagen geldig.
         </div>
@@ -97,11 +148,11 @@ export default function SettingsHouseholdInvitations() {
       {/* Openstaande uitnodigingen — alleen tonen als er uitnodigingen zijn */}
       {myInvitations.length > 0 && (
         <div>
-          <div style={{ height: 1, background: T.border, margin: '28px 0' }} />
+          {divider}
           <div style={titH}>Openstaande uitnodigingen</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
             {myInvitations.map(inv => (
-              <div key={inv.id} style={row}>
+              <div key={inv.id} style={memberRow}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: T.ink }}>
                     Aangemaakt: {fmtDate(inv.created_at, 'long')}
@@ -118,34 +169,6 @@ export default function SettingsHouseholdInvitations() {
                 }}>
                   Intrekken
                 </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Huishoudleden — toont personen (profiles, zonder GZ) */}
-      {persons.length > 0 && (
-        <div>
-          <div style={{ height: 1, background: T.border, margin: '28px 0' }} />
-          <div style={titH}>Huishoudleden</div>
-          <div style={{ ...desc, marginBottom: 14 }}>
-            Personen die toegang hebben tot dit huishouden.
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {persons.map(p => (
-              <div key={p.id} style={row}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                  background: p.kleur.bg, color: p.kleur.fg,
-                  display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700,
-                }}>
-                  {p.initialen}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{p.naam}</div>
-                  <div style={{ fontSize: 12, color: T.ink3 }}>Lid</div>
-                </div>
               </div>
             ))}
           </div>

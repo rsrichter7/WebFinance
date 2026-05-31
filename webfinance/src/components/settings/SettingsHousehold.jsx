@@ -27,8 +27,13 @@ export default function SettingsHousehold() {
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, marginBottom: 4 }}>Huishouden</div>
         <div style={{ fontSize: 13.5, color: T.ink3, lineHeight: 1.5 }}>
-          Beheer de personen in je huishouden. Deze worden gebruikt bij transacties, vaste lasten en kostenverdeling.
+          Beheer wie toegang heeft en hoe uitgaven worden bijgehouden.
         </div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, marginBottom: 2 }}>Profielen</div>
+        <div style={{ fontSize: 13, color: T.ink3 }}>Voor het bijhouden van wie wat uitgeeft</div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>

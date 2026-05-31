@@ -10,8 +10,10 @@ import { clearAllCaches } from './cacheManager'
 export default function useInvitations() {
   const { user } = useAuth()
   const { householdId, loading: householdLoading } = useHousehold()
-  const [myInvitations, setMyInvitations] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [myInvitations, setMyInvitations]     = useState([])
+  const [loading, setLoading]                 = useState(false)
+  const [householdMembers, setHouseholdMembers] = useState([])
+  const [membersLoading, setMembersLoading]   = useState(false)
 
   // Haal openstaande uitnodigingen op voor de ingelogde user
   const fetchInvitations = useCallback(async () => {
@@ -27,9 +29,21 @@ export default function useInvitations() {
     setLoading(false)
   }, [householdId, user])
 
+  // Haal echte gebruikersaccounts op via RPC (omzeilt RLS op household_members)
+  const fetchHouseholdMembers = useCallback(async () => {
+    if (!householdId) return
+    setMembersLoading(true)
+    const { data } = await supabase.rpc('get_household_members')
+    setHouseholdMembers(data ?? [])
+    setMembersLoading(false)
+  }, [householdId])
+
   useEffect(() => {
-    if (!householdLoading) fetchInvitations()
-  }, [fetchInvitations, householdLoading])
+    if (!householdLoading) {
+      fetchInvitations()
+      fetchHouseholdMembers()
+    }
+  }, [fetchInvitations, fetchHouseholdMembers, householdLoading])
 
   // Maak nieuwe uitnodiging aan, retourneer de deelbare link
   async function createInvitation() {
@@ -85,6 +99,8 @@ export default function useInvitations() {
   return {
     myInvitations,
     loading,
+    householdMembers,
+    membersLoading,
     createInvitation,
     cancelInvitation,
     getInvitationByToken,
