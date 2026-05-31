@@ -96,6 +96,13 @@ export default function useInvitations() {
     return await supabase.rpc('decline_household_invitation', { invite_token: token })
   }, [])
 
+  // RPC: verwijder een lid uit het huishouden (alleen eigenaar)
+  const removeHouseholdMember = useCallback(async (userId) => {
+    const { error } = await supabase.rpc('remove_household_member', { target_user_id: userId })
+    if (!error) await fetchHouseholdMembers()
+    return { error }
+  }, [fetchHouseholdMembers])
+
   return {
     myInvitations,
     loading,
@@ -106,5 +113,6 @@ export default function useInvitations() {
     getInvitationByToken,
     acceptInvitation,
     declineInvitation,
+    removeHouseholdMember,
   }
 }
