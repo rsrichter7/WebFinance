@@ -37,6 +37,11 @@ export default function NotificationPanel({ open, onClose, notifications, unread
 
   if (!open) return null
 
+  // Sorteer op datum en beperk tot de 3 meest recente
+  const zichtbaar = [...notifications]
+    .sort((a, b) => new Date(b.datum) - new Date(a.datum))
+    .slice(0, 3)
+
   function handleItemClick(n) {
     onMarkAsRead(n.id)
     if (n.link) { navigate(n.link); onClose() }
@@ -67,7 +72,7 @@ export default function NotificationPanel({ open, onClose, notifications, unread
         )}
       </div>
 
-      {/* Lijst */}
+      {/* Lijst — maximaal 3 meest recente notificaties */}
       <div style={{ overflowY: 'auto', flex: 1 }}>
         {notifications.length === 0 ? (
           <div style={{
@@ -78,7 +83,7 @@ export default function NotificationPanel({ open, onClose, notifications, unread
             <div style={{ fontSize: 13 }}>Geen notificaties</div>
           </div>
         ) : (
-          notifications.map(n => (
+          zichtbaar.map(n => (
             <div
               key={n.id}
               onClick={() => handleItemClick(n)}
@@ -106,6 +111,18 @@ export default function NotificationPanel({ open, onClose, notifications, unread
           ))
         )}
       </div>
+
+      {/* "Alle notificaties bekijken" — alleen tonen als er meer dan 3 zijn */}
+      {notifications.length > 3 && (
+        <div style={{ padding: '10px 16px', borderTop: `1px solid ${T.border}`, textAlign: 'center', flexShrink: 0 }}>
+          <button
+            onClick={() => { navigate('/instellingen'); onClose() }}
+            style={{ background: 'none', border: 'none', fontSize: 12.5, color: T.blue, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}
+          >
+            Alle {notifications.length} notificaties bekijken
+          </button>
+        </div>
+      )}
     </div>
   )
 }
