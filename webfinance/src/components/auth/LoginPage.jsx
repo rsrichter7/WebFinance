@@ -87,11 +87,7 @@ export default function LoginPage() {
       fontFamily: "'Inter', sans-serif", padding: '24px',
     }}>
       <div style={{ marginBottom: 32, textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, background: T.blue, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: T.ink, color: T.bg, display: 'grid', placeItems: 'center', fontSize: 20, fontWeight: 600, margin: '0 auto 12px' }}>€</div>
         <span style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: '-0.3px' }}>Webfinance</span>
       </div>
 
