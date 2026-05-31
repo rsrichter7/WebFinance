@@ -25,6 +25,8 @@ export default function LoginPage() {
   const [searchParams]      = useSearchParams()
   const [accountVerwijderd] = useState(() => searchParams.get('deleted') === 'true')
   const [modus, setModus]   = useState(() => searchParams.get('modus') === 'registreren' ? 'registreren' : 'inloggen')
+  const [naam, setNaam]                   = useState('')
+  const [naamFout, setNaamFout]           = useState('')
   const [email, setEmail]                 = useState('')
   const [wachtwoord, setWachtwoord]       = useState('')
   const [bevestig, setBevestig]           = useState('')
@@ -50,8 +52,9 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setFout(''); setWachtwoordFout('')
+    setFout(''); setWachtwoordFout(''); setNaamFout('')
     if (modus === 'registreren') {
+      if (naam.trim().length < 2) { setNaamFout('Voer je volledige naam in (minimaal 2 tekens).'); return }
       if (wachtwoord.length < 8) { setWachtwoordFout('Wachtwoord moet minimaal 8 tekens bevatten.'); return }
       if (wachtwoord !== bevestig) { setFout('Wachtwoorden komen niet overeen.'); return }
     }
@@ -61,7 +64,7 @@ export default function LoginPage() {
       if (error) setFout(vertaalFout(error.message))
       else navigeerNaLogin()
     } else {
-      const { error, needsConfirmation } = await signUp(email, wachtwoord)
+      const { error, needsConfirmation } = await signUp(email, wachtwoord, naam.trim())
       if (error) setFout(vertaalFout(error.message))
       else if (needsConfirmation) setNeedsBevestiging(true)
       else navigeerNaLogin()
@@ -69,8 +72,8 @@ export default function LoginPage() {
     setBezig(false)
   }
 
-  function wisselModus() { setModus(m => m === 'inloggen' ? 'registreren' : 'inloggen'); setFout(''); setWachtwoordFout('') }
-  function terug() { setNeedsBevestiging(false); setModus('inloggen'); setEmail(''); setWachtwoord(''); setBevestig('') }
+  function wisselModus() { setModus(m => m === 'inloggen' ? 'registreren' : 'inloggen'); setFout(''); setWachtwoordFout(''); setNaam(''); setNaamFout('') }
+  function terug() { setNeedsBevestiging(false); setModus('inloggen'); setEmail(''); setWachtwoord(''); setBevestig(''); setNaam('') }
 
   const labelStyle = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 500, color: T.ink2 }
   const inputStyle = { padding: '9px 12px', border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 14, color: T.ink, background: T.card, outline: 'none', fontFamily: "'Inter', sans-serif", transition: 'border-color 0.15s' }
@@ -117,6 +120,14 @@ export default function LoginPage() {
             </p>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {modus === 'registreren' && (
+                <label style={labelStyle}>
+                  Volledige naam
+                  <input type="text" value={naam} onChange={e => { setNaam(e.target.value); setNaamFout('') }} required autoComplete="name" style={inputStyle} placeholder="Jan de Vries" />
+                  {naamFout && <span style={{ fontSize: 12, color: T.redText, marginTop: 2 }}>{naamFout}</span>}
+                </label>
+              )}
+
               <label style={labelStyle}>
                 E-mailadres
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" style={inputStyle} placeholder="jij@voorbeeld.nl" />

@@ -17,7 +17,7 @@ function begroeting() {
   return 'Goedenavond'
 }
 
-export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx }) {
+export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx, voornaam }) {
   const { T } = useTheme()
 
   function vorige() {
@@ -54,7 +54,7 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx })
       padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card,
     }}>
       <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
-        {begroeting()}, Ronald
+        {begroeting()}{voornaam ? `, ${voornaam}` : ''}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

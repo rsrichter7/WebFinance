@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import useTransactions from '../hooks/useTransactions'
 import useBudgets from '../hooks/useBudgets'
 import useSettings from '../hooks/useSettings'
+import { useAuth } from '../hooks/useAuth'
 import TransactionForm from '../components/transactions/TransactionForm'
 import DashboardTopBar from '../components/dashboard/DashboardTopBar'
 import DashboardStatCards from '../components/dashboard/DashboardStatCards'
@@ -20,9 +21,12 @@ const now = new Date()
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { allTransactions, addTransaction } = useTransactions()
   const { spaardoelen, actieveVerdeling } = useBudgets()
   const { settings } = useSettings()
+
+  const voornaam = user?.user_metadata?.full_name?.split(' ')[0] || ''
 
   const [maand, setMaand] = useState(now.getMonth() + 1)
   const [jaar, setJaar]   = useState(now.getFullYear())
@@ -117,6 +121,7 @@ export default function DashboardPage() {
         maand={maand} jaar={jaar}
         onMaandWijzig={onMaandWijzig}
         onAddTx={() => setShowForm(true)}
+        voornaam={voornaam}
       />
 
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>

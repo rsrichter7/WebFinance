@@ -26,8 +26,9 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function signUp(email, password) {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+  async function signUp(email, password, naam) {
+    const opties = naam ? { options: { data: { full_name: naam } } } : {}
+    const { data, error } = await supabase.auth.signUp({ email, password, ...opties })
     const needsConfirmation = !error && data.session === null
     return { data, error, needsConfirmation }
   }
