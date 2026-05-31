@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { useAuth } from './useAuth'
 import { registerCache } from './cacheManager'
 
 export const PROFIEL_KLEUREN = [
@@ -51,6 +52,7 @@ function dbNaarFrontend(row) {
     initialen:     row.initialen,
     kleur:         parseKleur(row.kleur),
     isGezamenlijk: !row.is_deletable,
+    userId:        row.user_id || null,
   }
 }
 
@@ -60,6 +62,7 @@ registerCache(clearCache)
 
 export default function useProfiles() {
   const { householdId, loading: householdLoading } = useHousehold()
+  const { user } = useAuth()
 
   const cacheHit = prCache.data !== null && prCache.householdId === householdId && householdId !== null
 
@@ -83,7 +86,7 @@ export default function useProfiles() {
 
     const { data, error: err } = await supabase
       .from('profiles')
-      .select('id, naam, initialen, kleur, is_deletable')
+      .select('id, naam, initialen, kleur, is_deletable, user_id')
       .eq('household_id', householdId)
       .order('is_deletable', { ascending: false }) // GZ (false) altijd als laatste
       .order('created_at', { ascending: true })
@@ -135,9 +138,16 @@ export default function useProfiles() {
     if (Object.keys(updates).length > 0) {
       await supabase.from('profiles').update(updates).eq('id', id)
     }
+    // Sync naar auth metadata als dit het eigen profiel is
+    if (data.naam !== undefined && user) {
+      const profiel = profiles.find(p => p.id === id)
+      if (profiel?.userId === user.id) {
+        await supabase.auth.updateUser({ data: { full_name: data.naam } })
+      }
+    }
     prCache = { data: null, householdId: null }
     fetchProfiles()
-  }, [fetchProfiles])
+  }, [fetchProfiles, profiles, user])
 
   // ─── Profiel verwijderen (GZ en enige persoon zijn beschermd) — cache wissen ───
   const removeProfile = useCallback(async (id) => {
