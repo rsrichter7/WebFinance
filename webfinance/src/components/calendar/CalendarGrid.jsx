@@ -27,12 +27,16 @@ function getOccurrencesInMonth(item, year, month) {
   return results
 }
 
-export function buildDayMap(allTransactions, items, year, month) {
+export function buildDayMap(allTransactions, items, year, month, dismissedExpected = []) {
   const map = {}
+
   for (const item of items) {
     for (const { day } of getOccurrencesInMonth(item, year, month)) {
       if (!map[day]) map[day] = { expected: [], actual: [] }
-      map[day].expected.push({ id: item.id, name: item.omschrijving, amount: item.bedrag, income: item.type === 'Inkomst' })
+      map[day].expected.push({
+        id: item.id, name: item.omschrijving, winkel: item.winkel || '',
+        amount: item.bedrag, income: item.type === 'Inkomst',
+      })
     }
   }
   for (const tx of allTransactions) {
@@ -40,18 +44,51 @@ export function buildDayMap(allTransactions, items, year, month) {
     if (d.getFullYear() === year && d.getMonth() === month) {
       const day = d.getDate()
       if (!map[day]) map[day] = { expected: [], actual: [] }
-      map[day].actual.push({ id: tx.id, vasteLast: tx.vasteLast, name: tx.beschrijving, amount: tx.bedrag, income: tx.type === 'Inkomst' })
+      map[day].actual.push({
+        id: tx.id, vasteLast: tx.vasteLast, name: tx.beschrijving, winkel: tx.winkel || '',
+        amount: tx.bedrag, income: tx.type === 'Inkomst',
+      })
     }
   }
+
+  // Filter verwachte items voor vandaag en het verleden:
+  // verwijder automatische matches (vaste last betaald) en handmatig verwijderde
+  const today = new Date()
+  const p = n => String(n).padStart(2, '0')
+
+  for (const dayStr of Object.keys(map)) {
+    const day = parseInt(dayStr)
+    if (new Date(year, month, day) > today) continue // toekomstige dagen overslaan
+
+    const datum   = `${year}-${p(month + 1)}-${p(day)}`
+    const dayData = map[day]
+
+    dayData.expected = dayData.expected.filter(exp => {
+      // Handmatig verwijderd door gebruiker
+      if (dismissedExpected.some(d => d.vastelastId === exp.id && d.datum === datum)) return false
+      // Automatische match: zoek in ±1 dag naar gekoppelde of vergelijkbare transactie
+      for (const delta of [0, -1, 1]) {
+        const acts = map[day + delta]?.actual || []
+        for (const a of acts) {
+          if (a.vasteLast === exp.id) return false // directe koppeling via vaste_last_id
+          if (Math.abs(a.amount - exp.amount) < 0.01 &&
+              a.name && exp.name &&
+              a.name.toLowerCase() === exp.name.toLowerCase()) return false // naam + bedrag
+        }
+      }
+      return true
+    })
+  }
+
   return map
 }
 
-export default function CalendarGrid({ allTransactions, items, year, month, selectedDay, viewFilter, onSelectDay }) {
+export default function CalendarGrid({ allTransactions, items, year, month, selectedDay, viewFilter, onSelectDay, dismissed = [] }) {
   const { T } = useTheme()
   const today = new Date()
   const todayDay = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : -1
 
-  const dayMap = useMemo(() => buildDayMap(allTransactions, items, year, month), [allTransactions, items, year, month])
+  const dayMap = useMemo(() => buildDayMap(allTransactions, items, year, month, dismissed), [allTransactions, items, year, month, dismissed])
 
   const paidIds = useMemo(() => {
     const paid = allTransactions.filter(tx => {

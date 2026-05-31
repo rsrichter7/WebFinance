@@ -33,6 +33,18 @@ export default function CalendarPage() {
   const [viewFilter, setViewFilter] = useState('Beide')
   const [showForm,   setShowForm]   = useState(false)
 
+  // Handmatig verwijderde verwachte uitgaven — persistent via localStorage
+  const [dismissed, setDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('webfinance_dismissed_expected') || '[]') }
+    catch { return [] }
+  })
+
+  function dismissExpected(vastelastId, datum) {
+    const next = [...dismissed, { vastelastId, datum }]
+    setDismissed(next)
+    localStorage.setItem('webfinance_dismissed_expected', JSON.stringify(next))
+  }
+
   function prevPeriod() {
     if (viewMode === 'Week') {
       const mon = getMondayOfWeek(year, month, selDay)
@@ -61,7 +73,7 @@ export default function CalendarPage() {
     if (y !== undefined) setYear(y)
   }
 
-  const dayMap = useMemo(() => buildDayMap(allTransactions, items, year, month), [allTransactions, items, year, month])
+  const dayMap = useMemo(() => buildDayMap(allTransactions, items, year, month, dismissed), [allTransactions, items, year, month, dismissed])
 
   const totalExpected = useMemo(() =>
     Object.values(dayMap).reduce((s, d) => s + d.expected.filter(e => !e.income).reduce((s2, e) => s2 + e.amount, 0), 0),
@@ -82,13 +94,13 @@ export default function CalendarPage() {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <CalendarMonthNav year={year} month={month} selDay={selDay} viewMode={viewMode} onPrev={prevPeriod} onNext={nextPeriod} />
             {viewMode === 'Maand'
-              ? <CalendarGrid allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={setSelDay} />
+              ? <CalendarGrid allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={setSelDay} dismissed={dismissed} />
               : <CalendarWeekView allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={handleSelectDay} />
             }
             <CalendarStats totalExpected={totalExpected} totalActual={totalActual} />
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
-            <CalendarDayDetail day={selDay} month={month} year={year} dayData={dayMap[selDay]} onAdd={() => setShowForm(true)} />
+            <CalendarDayDetail day={selDay} month={month} year={year} dayData={dayMap[selDay]} onAdd={() => setShowForm(true)} onDismissExpected={id => dismissExpected(id, initialDate)} />
             <CalendarLegend />
           </div>
         </div>
