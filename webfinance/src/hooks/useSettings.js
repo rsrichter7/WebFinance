@@ -20,9 +20,11 @@ const DEFAULTS = {
   profiel_email:     '',
   analytics_order:   ['categories', 'subcategories', 'soort', 'inkexp'],
   import_max_regels: 1000,
+  notif_budget:       true,
+  notif_vaste_lasten: true,
 }
 
-const SELECT_COLS = 'datumformaat, taal, thema, premium, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels'
+const SELECT_COLS = 'datumformaat, taal, thema, premium, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten'
 
 let sCache = { settings: null, userId: null }
 function clearCache() { sCache = { settings: null, userId: null } }

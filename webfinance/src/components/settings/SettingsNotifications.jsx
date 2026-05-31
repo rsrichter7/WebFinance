@@ -1,24 +1,29 @@
 // ─── SettingsNotifications ───
-// Notificatie-overzicht: lijst, gelezen markeren en komende functies onderaan.
+// Notificatie-overzicht, instelbare meldingen en komende functies.
 
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
+import { Toggle } from '../ui/Card'
 import useNotifications from '../../hooks/useNotifications'
+import useSettings from '../../hooks/useSettings'
 import { fmtDate } from '../../tokens'
 
+// Alleen de twee nog-niet-gebouwde meldingen blijven hier staan
 const TOEKOMSTIG = [
-  { label: 'Budget bijna overschreden',  desc: 'Per categorie · drempel instelbaar' },
-  { label: 'Aankomende vaste lasten',    desc: '3 dagen voor afschrijving' },
-  { label: 'Maandelijks overzicht',      desc: 'Eerste van de maand' },
-  { label: 'Productupdates',             desc: 'Nieuwe features en verbeteringen' },
+  { label: 'Maandelijks overzicht', desc: 'Eerste van de maand' },
+  { label: 'Productupdates',        desc: 'Nieuwe features en verbeteringen' },
 ]
 
 export default function SettingsNotifications() {
   const { T } = useTheme()
   const navigate = useNavigate()
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications()
+  const { settings, updateSetting } = useSettings()
+
+  const notifBudget      = settings.notif_budget       !== false
+  const notifVasteLasten = settings.notif_vaste_lasten !== false
 
   function handleClick(notif) {
     markAsRead(notif.id)
@@ -33,7 +38,7 @@ export default function SettingsNotifications() {
         <div style={{ fontSize: 13, color: T.ink3, marginTop: 4 }}>Meldingen voor jullie huishouden</div>
       </div>
 
-      {/* "Alles als gelezen markeren" knop — alleen zichtbaar als er ongelezen zijn */}
+      {/* Alles als gelezen markeren — alleen zichtbaar bij ongelezen items */}
       {unreadCount > 0 && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
           <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: T.blue, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
@@ -58,15 +63,8 @@ export default function SettingsNotifications() {
             <div
               key={n.id}
               onClick={() => handleClick(n)}
-              style={{
-                display: 'flex', gap: 12, padding: '14px 16px',
-                borderBottom: i < notifications.length - 1 ? `1px solid ${T.rule}` : 'none',
-                background: n.gelezen ? T.card : T.blueSoft,
-                cursor: n.link ? 'pointer' : 'default',
-                transition: 'background 0.15s',
-              }}
+              style={{ display: 'flex', gap: 12, padding: '14px 16px', borderBottom: i < notifications.length - 1 ? `1px solid ${T.rule}` : 'none', background: n.gelezen ? T.card : T.blueSoft, cursor: n.link ? 'pointer' : 'default', transition: 'background 0.15s' }}
             >
-              {/* Ongelezen-bolletje */}
               <div style={{ paddingTop: 6, flexShrink: 0, width: 8 }}>
                 {!n.gelezen && <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.blue }} />}
               </div>
@@ -80,7 +78,27 @@ export default function SettingsNotifications() {
         </div>
       )}
 
-      {/* Komende functies — onderaan, toggles niet-functioneel */}
+      {/* Meldingen — functionele toggles */}
+      <div style={{ fontSize: 13, fontWeight: 600, color: T.ink2, marginBottom: 2 }}>Meldingen</div>
+      <div style={{ fontSize: 12, color: T.ink3, marginBottom: 14 }}>Kies welke meldingen je wil ontvangen</div>
+      <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.rule}` }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Budget bijna overschreden</div>
+            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Per categorie · bij ≥ 80%</div>
+          </div>
+          <Toggle on={notifBudget} onChange={() => updateSetting('notif_budget', !notifBudget)} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Aankomende vaste lasten</div>
+            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>3 dagen voor afschrijving</div>
+          </div>
+          <Toggle on={notifVasteLasten} onChange={() => updateSetting('notif_vaste_lasten', !notifVasteLasten)} />
+        </div>
+      </div>
+
+      {/* Komende functies — toggles niet-functioneel */}
       <div style={{ fontSize: 13, fontWeight: 600, color: T.ink2, marginBottom: 2 }}>Komende functies</div>
       <div style={{ fontSize: 12, color: T.ink3, marginBottom: 14 }}>Deze meldingen worden binnenkort toegevoegd</div>
       <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden' }}>
