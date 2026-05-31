@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import useProfiles, { PROFIEL_KLEUREN, genInitialen } from '../../hooks/useProfiles'
+import SettingsHouseholdInvitations from './SettingsHouseholdInvitations'
 
 export default function SettingsHousehold() {
   const { T } = useTheme()
@@ -62,6 +63,8 @@ export default function SettingsHousehold() {
         <span style={{ display: 'inline-flex' }}>{ICONS.plus}</span>
         Persoon toevoegen
       </button>
+
+      <SettingsHouseholdInvitations />
 
       {modal && modal.type !== 'delete' && createPortal(
         <ProfielModal modal={modal} onSave={handleSave} onClose={() => setModal(null)} />,

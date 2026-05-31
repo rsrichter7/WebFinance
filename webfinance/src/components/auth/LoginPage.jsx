@@ -24,7 +24,7 @@ export default function LoginPage() {
   const { signIn, signUp, signInWithGoogle } = useAuth()
   const [searchParams]      = useSearchParams()
   const [accountVerwijderd] = useState(() => searchParams.get('deleted') === 'true')
-  const [modus, setModus]   = useState('inloggen')
+  const [modus, setModus]   = useState(() => searchParams.get('modus') === 'registreren' ? 'registreren' : 'inloggen')
   const [email, setEmail]                 = useState('')
   const [wachtwoord, setWachtwoord]       = useState('')
   const [bevestig, setBevestig]           = useState('')
@@ -38,6 +38,16 @@ export default function LoginPage() {
     if (accountVerwijderd) window.history.replaceState({}, '', '/login')
   }, [])
 
+  function navigeerNaLogin() {
+    const invToken = sessionStorage.getItem('invitation_token')
+    if (invToken) {
+      sessionStorage.removeItem('invitation_token')
+      navigate(`/uitnodiging/${invToken}`)
+    } else {
+      navigate('/')
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setFout(''); setWachtwoordFout('')
@@ -49,12 +59,12 @@ export default function LoginPage() {
     if (modus === 'inloggen') {
       const { error } = await signIn(email, wachtwoord)
       if (error) setFout(vertaalFout(error.message))
-      else navigate('/')
+      else navigeerNaLogin()
     } else {
       const { error, needsConfirmation } = await signUp(email, wachtwoord)
       if (error) setFout(vertaalFout(error.message))
       else if (needsConfirmation) setNeedsBevestiging(true)
-      else navigate('/')
+      else navigeerNaLogin()
     }
     setBezig(false)
   }

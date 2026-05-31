@@ -16,6 +16,7 @@ import SettingsPage from './pages/SettingsPage'
 import LoginPage from './components/auth/LoginPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import PrivacyPage from './pages/PrivacyPage'
+import InvitationPage from './pages/InvitationPage'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/uitnodiging/:token" element={<InvitationPage />} />
           <Route element={
             <ProtectedRoute>
               <MainLayout />
