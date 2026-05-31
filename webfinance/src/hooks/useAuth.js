@@ -48,5 +48,10 @@ export function useAuth() {
     await supabase.auth.signOut()
   }
 
-  return { user, session, loading, signUp, signIn, signOut, signInWithGoogle }
+  async function refreshUser() {
+    const { data: { user: u } } = await supabase.auth.getUser()
+    if (u) setUser(u)
+  }
+
+  return { user, session, loading, signUp, signIn, signOut, signInWithGoogle, refreshUser }
 }

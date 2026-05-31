@@ -10,7 +10,7 @@ import { supabase } from '../../supabaseClient'
 export default function SettingsProfile() {
   const { T } = useTheme()
   const { settings, loading, updateSettings } = useSettings()
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [data, setData]       = useState({ naam: '', email: '' })
   const [saved, setSaved]     = useState(false)
   const [emailMsg, setEmailMsg] = useState(null)
@@ -31,6 +31,8 @@ export default function SettingsProfile() {
       setEmailMsg({ type: 'info', text: `Er is een bevestigingsmail gestuurd naar ${data.email}. Klik op de link om je emailadres te wijzigen.` })
     }
     await updateSettings({ profiel_naam: data.naam, profiel_email: data.email })
+    await supabase.auth.updateUser({ data: { full_name: data.naam } })
+    await refreshUser()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }

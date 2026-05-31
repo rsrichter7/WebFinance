@@ -8,7 +8,6 @@ import useTransactions from '../hooks/useTransactions'
 import useBudgets from '../hooks/useBudgets'
 import useSettings from '../hooks/useSettings'
 import { useAuth } from '../hooks/useAuth'
-import useProfiles from '../hooks/useProfiles'
 import TransactionForm from '../components/transactions/TransactionForm'
 import DashboardTopBar from '../components/dashboard/DashboardTopBar'
 import DashboardStatCards from '../components/dashboard/DashboardStatCards'
@@ -23,13 +22,11 @@ const now = new Date()
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { profiles } = useProfiles()
   const { allTransactions, addTransaction } = useTransactions()
   const { spaardoelen, actieveVerdeling } = useBudgets()
   const { settings } = useSettings()
 
-  const eigenProfiel = profiles.find(p => p.userId === user?.id)
-  const voornaam = (eigenProfiel?.naam || user?.user_metadata?.full_name || '').split(' ')[0]
+  const voornaam = (user?.user_metadata?.full_name || '').split(' ')[0]
 
   const [maand, setMaand] = useState(now.getMonth() + 1)
   const [jaar, setJaar]   = useState(now.getFullYear())
