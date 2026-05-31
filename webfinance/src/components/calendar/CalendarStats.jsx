@@ -1,39 +1,40 @@
 // ─── CalendarStats ───
-// Drie statistiekkaarten: verwachte uitgaven, werkelijke uitgaven en verschil.
+// Drie statistiekkaarten: inkomsten, uitgaven en verschil — consistent met andere pagina's.
 
 import React from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { TAB, fmt } from '../../tokens'
 
-function MiniCard({ label, children }) {
+function MiniCard({ label, children, accentColor }) {
   const { T } = useTheme()
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 16px', boxShadow: T.shadow }}>
-      <div style={{ fontSize: 11, color: T.ink4, fontWeight: 500, marginBottom: 4 }}>{label}</div>
+    <div style={{
+      background: T.card, border: `1px solid ${T.border}`,
+      borderTop: `3px solid ${accentColor}`,
+      borderRadius: 10, padding: '14px 16px', boxShadow: T.shadow,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 500, color: T.ink4, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</div>
       {children}
     </div>
   )
 }
 
-export default function CalendarStats({ totalExpected, totalActual }) {
+export default function CalendarStats({ totalIncome, totalExpenses }) {
   const { T } = useTheme()
-  const diff = totalExpected - totalActual
-  const onderVerwachting = diff >= 0
+  const diff = totalIncome - totalExpenses
+  const diffColor = diff >= 0 ? T.green : T.red
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-      <MiniCard label="Verwachte uitgaven">
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.green, ...TAB }}>{fmt(totalExpected)}</div>
+      <MiniCard label="Inkomsten" accentColor={T.green}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.green, ...TAB }}>{fmt(totalIncome)}</div>
       </MiniCard>
-      <MiniCard label="Werkelijke uitgaven">
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.red, ...TAB }}>{fmt(totalActual)}</div>
+      <MiniCard label="Uitgaven" accentColor={T.red}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.red, ...TAB }}>{fmt(totalExpenses)}</div>
       </MiniCard>
-      <MiniCard label="Verschil">
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.blueText, ...TAB }}>
-          {onderVerwachting ? '−' : '+'} {fmt(Math.abs(diff))}
-        </div>
-        <div style={{ fontSize: 11, color: T.ink4, marginTop: 2 }}>
-          {onderVerwachting ? 'Onder verwachting' : 'Boven verwachting'}
+      <MiniCard label="Verschil" accentColor={T.blue}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: diffColor, ...TAB }}>
+          {diff >= 0 ? '+' : '−'} {fmt(Math.abs(diff))}
         </div>
       </MiniCard>
     </div>

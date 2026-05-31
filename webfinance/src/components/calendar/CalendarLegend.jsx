@@ -11,8 +11,7 @@ export default function CalendarLegend() {
   const ICON_ITEMS = [
     { icon: ICONS.clock,   color: T.blue,  label: 'Verwachte uitgave (vaste last)' },
     { icon: ICONS.arrDown, color: T.ink4,  label: 'Werkelijke uitgave' },
-    { icon: ICONS.arrUp,   color: T.green, label: 'Inkomst' },
-    { icon: ICONS.check,   color: T.green, label: 'Verwacht en betaald' },
+    { icon: ICONS.arrUp,   color: T.green, label: 'Inkomst (verwacht of werkelijk)' },
   ]
 
   return (

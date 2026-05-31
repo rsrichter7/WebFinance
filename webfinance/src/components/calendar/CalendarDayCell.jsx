@@ -17,17 +17,20 @@ export default function CalendarDayCell({ day, dayData, isToday, isSelected, vie
   const showExpected = viewFilter !== 'Werkelijk'
   const showActual   = viewFilter !== 'Verwacht'
 
-  const expUitgaven  = showExpected ? expected.filter(e => !e.income) : []
-  const expInkomsten = showExpected ? expected.filter(e => e.income)  : []
-  const actUitgaven  = showActual   ? actual.filter(a => !a.income)   : []
+  const expUitgaven   = showExpected ? expected.filter(e => !e.income) : []
+  const expInkomsten  = showExpected ? expected.filter(e => e.income)  : []
+  const actUitgaven   = showActual   ? actual.filter(a => !a.income)   : []
+  const actInkomsten  = showActual   ? actual.filter(a => a.income)    : []
 
-  const totalExpected = expUitgaven.reduce((s, e) => s + e.amount, 0)
-  const totalIncome   = expInkomsten.reduce((s, e) => s + e.amount, 0)
-  const totalActual   = actUitgaven.reduce((s, a) => s + a.amount, 0)
+  const totalExpected     = expUitgaven.reduce((s, e) => s + e.amount, 0)
+  const totalExpIncome    = expInkomsten.reduce((s, e) => s + e.amount, 0)
+  const totalActual       = actUitgaven.reduce((s, a) => s + a.amount, 0)
+  const totalActualIncome = actInkomsten.reduce((s, a) => s + a.amount, 0)
 
-  const hasExpected = expUitgaven.length > 0
-  const hasIncome   = expInkomsten.length > 0
-  const hasActual   = actUitgaven.length > 0
+  const hasExpected    = expUitgaven.length > 0
+  const hasIncome      = expInkomsten.length > 0 || actInkomsten.length > 0
+  const totalIncome    = totalExpIncome + totalActualIncome
+  const hasActual      = actUitgaven.length > 0
 
   const isPaid = showExpected && expUitgaven.some(e => paidIds?.has(e.id))
 

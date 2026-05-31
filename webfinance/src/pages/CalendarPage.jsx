@@ -75,8 +75,8 @@ export default function CalendarPage() {
 
   const dayMap = useMemo(() => buildDayMap(allTransactions, items, year, month, dismissed), [allTransactions, items, year, month, dismissed])
 
-  const totalExpected = useMemo(() =>
-    Object.values(dayMap).reduce((s, d) => s + d.expected.filter(e => !e.income).reduce((s2, e) => s2 + e.amount, 0), 0),
+  const totalIncome = useMemo(() =>
+    Object.values(dayMap).reduce((s, d) => s + d.actual.filter(a => a.income).reduce((s2, a) => s2 + a.amount, 0), 0),
     [dayMap])
   const totalActual = useMemo(() =>
     Object.values(dayMap).reduce((s, d) => s + d.actual.filter(a => !a.income).reduce((s2, a) => s2 + a.amount, 0), 0),
@@ -97,7 +97,7 @@ export default function CalendarPage() {
               ? <CalendarGrid allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={setSelDay} dismissed={dismissed} />
               : <CalendarWeekView allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={handleSelectDay} />
             }
-            <CalendarStats totalExpected={totalExpected} totalActual={totalActual} />
+            <CalendarStats totalIncome={totalIncome} totalExpenses={totalActual} />
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
             <CalendarDayDetail day={selDay} month={month} year={year} dayData={dayMap[selDay]} onAdd={() => setShowForm(true)} onDismissExpected={id => dismissExpected(id, initialDate)} />
