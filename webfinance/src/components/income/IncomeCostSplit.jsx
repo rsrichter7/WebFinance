@@ -1,13 +1,15 @@
-// ─── DashboardCostSplit ───
-// Alleen-lezen kostenverdeling op het dashboard.
-// Bewerken kan via de Inkomsten pagina.
+// ─── IncomeCostSplit ───
+// Bewerkbare kostenverdeling op de inkomsten pagina.
+// Toont gemiddelde maandkosten, bijdrage per persoon, betaald en verschil.
 
-import React, { useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { fmt } from '../../tokens'
 import { Card } from '../ui/Card'
+import { ICONS } from '../ui/Icons'
 import useProfiles from '../../hooks/useProfiles'
 import useSettings from '../../hooks/useSettings'
+import DashboardIncomeModal from '../dashboard/DashboardIncomeModal'
 
 function Row({ label, waarde, kleur }) {
   return (
@@ -18,11 +20,12 @@ function Row({ label, waarde, kleur }) {
   )
 }
 
-export default function DashboardCostSplit({ allTransactions }) {
+export default function IncomeCostSplit({ allTransactions }) {
   const { T, resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const { persons } = useProfiles()
-  const { settings } = useSettings()
+  const { settings, updateSetting } = useSettings()
+  const [showModal, setShowModal] = useState(false)
 
   const inkomen = settings.kosten_inkomen || {}
   const methode = settings.verdeel_methode || 'ratio'
@@ -71,18 +74,33 @@ export default function DashboardCostSplit({ allTransactions }) {
     return gemKosten * ((inkomen[p.initialen] || 0) / totaalInkomen)
   }
 
+  function wisselMethode(m) { updateSetting('verdeel_methode', m) }
+
+  const editBtn = { display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.card, color: T.ink3, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }
+  const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+
   return (
-    <Card>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>Kostenverdeling</div>
-        <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Verdeling op basis van netto salaris</div>
+    <Card style={{ overflow: 'visible' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>Kostenverdeling</div>
+          <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>Verdeling op basis van netto salaris</div>
+        </div>
+        <button onClick={() => setShowModal(true)} style={editBtn}>
+          <span style={{ display: 'inline-flex' }}>{ICONS.edit}</span>
+          Bewerken
+        </button>
       </div>
 
       {!heeftInkomen ? (
-        <div style={{ padding: '8px 0 4px' }}>
-          <div style={{ fontSize: 13, color: T.ink3, lineHeight: 1.5 }}>
-            Stel je netto inkomen in via de Inkomsten pagina om de kostenverdeling te berekenen.
+        <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+          <div style={{ fontSize: 13, color: T.ink3, marginBottom: 14, lineHeight: 1.5 }}>
+            Stel je netto inkomen in om de<br />kostenverdeling te berekenen
           </div>
+          <button onClick={() => setShowModal(true)} style={primaryBtn}>
+            <span style={{ display: 'inline-flex' }}>{ICONS.edit}</span>
+            Inkomen instellen
+          </button>
         </div>
       ) : (
         <>
@@ -128,12 +146,31 @@ export default function DashboardCostSplit({ allTransactions }) {
             })}
           </div>
 
-          <div style={{ height: 7, borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
+          <div style={{ height: 7, borderRadius: 4, overflow: 'hidden', display: 'flex', marginBottom: 12 }}>
             {persons.map(p => (
               <div key={p.initialen} style={{ width: `${pctVoor(p)}%`, background: p.kleur.fg, opacity: 0.85, transition: 'width 0.4s' }} />
             ))}
           </div>
         </>
+      )}
+
+      <div style={{ paddingTop: 10, borderTop: `1px solid ${T.rule}`, display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 3, padding: 3, background: T.rule, borderRadius: 8 }}>
+          {[['ratio', 'Naar ratio'], ['50/50', '50/50']].map(([m, label]) => (
+            <button key={m} onClick={() => wisselMethode(m)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: methode === m ? T.card : 'transparent', color: methode === m ? T.ink : T.ink4, boxShadow: methode === m ? T.shadow : 'none' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {showModal && (
+        <DashboardIncomeModal
+          persons={persons}
+          inkomen={inkomen}
+          onSave={d => { updateSetting('kosten_inkomen', d); setShowModal(false) }}
+          onClose={() => setShowModal(false)}
+        />
       )}
     </Card>
   )
