@@ -1,4 +1,4 @@
-# Webfinance — Projectsamenvatting v12
+# Webfinance — Projectsamenvatting v13
 
 Plak dit samen met de stijlgids aan het begin van elke nieuwe chat.
 
@@ -25,27 +25,30 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Geen Tailwind, geen TypeScript, geen Redux
 - **Backend: Supabase** (PostgreSQL database, authenticatie, RLS) — Central EU (Frankfurt)
 - `.env` met `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` (staat in `.gitignore`)
-- Hosting: Vercel deployment geconfigureerd (`vercel.json` in repo-root)
+- **Hosting: Vercel** — live op https://webfinance-nl.vercel.app (`vercel.json` in repo-root)
 - **SMTP:** Resend geconfigureerd als e-mailprovider in Supabase (sender: Webfinance via onboarding@resend.dev)
 
 ---
 
 ## Huidige status
 
-### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback
+### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment
 
 **Supabase backend volledig werkend:**
 - Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
 - Email-verificatie verplicht bij registratie (via Resend SMTP)
 - Wachtwoord minimaal 8 tekens (client-side validatie + Supabase policy)
+- **Naamveld bij registratie** — "Volledige naam" veld bij email-registratie; Google OAuth haalt naam automatisch op
 - `useHousehold` hook — haalt household_id op van ingelogde user; gebruikt door alle data-hooks
 - `useSettings` hook — centrale instellingen per user (Supabase `user_settings` tabel)
-- Auto-setup trigger bij registratie: huishouden + GZ-profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER
+- Auto-setup trigger bij registratie: huishouden + GZ-profiel + persoonlijk profiel + user_settings aangemaakt via `handle_new_user()` met SECURITY DEFINER
+- **`handle_new_user()` trigger bijgewerkt** — maakt nu ook een persoonlijk profiel aan met naam uit auth metadata
 - RLS-policies op alle tabellen — gebruikers zien alleen eigen huishouden-data
 - `household_members` RLS: directe `user_id = auth.uid()` check (niet via `get_my_household_id()` wegens circulaire afhankelijkheid)
 - GRANT op alle tabellen voor de `authenticated` rol (nodig omdat "Automatically expose new tables" uit staat)
 - Check constraints hoofdlettergevoelig: `Inkomst`/`Uitgave`, `Noodzaak`/`Wens`/`Sparen`, `Maandelijks`/`Jaarlijks`/etc.
 - localStorage opgeruimd — alleen backward-compat syncs + `admin_unlocked` blijven
+- **`user_id` kolom op `profiles`** — koppelt profiel aan auth user, aangemaakt bij registratie via `handle_new_user()` trigger
 
 **Alle pagina's werkend:**
 - **Dashboard** — begroeting, maandselector, 3 StatCards, kostenverdeling, staafdiagram, spaardoelen, recente tx, donut, 50/30/20 score
@@ -57,6 +60,25 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - **Kalender** — premium-only, maand/week view, verwacht vs. werkelijk, inkomsten zichtbaar, hoge uitgaven gemarkeerd, auto-match verwachte uitgaven, default filter "Beide"
 - **Privacy policy** — statische pagina op `/privacy`, toegankelijk zonder login (AVG)
 - **Uitnodigingspagina** — `/uitnodiging/:token`, buiten ProtectedRoute, voor huishouden-uitnodigingen
+
+**Vercel deployment live:**
+- App draait op https://webfinance-nl.vercel.app
+- Automatische deploy bij elke push naar `main`
+- Environment variables geconfigureerd in Vercel dashboard
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.) via `vercel.json`
+
+**Favicon + Login-logo:**
+- Favicon: SVG met €-teken in donker afgerond vierkant, consistent met sidebar-logo
+- Login-logo: aangepast naar zelfde stijl als sidebar (€-teken in donker vierkant)
+
+**Dashboard begroeting dynamisch:**
+- Voornaam uit `auth.users` metadata (`user_metadata.full_name`)
+- Refresht direct na profielwijziging via `refreshUser()` in `useAuth`
+
+**Notificaties persistent:**
+- In-memory notificaties (budget, vaste lasten) worden naar de database geschreven
+- `ref_key` kolom (UNIQUE) voorkomt dubbele notificaties
+- Gelezen-status blijft behouden tussen sessies
 
 **Dark mode volledig werkend:**
 - `ThemeProvider` context via `useTheme.jsx` — drie opties: Licht, Donker, Automatisch
@@ -74,7 +96,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - `NotificationPanel` dropdown: laatste 3 notificaties + "Alle bekijken" link
 - `SettingsNotifications`: notificatie-geschiedenis met paginering (3 per pagina)
 - Database-notificaties: huishouden-events (uitnodiging geaccepteerd, lid verwijderd)
-- In-memory notificaties: budget overschreden (≥80%), aankomende vaste lasten (3 dagen)
+- In-memory notificaties: budget overschreden (≥80%), aankomende vaste lasten (3 dagen) — persistent via `ref_key`
 - Toggles in instellingen: `notif_budget` en `notif_vaste_lasten` (opgeslagen in `user_settings`)
 - `create_notification()` RPC functie (SECURITY DEFINER) voor database-notificaties
 
@@ -112,6 +134,8 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Dynamische wie-knoppen in alle formulieren
 - WieAvatar dynamisch op kleur via `getByInitialen`
 - GZ-profiel automatisch aangemaakt bij registratie (`is_deletable: false`)
+- Persoonlijk profiel aangemaakt bij registratie via `handle_new_user()` trigger (naam uit auth metadata)
+- `user_id` kolom op `profiles` — koppelt profiel aan auth user
 - Sidebar toont volledige naam + profielkleur + klikbaar naar instellingen
 
 **Security-hardening afgerond:**
@@ -122,23 +146,69 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Data-export als Excel (.xlsx) via Instellingen → Data beheer (SheetJS, 6 tabbladen)
 - "Alle transacties verwijderen" functie met bevestigingsmodal
 
-### 🔮 Volgende stap
+### 🔮 Volgende stap (to-do)
 
-- **Vercel deployment + productie-URLs** — Site URL en redirect URLs aanpassen in Supabase naar productie-domein
-- **SMTP sender updaten** — van `onboarding@resend.dev` (test) naar eigen domein (productie)
-- **Testen met tweede gebruiker** — huishouden uitnodiging testen met Anne
-- **Bugfixes na import-testing** — CSV parsers voor niet-Rabobank banken zijn ongetest; afhankelijk van gebruikersfeedback
-- **Meerdere bankrekeningen** (premium) — extra tabel `accounts` + `account_id` op transactions
+**UI/UX verbeteringen:**
+- Sidebar: Instellingen-knop verplaatsen naar tussen feedback en uitloggen
+- Dark mode: uitgave/inkomsten knoppen donkerdere kleur
+- Dark mode: scorecards dashboard inkomsten donkerdere kleur
+- Uitloggen-icoon uitlijning fixen in sidebar
+- Vraagteken-icoon per pagina in topbar met korte uitleg van functies
+
+**Notificaties verbeteren:**
+- Gelezen notificaties niet automatisch verwijderen — handmatig verwijderen via popup of instellingen
+- Automatisch opruimen na 14 dagen uit database
+
+**Deployment & testen:**
+- SMTP sender updaten naar eigen domein (weg van onboarding@resend.dev)
+- Testen met Anne (inloggen, transacties, huishouden-perspectief)
+- CSV parsers testen met echte bankbestanden (ING, ABN AMRO, etc.)
+
+**Data opruimen:**
+- `user_id` op Ronald's profiel fixen (`profiles` tabel, nog NULL)
+- Derde account opruimen (rs.richter7@gmail.com in auth.users)
 
 ### 🔮 Later (niet nu)
 
 - GoCardless bankkoppeling (premium) — directe import zonder CSV
 - Automatische AI-categorisering via Anthropic API (premium)
+- Meerdere bankrekeningen (premium)
 - Leningen sectie (geparkeerd)
 - Paginering in tabellen (bij 2000+ transacties)
-- Maandelijks overzicht notificatie
-- Productupdates notificatie
+- Stripe integratie voor premium-betalingen
 - Cookie-banner (bij analytics)
+
+---
+
+## Premium vs. Gratis features
+
+### Gratis
+
+- Dashboard, Transacties, Vaste Lasten, Budgetten (50/30/20 modus)
+- Hoofdcategorieën
+- Dark mode
+- Notificaties (budget-alerts + vaste lasten-herinneringen)
+- Analyse — 2 grafieken
+- Max 2 spaardoelen
+- Max 2 profielen + GZ
+- CSV import max 50 regels
+
+### Premium (€3–5/mnd)
+
+- Subcategorieën
+- Analyse — alle 4 grafieken + versleepbaar grid
+- Aangepaste categorieën
+- CSV import — onbeperkt
+- Spaardoelen — onbeperkt
+- Budgetmodus — handmatig
+- Meerdere profielen — onbeperkt
+- Data export (Excel)
+- Kalender
+- Meerdere bankrekeningen
+- GoCardless bankkoppeling
+- AI-categorisering
+
+**Premium toekennen:** admin zet `premium: true` in `user_settings` via Supabase dashboard.
 
 ---
 
@@ -192,7 +262,7 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 │   ├── hooks/
 │   │   ├── cacheManager.js         → In-memory cache utilities voor alle data-hooks
-│   │   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, Google OAuth)
+│   │   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, Google OAuth, refreshUser)
 │   │   ├── useHousehold.js         → Household_id ophalen van ingelogde user
 │   │   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
 │   │   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
@@ -203,7 +273,7 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   │   ├── useTheme.jsx            → ThemeProvider + useTheme hook (licht/donker/auto)
 │   │   ├── useFeedback.js          → Feedback CRUD (Supabase feedback tabel)
 │   │   ├── useInvitations.js       → Huishouden uitnodigingen (aanmaken, accepteren, afwijzen, annuleren)
-│   │   └── useNotifications.js     → Combineert database- en in-memory notificaties
+│   │   └── useNotifications.js     → Combineert database- en in-memory notificaties (persistent via ref_key)
 │   │
 │   ├── data/
 │   │   ├── categories.js           → CATEGORIES + getMergedCategories(customCategories?) + SOORTEN
@@ -273,7 +343,7 @@ vercel.json          ← In de root van de repo (naast webfinance/)
 ### Hooks als single source of truth
 
 Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
-- `useAuth.js` — authenticatie (login, logout, sessie, Google OAuth via `signInWithGoogle`)
+- `useAuth.js` — authenticatie (login, logout, sessie, Google OAuth via `signInWithGoogle`, `refreshUser()`)
 - `useHousehold.js` — household_id van ingelogde user; gebruikt door alle data-hooks
 - `useSettings.js` — centrale user settings per user (Supabase `user_settings`)
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
@@ -284,7 +354,7 @@ Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
 - `useTheme.jsx` — ThemeProvider + `useTheme()` hook (licht/donker/auto, T-tokens per thema)
 - `useFeedback.js` — feedback aanmaken + admin-overzicht (Supabase `feedback` tabel)
 - `useInvitations.js` — huishouden uitnodigingen aanmaken, accepteren, afwijzen en annuleren
-- `useNotifications.js` — combineert database-notificaties en in-memory notificaties
+- `useNotifications.js` — combineert database-notificaties en in-memory notificaties (persistent via `ref_key`)
 
 Componenten en pagina's bevatten **geen** eigen dataloading of businesslogica.
 
@@ -377,7 +447,7 @@ Bij gelijke datum worden nieuwste transacties (hoogste `created_at`) eerst getoo
 
 - Sidebar label **"Analyse"** — route, mapnamen en bestandsnamen blijven `analytics`
 - Subtitels verwijderd op alle pagina's — TopBars tonen alleen paginatitel
-- Dashboard TopBar toont dynamische begroeting (Goedemorgen/middag/avond) ipv paginatitel
+- Dashboard TopBar toont dynamische begroeting (Goedemorgen/middag/avond) + voornaam uit auth metadata
 
 ### Dashboard architectuur
 
@@ -450,14 +520,14 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 | `households` | `get_my_household_id()` | Huishouden |
 | `household_members` | `user_id = auth.uid()` | User ↔ huishouden koppeling (role: eigenaar/lid) |
 | `household_invitations` | `household_id = get_my_household_id()` | Uitnodigingslinks met tokens |
-| `profiles` | `get_my_household_id()` | Wie-profielen per huishouden |
+| `profiles` | `get_my_household_id()` | Wie-profielen per huishouden (`user_id` kolom koppelt aan auth user) |
 | `transactions` | `get_my_household_id()` | Alle transacties |
 | `fixed_expenses` | `get_my_household_id()` | Vaste lasten én vaste inkomsten |
 | `budgets` | `get_my_household_id()` | Categorie-budgetten |
 | `savings_goals` | `get_my_household_id()` | Spaardoelen |
 | `user_settings` | `user_id = auth.uid()` | Persoonlijke instellingen |
 | `feedback` | `household_id = get_my_household_id()` | Gebruikersfeedback + bug-meldingen |
-| `notifications` | `user_id = auth.uid()` | Notificaties per gebruiker |
+| `notifications` | `user_id = auth.uid()` | Notificaties per gebruiker (`ref_key` UNIQUE voor deduplicatie) |
 
 ### Check constraints (hoofdlettergevoelig!)
 
@@ -484,6 +554,8 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 - `user_settings.notif_vaste_lasten` — BOOLEAN, default true
 - `household_members.role` — TEXT: `'eigenaar'` of `'lid'`, default `'eigenaar'`
 - `feedback.status` — TEXT: `'open'`, `'behandeld'`, `'afgewezen'`
+- `profiles.user_id` — UUID, koppelt profiel aan auth user (aangemaakt via `handle_new_user()`)
+- `notifications.ref_key` — TEXT UNIQUE, voorkomt dubbele in-memory notificaties in database
 
 ### Database-functies met SECURITY DEFINER
 
@@ -492,7 +564,8 @@ AFTER INSERT op `auth.users`:
 1. Maakt een `households` rij aan
 2. Koppelt de user als eigenaar in `household_members`
 3. Maakt GZ-profiel aan (`is_deletable: false`)
-4. Maakt `user_settings` rij aan met defaults
+4. Maakt persoonlijk profiel aan met naam uit auth metadata (`user_id` ingevuld)
+5. Maakt `user_settings` rij aan met defaults
 
 **RPC: `delete_my_account()`**
 Verwijdert alle gebruikersdata in volgorde van foreign key-afhankelijkheden:
@@ -521,6 +594,19 @@ Admin-only: wijzigt status en admin-notitie van een feedback-item.
 
 ---
 
+## Vercel deployment
+
+- **URL:** https://webfinance-nl.vercel.app
+- **Configuratie:** `vercel.json` in repo-root (buildCommand, outputDirectory, rewrites, security headers)
+- **Build:** `cd webfinance && npm install && npm run build`
+- **Output:** `webfinance/dist`
+- **Environment variables:** `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (in Vercel dashboard)
+- **Security headers:** CSP, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+- **Auto-deploy:** elke push naar `main` triggert automatische deployment
+- **SPA routing:** rewrites regel stuurt alle routes naar `index.html`
+
+---
+
 ## LocalStorage (minimaal na Supabase-migratie)
 
 | Key | Inhoud | Reden |
@@ -538,6 +624,7 @@ Admin-only: wijzigt status en admin-notitie van een feedback-item.
 1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
 3. **Account verwijderen bij gedeeld huishouden** — `delete_my_account()` verwijdert het hele huishouden; bij meerdere gebruikers in één huishouden moet de logica aangepast worden (eigenaarschap overdragen of alleen eigen data verwijderen)
+4. **`user_id` op Ronald's profiel is NULL** — `profiles` tabel, handmatig te fixen via Supabase dashboard
 
 ---
 
@@ -556,13 +643,6 @@ Kleuren per categorie (zie `src/data/categoryConfig.js`):
 - Vrije tijd: red/redSoft, icoon: target
 - Financieel: green/greenSoft, icoon: coin
 - Overig: ink3/rule, icoon: grip
-
----
-
-## Verdienmodel (voor later, niet nu)
-
-- Gratis: basisfuncties
-- Premium (€3–5/mnd): ongelimiteerd, kalender, bankimport, GoCardless koppeling, AI-categorisering, meerdere bankrekeningen, aanpasbare analytics
 
 ---
 
