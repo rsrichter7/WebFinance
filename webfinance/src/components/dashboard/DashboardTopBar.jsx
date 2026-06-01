@@ -4,6 +4,7 @@
 import React from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
+import PageInfoPopover from '../ui/PageInfoPopover'
 
 const MAANDEN = [
   'januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -53,8 +54,20 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx, v
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card,
     }}>
-      <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
-        {begroeting()}{voornaam ? `, ${voornaam}` : ''}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
+          {begroeting()}{voornaam ? `, ${voornaam}` : ''}
+        </div>
+        <PageInfoPopover
+          titel="Hoe werkt deze pagina?"
+          intro="Het dashboard geeft een overzicht van je financiën per maand."
+          bullets={[
+            'Bekijk je inkomsten, uitgaven en huidig saldo bovenaan de pagina.',
+            'De grafieken tonen je bestedingspatroon per categorie en per maand.',
+            'Volg je voortgang op spaardoelen en je 50/30/20 score.',
+            'Gebruik de maandnavigatie om andere periodes te bekijken.',
+          ]}
+        />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -3,6 +3,7 @@
 
 import React from 'react'
 import { useTheme } from '../../hooks/useTheme'
+import PageInfoPopover from '../ui/PageInfoPopover'
 
 function PillGroup({ options, value, onChange }) {
   const { T } = useTheme()
@@ -32,7 +33,19 @@ export default function CalendarTopBar({ viewMode, setViewMode, viewFilter, setV
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card, flexShrink: 0,
     }}>
-      <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Kalender</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Kalender</div>
+        <PageInfoPopover
+          titel="Hoe werkt deze pagina?"
+          intro="Bekijk je verwachte en werkelijke transacties per dag."
+          bullets={[
+            'Verwachte uitgaven worden automatisch berekend vanuit je vaste lasten.',
+            'Werkelijke transacties verschijnen zodra ze zijn ingevoerd of geïmporteerd.',
+            'Verwachte uitgaven verdwijnen automatisch bij een match met een werkelijke transactie.',
+            'Hoge uitgaven (boven €500) worden gemarkeerd met een rode achtergrond.',
+          ]}
+        />
+      </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <PillGroup options={['Maand', 'Week']} value={viewMode} onChange={setViewMode} />
         <PillGroup options={['Verwacht', 'Werkelijk', 'Beide']} value={viewFilter} onChange={setViewFilter} />

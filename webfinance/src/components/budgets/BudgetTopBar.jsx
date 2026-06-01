@@ -3,6 +3,7 @@
 
 import React from 'react'
 import { useTheme } from '../../hooks/useTheme'
+import PageInfoPopover from '../ui/PageInfoPopover'
 
 const MAANDEN = [
   'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
@@ -28,8 +29,17 @@ export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card,
     }}>
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Budgetten</div>
+        <PageInfoPopover
+          titel="Hoe werkt deze pagina?"
+          intro="Stel budgetten in en houd je uitgaven per categorie bij."
+          bullets={[
+            'Gebruik de 50/30/20 regel om je inkomsten te verdelen over noodzaak, wens en sparen.',
+            'Bekijk per categorie hoeveel je hebt uitgegeven ten opzichte van je budget.',
+            'Stel spaardoelen in en volg je voortgang met stortingen.',
+          ]}
+        />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button onClick={vorige} style={{

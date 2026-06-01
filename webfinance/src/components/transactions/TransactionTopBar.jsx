@@ -6,6 +6,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import { Badge } from '../ui/Card'
 import usePremium from '../../hooks/usePremium'
+import PageInfoPopover from '../ui/PageInfoPopover'
 
 export default function TransactionTopBar({ onNewClick, onImportClick }) {
   const { T } = useTheme()
@@ -17,9 +18,18 @@ export default function TransactionTopBar({ onNewClick, onImportClick }) {
       borderBottom: `1px solid ${T.border}`,
       background: T.card,
     }}>
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>Transacties</div>
-        <div style={{ fontSize: 13, color: T.ink3, marginTop: 2 }}></div>
+        <PageInfoPopover
+          titel="Hoe werkt deze pagina?"
+          intro="Alle inkomsten en uitgaven op één plek."
+          bullets={[
+            'Voeg transacties handmatig toe via de knop rechtsboven.',
+            'Importeer transacties via CSV vanuit je bank.',
+            'Filter op categorie, persoon, type of periode via de filterbalk.',
+            'Transacties met een AUTO label zijn automatisch aangemaakt vanuit je vaste lasten.',
+          ]}
+        />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {isPremium ? (
