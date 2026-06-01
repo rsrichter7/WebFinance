@@ -99,37 +99,38 @@ function groupByCategorie(items) {
     })
 }
 
-// Genereer de verwachte datum voor een vaste last — alleen vandaag of later
+// Genereer de verwachte datum voor een vaste last — alleen vandaag of eerder
 function berekenVerwachteDatums(item, today) {
   const dates = []
   const dag = item.afschrijfdag ?? 1
   const now = new Date()
 
   if (item.herhaling === 'Maandelijks') {
-    // Alleen huidige maand — als de afschrijfdag nog niet voorbij is
     const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr >= today) dates.push(dateStr)
+    if (dateStr <= today) dates.push(dateStr)
   } else if (item.herhaling === 'Kwartaal') {
-    // Alleen huidige maand — als de afschrijfdag nog niet voorbij is
     const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr >= today) dates.push(dateStr)
+    if (dateStr <= today) dates.push(dateStr)
   } else if (item.herhaling === 'Jaarlijks') {
     const base = new Date(item.createdAt || now)
     const maxDay = new Date(now.getFullYear(), base.getMonth() + 1, 0).getDate()
     const dateStr = `${now.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr >= today) dates.push(dateStr)
+    if (dateStr <= today) dates.push(dateStr)
   } else if (item.herhaling === 'Wekelijks') {
-    // Schuif door naar de eerstvolgende datum >= vandaag
+    // Zoek de laatste wekelijkse datum die <= vandaag is
     let cur = new Date(item.startdatum || item.createdAt || today)
     let safety = 0
-    while (cur.toISOString().split('T')[0] < today && safety < 200) {
-      cur.setDate(cur.getDate() + 7)
+    while (safety < 200) {
+      const next = new Date(cur)
+      next.setDate(next.getDate() + 7)
+      if (next.toISOString().split('T')[0] > today) break
+      cur = next
       safety++
     }
     const dateStr = cur.toISOString().split('T')[0]
-    if (dateStr >= today) dates.push(dateStr)
+    if (dateStr <= today) dates.push(dateStr)
   }
 
   return dates
@@ -146,7 +147,7 @@ export default function useFixedExpenses() {
   const [formOpen, setFormOpen]         = useState(false)
   const [editingItem, setEditingItem]   = useState(null)
 
-  // ─── Auto-transacties aanmaken voor vandaag of toekomst ───
+  // ─── Auto-transacties aanmaken voor vandaag of verleden ───
   const verwerkAutoTransacties = useCallback(async (fixedItems) => {
     if (!householdId || fixedItems.length === 0) return
     const today = new Date().toISOString().split('T')[0]

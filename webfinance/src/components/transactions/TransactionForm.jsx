@@ -68,7 +68,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
     })
   }
 
-  function handleSave(keepOpen) {
+  async function handleSave(keepOpen) {
     const bedrag = parseFloat(form.bedrag)
     if (!bedrag || !form.beschrijving.trim()) return
     const velden = {
@@ -78,10 +78,10 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
       notitie: form.notitie.trim(),
     }
     if (editingTransaction) {
-      onUpdate(editingTransaction.id, velden)
+      await onUpdate(editingTransaction.id, velden)
       onClose()
     } else {
-      onSave(velden)
+      await onSave(velden)
       setForm({ ...emptyForm(), datum: new Date().toISOString().split('T')[0] })
       if (!keepOpen) onClose()
     }
