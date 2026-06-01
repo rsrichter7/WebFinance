@@ -19,15 +19,16 @@ const TOEKOMSTIG = [
 export default function SettingsNotifications() {
   const { T } = useTheme()
   const navigate = useNavigate()
-  const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, loading } = useNotifications()
   const { settings, updateSetting } = useSettings()
 
   const notifBudget      = settings.notif_budget       !== false
   const notifVasteLasten = settings.notif_vaste_lasten !== false
 
   const PER_PAGINA    = 3
-  const [pagina, setPagina] = useState(1)
-  const [hover, setHover]   = useState(null)
+  const [pagina, setPagina]       = useState(1)
+  const [hover, setHover]         = useState(null)
+  const [hoverNotif, setHoverNotif] = useState(null)
   const aantalPaginas = Math.max(1, Math.ceil(notifications.length / PER_PAGINA))
   const pagNotifs     = notifications.slice((pagina - 1) * PER_PAGINA, pagina * PER_PAGINA)
 
@@ -72,15 +73,33 @@ export default function SettingsNotifications() {
             {pagNotifs.map((n, i) => (
               <div
                 key={n.id}
+                onMouseEnter={() => setHoverNotif(n.id)}
+                onMouseLeave={() => setHoverNotif(null)}
                 onClick={() => handleClick(n)}
-                style={{ display: 'flex', gap: 12, padding: '14px 16px', borderBottom: i < pagNotifs.length - 1 ? `1px solid ${T.rule}` : 'none', background: n.gelezen ? T.card : T.blueSoft, cursor: n.link ? 'pointer' : 'default', transition: 'background 0.15s' }}
+                style={{
+                  display: 'flex', gap: 12, padding: '14px 16px', position: 'relative',
+                  borderBottom: i < pagNotifs.length - 1 ? `1px solid ${T.rule}` : 'none',
+                  background: n.gelezen ? T.card : T.blueSoft,
+                  cursor: n.link ? 'pointer' : 'default', transition: 'background 0.15s',
+                }}
               >
+                {n._isDb && hoverNotif === n.id && (
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteNotification(n.id) }}
+                    style={{
+                      position: 'absolute', top: 8, right: 12,
+                      background: 'none', border: 'none', color: T.ink3,
+                      cursor: 'pointer', fontSize: 16, lineHeight: 1,
+                      padding: '2px 5px', borderRadius: 4, fontFamily: 'inherit',
+                    }}
+                  >×</button>
+                )}
                 <div style={{ paddingTop: 6, flexShrink: 0, width: 8 }}>
                   {!n.gelezen && <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.blue }} />}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: n.gelezen ? 500 : 600, color: T.ink }}>{n.titel}</div>
-                  <div style={{ fontSize: 13, color: T.ink3, marginTop: 2, lineHeight: 1.4 }}>{n.bericht}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: n.gelezen ? 500 : 600, color: n.gelezen ? T.ink3 : T.ink }}>{n.titel}</div>
+                  <div style={{ fontSize: 13, color: n.gelezen ? T.ink4 : T.ink3, marginTop: 2, lineHeight: 1.4 }}>{n.bericht}</div>
                   <div style={{ fontSize: 11, color: T.ink4, marginTop: 5 }}>{fmtDate(n.datum, 'long')}</div>
                 </div>
               </div>

@@ -8,11 +8,12 @@ import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from './Icons'
 import { fmtDate } from '../../tokens'
 
-export default function NotificationPanel({ open, onClose, notifications, unreadCount, onMarkAsRead, onMarkAllAsRead, anchorRef }) {
+export default function NotificationPanel({ open, onClose, notifications, unreadCount, onMarkAsRead, onMarkAllAsRead, onDelete, anchorRef }) {
   const { T } = useTheme()
   const navigate = useNavigate()
   const panelRef = useRef(null)
-  const [pos, setPos] = useState({ left: 0, bottom: 0 })
+  const [pos, setPos]           = useState({ left: 0, bottom: 0 })
+  const [hoverItem, setHoverItem] = useState(null)
 
   // Bereken positie op basis van anker-knop
   useEffect(() => {
@@ -86,14 +87,27 @@ export default function NotificationPanel({ open, onClose, notifications, unread
           zichtbaar.map(n => (
             <div
               key={n.id}
+              onMouseEnter={() => setHoverItem(n.id)}
+              onMouseLeave={() => setHoverItem(null)}
               onClick={() => handleItemClick(n)}
               style={{
-                padding: '12px 16px',
+                padding: '12px 16px', position: 'relative',
                 background: n.gelezen ? 'transparent' : T.blueSoft,
                 borderBottom: `1px solid ${T.border}`,
                 cursor: n.link ? 'pointer' : 'default',
               }}
             >
+              {n._isDb && hoverItem === n.id && (
+                <button
+                  onClick={e => { e.stopPropagation(); onDelete(n.id) }}
+                  style={{
+                    position: 'absolute', top: 6, right: 8,
+                    background: 'none', border: 'none', color: T.ink3,
+                    cursor: 'pointer', fontSize: 16, lineHeight: 1,
+                    padding: '2px 5px', borderRadius: 4, fontFamily: 'inherit',
+                  }}
+                >×</button>
+              )}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 {!n.gelezen && (
                   <div style={{
@@ -102,9 +116,9 @@ export default function NotificationPanel({ open, onClose, notifications, unread
                   }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0, paddingLeft: n.gelezen ? 17 : 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 2 }}>{n.titel}</div>
-                  <div style={{ fontSize: 12.5, color: T.ink2, marginBottom: 4, lineHeight: 1.4 }}>{n.bericht}</div>
-                  <div style={{ fontSize: 11.5, color: T.ink3 }}>{fmtDate(n.datum.slice(0, 10))}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: n.gelezen ? T.ink3 : T.ink, marginBottom: 2 }}>{n.titel}</div>
+                  <div style={{ fontSize: 12.5, color: n.gelezen ? T.ink3 : T.ink2, marginBottom: 4, lineHeight: 1.4 }}>{n.bericht}</div>
+                  <div style={{ fontSize: 11.5, color: T.ink4 }}>{fmtDate(n.datum.slice(0, 10))}</div>
                 </div>
               </div>
             </div>

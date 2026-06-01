@@ -34,7 +34,7 @@ export default function Sidebar() {
   const { isPremium } = usePremium()
   const { user, signOut } = useAuth()
   const { isAdmin, submitFeedback } = useFeedback()
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
   const { persons } = useProfiles()
   const { settings } = useSettings()
   const navigate = useNavigate()
@@ -212,6 +212,7 @@ export default function Sidebar() {
         unreadCount={unreadCount}
         onMarkAsRead={markAsRead}
         onMarkAllAsRead={markAllAsRead}
+        onDelete={deleteNotification}
         anchorRef={bellRef}
       />
       <FeedbackForm open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSubmit={submitFeedback} />

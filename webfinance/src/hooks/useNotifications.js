@@ -178,5 +178,12 @@ export default function useNotifications() {
     setDbNotifications(prev => prev.map(n => ({ ...n, gelezen: true })))
   }
 
-  return { notifications, unreadCount, markAsRead, markAllAsRead, loading }
+  async function deleteNotification(id) {
+    const notif = dbNotifications.find(n => n.id === id)
+    if (!notif) return
+    await supabase.from('notifications').delete().eq('id', id)
+    setDbNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  return { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, loading }
 }
