@@ -38,6 +38,7 @@ export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
             'Gebruik de 50/30/20 regel om je inkomsten te verdelen over noodzaak, wens en sparen.',
             'Bekijk per categorie hoeveel je hebt uitgegeven ten opzichte van je budget.',
             'Stel spaardoelen in en volg je voortgang met stortingen.',
+            'Je budget wordt automatisch berekend op basis van je gemiddelde inkomen van de afgelopen maanden. Je kunt dit handmatig overschrijven.',
           ]}
         />
       </div>

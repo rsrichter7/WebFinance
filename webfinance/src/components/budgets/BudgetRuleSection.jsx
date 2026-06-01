@@ -8,12 +8,15 @@ import { Card, ProgressBar, PctBadge } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 
 export default function BudgetRuleSection({
-  regelVerdeling, inkomen, budgetModus, onModusWijzig,
+  regelVerdeling, effectiefInkomen, budgetInkomenBron, aantalMaanden,
+  setHandmatigInkomen, budgetModus, onModusWijzig,
   actieveVerdeling, handmatigeVerdeling, onVerdelingWijzig,
 }) {
   const { T } = useTheme()
   const [bewerken, setBewerken] = useState(false)
   const [lokaleVerdeling, setLokaleVerdeling] = useState(handmatigeVerdeling)
+  const [editInkomen, setEditInkomen] = useState(false)
+  const [inkomenInput, setInkomenInput] = useState('')
   const isHandmatig = budgetModus === 'handmatig'
   const totaalPct = lokaleVerdeling.noodzaak + lokaleVerdeling.wens + lokaleVerdeling.sparen
   const isValid = totaalPct === 100
@@ -31,6 +34,19 @@ export default function BudgetRuleSection({
   function handleOpslaan() { if (!isValid) return; onVerdelingWijzig(lokaleVerdeling); setBewerken(false) }
   function handleAnnuleer() { setLokaleVerdeling(handmatigeVerdeling); setBewerken(false) }
 
+  function handleInkomenOpslaan() {
+    setHandmatigInkomen(inkomenInput)
+    setEditInkomen(false)
+    setInkomenInput('')
+  }
+  function handleInkomenWissen() {
+    setHandmatigInkomen(null)
+    setEditInkomen(false)
+  }
+
+  const bron = budgetInkomenBron
+  const toonGemiddeldLabel = bron === 'gemiddeld' && aantalMaanden > 0 && effectiefInkomen > 0
+
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -39,8 +55,39 @@ export default function BudgetRuleSection({
             {isHandmatig ? 'Aangepaste verdeling' : '50 / 30 / 20 regel'}
           </div>
           <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
-            Gebaseerd op je maandelijks inkomen van {fmt(inkomen)}
+            Gebaseerd op je maandelijks inkomen van {fmt(effectiefInkomen)}
+            {!editInkomen && (
+              <button onClick={() => { setEditInkomen(true); setInkomenInput('') }} title="Inkomen aanpassen"
+                style={{ marginLeft: 6, background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', color: T.ink4, display: 'inline-flex', verticalAlign: 'middle' }}>
+                {ICONS.edit}
+              </button>
+            )}
           </div>
+          {editInkomen ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: T.ink3, fontSize: 12 }}>€</span>
+                <input autoFocus type="text" inputMode="decimal" value={inkomenInput}
+                  onChange={e => setInkomenInput(e.target.value)}
+                  placeholder="bv. 3500"
+                  style={{ width: 110, padding: '5px 8px 5px 22px', borderRadius: 6, border: `1.5px solid ${T.blue}`, background: T.card, fontSize: 12, color: T.ink, fontFamily: "'Inter', system-ui, sans-serif", ...TAB, outline: 'none' }} />
+              </div>
+              <button onClick={handleInkomenOpslaan} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: T.blue, color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Opslaan</button>
+              <button onClick={() => setEditInkomen(false)} style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.card, color: T.ink3, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Annuleer</button>
+              {bron === 'handmatig' && (
+                <button onClick={handleInkomenWissen} style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.card, color: T.ink3, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Wissen</button>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: T.ink4, marginTop: 3 }}>
+              {bron === 'handmatig' && (
+                <span>Handmatig ingesteld · <span onClick={handleInkomenWissen} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Wissen</span></span>
+              )}
+              {toonGemiddeldLabel && (
+                <span>Op basis van gemiddeld inkomen ({aantalMaanden} {aantalMaanden === 1 ? 'maand' : 'maanden'})</span>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {isHandmatig && bewerken && (

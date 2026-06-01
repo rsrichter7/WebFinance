@@ -10,12 +10,13 @@ import { CATEGORIES } from '../data/categories'
 
 const STANDAARD_VERDELING = { noodzaak: 50, wens: 30, sparen: 20 }
 
-// Cache slaat de complete verwerkte state op om re-processing te vermijden
+// Financieel wordt uitgesloten van budgetberekeningen
+const UITGESLOTEN_CAT = 'Financieel'
+
 let bCache = { state: null, householdId: null }
 function clearCache() { bCache = { state: null, householdId: null } }
 registerCache(clearCache)
 
-// Verwerk ruwe DB-data naar de state die de hook exporteert
 function verwerkData(budgetData, goalData, txData) {
   const categorieBudgetten = (budgetData ?? []).map(b => ({
     id:                    b.id,
@@ -71,11 +72,27 @@ export default function useBudgets() {
   const [loading, setLoading] = useState(!cacheHit)
   const [error, setError]     = useState(null)
 
+  // Handmatig overschreven budgetinkomen (per user, opgeslagen in localStorage)
+  const [handmatigBedrag, setHandmatigBedragState] = useState(() => {
+    const v = localStorage.getItem('webfinance_budget_inkomen')
+    return v ? parseFloat(v) : null
+  })
+
+  function setHandmatigInkomen(bedrag) {
+    if (!bedrag || parseFloat(bedrag) <= 0) {
+      localStorage.removeItem('webfinance_budget_inkomen')
+      setHandmatigBedragState(null)
+    } else {
+      const n = parseFloat(String(bedrag).replace(',', '.'))
+      localStorage.setItem('webfinance_budget_inkomen', String(n))
+      setHandmatigBedragState(n)
+    }
+  }
+
   // ─── Alles ophalen uit Supabase ───
   const fetchAll = useCallback(async (silent = false) => {
     if (!householdId) return
 
-    // Cache geldig voor dit huishouden
     if (bCache.state !== null && bCache.householdId === householdId) {
       const s = bCache.state
       setBudgetModusState(s.budgetModus)
@@ -127,7 +144,6 @@ export default function useBudgets() {
     if (!householdLoading) fetchAll()
   }, [fetchAll, householdLoading])
 
-  // Invalideer cache en haal verse data op na mutaties (silent = geen laad-indicator)
   function invalideerEnHerlaad() {
     bCache = { state: null, householdId: null }
     fetchAll(true)
@@ -142,20 +158,60 @@ export default function useBudgets() {
     })
   , [allTransactions, geselecteerdeMaand])
 
+  // Werkelijk inkomen voor de geselecteerde maand
   const inkomen = useMemo(() =>
     maandTransacties.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
   , [maandTransacties])
 
+  // ─── Gemiddeld inkomen: laatste 6 voltooide maanden met inkomsten ───
+  const gemiddeldInkomenData = useMemo(() => {
+    const curY = now.getFullYear()
+    const curM = now.getMonth()
+    const maandMap = {}
+    for (const t of allTransactions) {
+      if (t.type !== 'Inkomst') continue
+      const d = new Date(t.datum)
+      const y = d.getFullYear()
+      const m = d.getMonth()
+      if (y === curY && m === curM) continue // huidige maand niet meenemen
+      const key = `${y}-${m}`
+      maandMap[key] = (maandMap[key] || 0) + t.bedrag
+    }
+    const sorted = Object.entries(maandMap)
+      .map(([key, total]) => {
+        const [y, m] = key.split('-').map(Number)
+        return { sortKey: y * 12 + m, total }
+      })
+      .sort((a, b) => b.sortKey - a.sortKey)
+      .slice(0, 6)
+    if (sorted.length === 0) return { gemiddeld: 0, aantalMaanden: 0 }
+    const totaal = sorted.reduce((s, e) => s + e.total, 0)
+    return {
+      gemiddeld: Math.round((totaal / sorted.length) * 100) / 100,
+      aantalMaanden: sorted.length,
+    }
+  }, [allTransactions])
+
+  // Effectief inkomen: handmatig > huidig maand > gemiddelde
+  const effectiefInkomen = useMemo(() => {
+    if (handmatigBedrag > 0) return handmatigBedrag
+    if (inkomen > 0) return inkomen
+    return gemiddeldInkomenData.gemiddeld
+  }, [handmatigBedrag, inkomen, gemiddeldInkomenData])
+
+  const budgetInkomenBron = handmatigBedrag > 0 ? 'handmatig' : inkomen > 0 ? 'huidig' : 'gemiddeld'
+  const aantalMaanden = gemiddeldInkomenData.aantalMaanden
+
   const actieveVerdeling = budgetModus === 'handmatig' ? handmatigeVerdeling : STANDAARD_VERDELING
 
-  // ─── 50/30/20 verdeling ───
+  // ─── 50/30/20 verdeling — Financieel uitgesloten ───
   const regelVerdeling = useMemo(() => {
     const budgets = {
-      noodzaak: inkomen * (actieveVerdeling.noodzaak / 100),
-      wens:     inkomen * (actieveVerdeling.wens / 100),
-      sparen:   inkomen * (actieveVerdeling.sparen / 100),
+      noodzaak: effectiefInkomen * (actieveVerdeling.noodzaak / 100),
+      wens:     effectiefInkomen * (actieveVerdeling.wens / 100),
+      sparen:   effectiefInkomen * (actieveVerdeling.sparen / 100),
     }
-    const uitgaven = maandTransacties.filter(t => t.type === 'Uitgave')
+    const uitgaven = maandTransacties.filter(t => t.type === 'Uitgave' && t.categorie !== UITGESLOTEN_CAT)
     const besteed  = {
       noodzaak: uitgaven.filter(t => t.soort === 'Noodzaak').reduce((s, t) => s + t.bedrag, 0),
       wens:     uitgaven.filter(t => t.soort === 'Wens').reduce((s, t) => s + t.bedrag, 0),
@@ -167,12 +223,12 @@ export default function useBudgets() {
       result[k] = { budget: b, besteed: s, pct: b > 0 ? (s / b) * 100 : 0 }
     }
     return result
-  }, [maandTransacties, inkomen, actieveVerdeling])
+  }, [maandTransacties, effectiefInkomen, actieveVerdeling])
 
-  // ─── Categorie overzicht met besteed en budget ───
+  // ─── Categorie overzicht — Financieel uitgesloten ───
   const categorieOverzicht = useMemo(() => {
     const uitgaven = maandTransacties.filter(t => t.type === 'Uitgave')
-    return CATEGORIES.map(cat => {
+    return CATEGORIES.filter(cat => cat.name !== UITGESLOTEN_CAT).map(cat => {
       const catTx      = uitgaven.filter(t => t.categorie === cat.name)
       const catBesteed = catTx.reduce((s, t) => s + t.bedrag, 0)
       const setting    = categorieBudgetten.find(b => b.categorie === cat.name)
@@ -186,12 +242,17 @@ export default function useBudgets() {
     })
   }, [maandTransacties, categorieBudgetten])
 
+  // Financieel uitgesloten uit totalen
   const totaalCategorieBudget = useMemo(() =>
-    categorieBudgetten.reduce((s, b) => s + b.totaalBudget, 0)
+    categorieBudgetten
+      .filter(b => b.categorie !== UITGESLOTEN_CAT)
+      .reduce((s, b) => s + b.totaalBudget, 0)
   , [categorieBudgetten])
 
   const totaalBesteed = useMemo(() =>
-    maandTransacties.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
+    maandTransacties
+      .filter(t => t.type === 'Uitgave' && t.categorie !== UITGESLOTEN_CAT)
+      .reduce((s, t) => s + t.bedrag, 0)
   , [maandTransacties])
 
   // ─── Budget acties ───
@@ -261,7 +322,7 @@ export default function useBudgets() {
     invalideerEnHerlaad()
   }, [householdId, spaardoelen, fetchAll])
 
-  // ─── Globale instellingen persisteren naar alle budget-rijen ───
+  // ─── Globale instellingen persisteren ───
   const setBudgetModus = useCallback(async (modus) => {
     setBudgetModusState(modus)
     if (bCache.state) bCache.state = { ...bCache.state, budgetModus: modus }
@@ -286,9 +347,13 @@ export default function useBudgets() {
     geselecteerdeMaand,
     setGeselecteerdeMaand,
     inkomen,
-    totaalBudget:        inkomen,
+    effectiefInkomen,
+    budgetInkomenBron,
+    aantalMaanden,
+    setHandmatigInkomen,
+    totaalBudget:        effectiefInkomen,
     totaalBesteed,
-    totaalResterend:     inkomen - totaalBesteed,
+    totaalResterend:     effectiefInkomen - totaalBesteed,
     totaalCategorieBudget,
     regelVerdeling,
     categorieOverzicht,

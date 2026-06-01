@@ -15,7 +15,9 @@ export default function BudgetsPage() {
   const { T } = useTheme()
   const {
     budgetModus, setBudgetModus, categorieBudgetten, spaardoelen,
-    geselecteerdeMaand, setGeselecteerdeMaand, inkomen, totaalBudget, totaalBesteed, totaalResterend,
+    geselecteerdeMaand, setGeselecteerdeMaand, inkomen, effectiefInkomen,
+    budgetInkomenBron, aantalMaanden, setHandmatigInkomen,
+    totaalBudget, totaalBesteed, totaalResterend,
     totaalCategorieBudget, regelVerdeling, categorieOverzicht,
     voegBudgetToe, wijzigBudget, voegSpaardoelToe, verwijderSpaardoel, stortOpSpaardoel,
     handmatigeVerdeling, setHandmatigeVerdeling, actieveVerdeling, loading,
@@ -47,11 +49,13 @@ export default function BudgetsPage() {
           <>
             <BudgetStats totaalBudget={totaalBudget} totaalBesteed={totaalBesteed} totaalResterend={totaalResterend} />
             <BudgetSavingsGoals spaardoelen={spaardoelen} onToevoegen={voegSpaardoelToe} onStorten={stortOpSpaardoel} onVerwijderen={verwijderSpaardoel} />
-            <BudgetRuleSection regelVerdeling={regelVerdeling} inkomen={inkomen} budgetModus={budgetModus}
+            <BudgetRuleSection regelVerdeling={regelVerdeling} effectiefInkomen={effectiefInkomen}
+              budgetInkomenBron={budgetInkomenBron} aantalMaanden={aantalMaanden}
+              setHandmatigInkomen={setHandmatigInkomen} budgetModus={budgetModus}
               onModusWijzig={setBudgetModus} actieveVerdeling={actieveVerdeling}
               handmatigeVerdeling={handmatigeVerdeling} onVerdelingWijzig={setHandmatigeVerdeling} />
             <BudgetCategoryTable categorieOverzicht={categorieOverzicht} onSave={handleCategorySave}
-              budgetLimiet={inkomen} totaalCategorieBudget={totaalCategorieBudget} />
+              budgetLimiet={effectiefInkomen} totaalCategorieBudget={totaalCategorieBudget} />
           </>
         )}
       </div>
