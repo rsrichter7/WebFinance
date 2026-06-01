@@ -59,38 +59,51 @@ export default function CalendarWeekView({ allTransactions, items, year, month, 
           const expItems = showExpected ? dayData.expected : []
           const actItems = showActual   ? dayData.actual   : []
 
+          const allItems = [
+            ...expItems.map(e => ({ ...e, isExpected: true })),
+            ...actItems.map(a => ({ ...a, isExpected: false })),
+          ]
+          const MAX_VISIBLE = 4
+          const visibleItems = allItems.slice(0, MAX_VISIBLE)
+          const hiddenCount  = Math.max(0, allItems.length - MAX_VISIBLE)
+
           return (
             <div key={i} onClick={() => onSelectDay(d, m, y)} style={{
               borderRight: i < 6 ? `1px solid ${T.border}` : 'none',
-              padding: 10, minHeight: 150,
+              padding: 10, minHeight: 170,
               background: isSelected ? T.blueSoft : T.card,
               opacity: isFuture ? 0.75 : 1, cursor: 'pointer',
             }}>
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ marginBottom: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'grid', placeItems: 'center', background: isToday ? T.blue : 'transparent', color: isToday ? '#fff' : T.ink, fontSize: 14, fontWeight: isToday ? 700 : 600 }}>{d}</div>
                 <div style={{ fontSize: 10.5, color: T.ink4, marginTop: 2 }}>{MAANDEN_KORT[m]}</div>
               </div>
 
-              {expItems.map((e, j) => (
-                <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 5 }}>
-                  <span style={{ color: e.income ? T.green : T.blue, display: 'inline-flex', marginTop: 1, flexShrink: 0 }}>
-                    {e.income ? ICONS.arrUp : ICONS.clock}
-                  </span>
-                  <span style={{ fontSize: 10.5, color: e.income ? T.greenText : T.blueText, fontWeight: 500, ...TAB, lineHeight: 1.3 }}>
-                    {e.income ? '+' : ''}{fmtShort(e.amount)}
-                  </span>
-                </div>
-              ))}
+              {visibleItems.map((item, j) => {
+                const label     = item.winkel || item.name || '–'
+                const icon      = item.income ? ICONS.arrUp : ICONS.arrDown
+                const iconColor = item.isExpected
+                  ? (item.income ? T.green : T.blue)
+                  : (item.income ? T.green : T.ink4)
+                const textColor = item.isExpected ? T.ink4 : T.ink2
+                const amtColor  = item.isExpected
+                  ? (item.income ? T.green : T.blueText)
+                  : (item.income ? T.greenText : T.ink)
+                return (
+                  <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 4, minWidth: 0 }}>
+                    <span style={{ color: iconColor, display: 'inline-flex', flexShrink: 0, opacity: item.isExpected ? 0.7 : 1 }}>{icon}</span>
+                    <span style={{ fontSize: 12, color: textColor, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{label}</span>
+                    <span style={{ fontSize: 12, color: amtColor, fontWeight: 500, ...TAB, lineHeight: 1.3, flexShrink: 0, marginLeft: 2 }}>{item.income ? '+' : ''}{fmtShort(item.amount)}</span>
+                  </div>
+                )
+              })}
 
-              {actItems.filter(a => !a.income).map((a, j) => (
-                <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 5 }}>
-                  <span style={{ color: T.ink4, display: 'inline-flex', marginTop: 1, flexShrink: 0 }}>{ICONS.arrDown}</span>
-                  <span style={{ fontSize: 10.5, color: T.ink2, fontWeight: 500, ...TAB, lineHeight: 1.3 }}>{fmtShort(a.amount)}</span>
-                </div>
-              ))}
+              {hiddenCount > 0 && (
+                <div style={{ fontSize: 11, color: T.ink4, marginTop: 2 }}>en {hiddenCount} meer...</div>
+              )}
 
-              {expItems.length === 0 && actItems.length === 0 && (
-                <div style={{ fontSize: 10.5, color: T.ink4 }}>—</div>
+              {allItems.length === 0 && (
+                <div style={{ fontSize: 11, color: T.ink4 }}>—</div>
               )}
             </div>
           )

@@ -92,14 +92,14 @@ export default function CalendarPage() {
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ display: 'flex', gap: 20 }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <CalendarMonthNav year={year} month={month} selDay={selDay} viewMode={viewMode} onPrev={prevPeriod} onNext={nextPeriod} />
             {viewMode === 'Maand'
               ? <CalendarGrid allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={setSelDay} dismissed={dismissed} />
               : <CalendarWeekView allTransactions={allTransactions} items={items} year={year} month={month} selectedDay={selDay} viewFilter={viewFilter} onSelectDay={handleSelectDay} />
             }
             <CalendarStats totalIncome={totalIncome} totalExpenses={totalActual} />
           </div>
-          <div style={{ width: 280, flexShrink: 0 }}>
+          <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <CalendarMonthNav year={year} month={month} selDay={selDay} viewMode={viewMode} onPrev={prevPeriod} onNext={nextPeriod} />
             <CalendarDayDetail day={selDay} month={month} year={year} dayData={dayMap[selDay]} onAdd={() => setShowForm(true)} onDismissExpected={id => dismissExpected(id, initialDate)} />
             <CalendarLegend />
           </div>
