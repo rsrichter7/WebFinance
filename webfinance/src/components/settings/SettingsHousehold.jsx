@@ -14,8 +14,12 @@ export default function SettingsHousehold() {
   const [modal, setModal] = useState(null)
 
   function handleSave(data) {
-    if (modal.type === 'edit') updateProfile(modal.profile.id, data)
-    else addProfile(data)
+    if (modal.type === 'edit') {
+      if (modal.profile.isGezamenlijk) updateProfile(modal.profile.id, { kleur: data.kleur })
+      else updateProfile(modal.profile.id, data)
+    } else {
+      addProfile(data)
+    }
     setModal(null)
   }
 
@@ -38,19 +42,19 @@ export default function SettingsHousehold() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
         {profiles.map(p => (
-          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.card, borderRadius: 10, border: `1px solid ${T.border}`, opacity: p.isGezamenlijk ? 0.6 : 1 }}>
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.card, borderRadius: 10, border: `1px solid ${T.border}` }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: p.kleur.bg, color: p.kleur.fg, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700 }}>
               {p.initialen}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{p.naam}</div>
               <div style={{ fontSize: 12, color: T.ink3 }}>
-                {p.isGezamenlijk ? 'Altijd aanwezig · niet verwijderbaar' : `Initialen: ${p.initialen}`}
+                {p.isGezamenlijk ? 'Altijd aanwezig · alleen kleur aanpasbaar' : `Initialen: ${p.initialen}`}
               </div>
             </div>
-            {!p.isGezamenlijk && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => setModal({ type: 'edit', profile: p })} style={iconBtn}>{ICONS.edit}</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setModal({ type: 'edit', profile: p })} style={iconBtn}>{ICONS.edit}</button>
+              {!p.isGezamenlijk && (
                 <button
                   onClick={() => persons.length > 1 && setModal({ type: 'delete', profile: p })}
                   style={{ ...iconBtn, opacity: persons.length <= 1 ? 0.3 : 1, cursor: persons.length <= 1 ? 'not-allowed' : 'pointer' }}
@@ -58,8 +62,8 @@ export default function SettingsHousehold() {
                 >
                   {ICONS.trash}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -86,35 +90,44 @@ export default function SettingsHousehold() {
 function ProfielModal({ modal, onSave, onClose }) {
   const { T } = useTheme()
   const isEdit = modal.type === 'edit'
+  const isGZ   = isEdit && modal.profile.isGezamenlijk
   const [naam,  setNaam]  = useState(isEdit ? modal.profile.naam  : '')
   const [kleur, setKleur] = useState(isEdit ? modal.profile.kleur : PROFIEL_KLEUREN[0])
   const initialen = genInitialen(naam)
 
   const L = { display: 'block', fontSize: 13, fontWeight: 500, color: T.ink2, marginBottom: 6 }
   const I = { width: '100%', padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, color: T.ink, outline: 'none', fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box' }
-  const primaryBtn  = { flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+  const primaryBtn   = { flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
   const secondaryBtn = { flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+
+  const titel = isGZ ? 'Kleur aanpassen' : isEdit ? 'Persoon bewerken' : 'Persoon toevoegen'
+  const kanOpslaan = isGZ || naam.trim().length > 0
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', padding: 28, width: 360, zIndex: 201 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 20 }}>
-          {isEdit ? 'Persoon bewerken' : 'Persoon toevoegen'}
-        </div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: T.ink, marginBottom: 20 }}>{titel}</div>
         <div style={{ marginBottom: 16 }}>
-          <label style={L}>Naam *</label>
-          <input value={naam} onChange={e => setNaam(e.target.value)} placeholder="Bijv. Anne de Reus" style={I} autoFocus />
+          <label style={L}>Naam {!isGZ && '*'}</label>
+          <input value={naam} onChange={e => !isGZ && setNaam(e.target.value)}
+            placeholder="Bijv. Anne de Reus"
+            disabled={isGZ}
+            autoFocus={!isGZ}
+            style={{ ...I, background: isGZ ? T.bg : T.card, color: isGZ ? T.ink3 : T.ink, cursor: isGZ ? 'not-allowed' : 'text' }} />
+          {isGZ && <div style={{ fontSize: 11.5, color: T.ink4, marginTop: 4 }}>De naam van Gezamenlijk kan niet worden aangepast</div>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: kleur.bg, color: kleur.fg, display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
-            {initialen}
+        {!isGZ && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: kleur.bg, color: kleur.fg, display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+              {initialen}
+            </div>
+            <div style={{ fontSize: 13, color: T.ink3 }}>
+              Initialen: <strong style={{ color: T.ink }}>{initialen}</strong>
+              <div style={{ fontSize: 12, color: T.ink4, marginTop: 2 }}>Automatisch gegenereerd</div>
+            </div>
           </div>
-          <div style={{ fontSize: 13, color: T.ink3 }}>
-            Initialen: <strong style={{ color: T.ink }}>{initialen}</strong>
-            <div style={{ fontSize: 12, color: T.ink4, marginTop: 2 }}>Automatisch gegenereerd</div>
-          </div>
-        </div>
+        )}
         <div style={{ marginBottom: 24 }}>
           <label style={L}>Kleur</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -126,7 +139,7 @@ function ProfielModal({ modal, onSave, onClose }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => naam.trim() && onSave({ naam: naam.trim(), initialen, kleur })} style={primaryBtn}>Opslaan</button>
+          <button onClick={() => kanOpslaan && onSave({ naam: naam.trim(), initialen, kleur })} style={{ ...primaryBtn, opacity: kanOpslaan ? 1 : 0.5, cursor: kanOpslaan ? 'pointer' : 'not-allowed' }}>Opslaan</button>
           <button onClick={onClose} style={secondaryBtn}>Annuleren</button>
         </div>
       </div>

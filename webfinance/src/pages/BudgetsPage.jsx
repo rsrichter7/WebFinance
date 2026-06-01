@@ -10,21 +10,23 @@ import BudgetRuleSection from '../components/budgets/BudgetRuleSection'
 import BudgetCategoryTable from '../components/budgets/BudgetCategoryTable'
 import BudgetSavingsGoals from '../components/budgets/BudgetSavingsGoals'
 import BudgetForm from '../components/budgets/BudgetForm'
+import BudgetSettingsForm from '../components/budgets/BudgetSettingsForm'
 
 export default function BudgetsPage() {
   const { T } = useTheme()
   const {
     budgetModus, setBudgetModus, categorieBudgetten, spaardoelen,
     geselecteerdeMaand, setGeselecteerdeMaand, inkomen, effectiefInkomen,
-    budgetInkomenBron, aantalMaanden, setHandmatigInkomen,
+    budgetInkomenBron, aantalMaanden, setHandmatigInkomen, allTransactions,
     totaalBudget, totaalBesteed, totaalResterend,
     totaalCategorieBudget, regelVerdeling, categorieOverzicht,
     voegBudgetToe, wijzigBudget, voegSpaardoelToe, verwijderSpaardoel, stortOpSpaardoel,
     handmatigeVerdeling, setHandmatigeVerdeling, actieveVerdeling, loading,
   } = useBudgets()
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingBudget, setEditingBudget] = useState(null)
+  const [formOpen, setFormOpen]             = useState(false)
+  const [editingBudget, setEditingBudget]   = useState(null)
+  const [settingsOpen, setSettingsOpen]     = useState(false)
 
   const handleSave = (data, isEdit) => {
     if (isEdit) wijzigBudget(data.id, data)
@@ -39,7 +41,7 @@ export default function BudgetsPage() {
 
   return (
     <>
-      <BudgetTopBar geselecteerdeMaand={geselecteerdeMaand} onMaandWijzig={setGeselecteerdeMaand} />
+      <BudgetTopBar geselecteerdeMaand={geselecteerdeMaand} onMaandWijzig={setGeselecteerdeMaand} onBudgetInstellen={() => setSettingsOpen(true)} />
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: T.ink3, fontSize: 14 }}>
@@ -62,6 +64,9 @@ export default function BudgetsPage() {
       <BudgetForm open={formOpen} editingItem={editingBudget}
         onClose={() => { setFormOpen(false); setEditingBudget(null) }}
         onSave={handleSave} bestaandeCategorieën={categorieBudgetten.map(b => b.categorie)} />
+      <BudgetSettingsForm open={settingsOpen} onClose={() => setSettingsOpen(false)}
+        effectiefInkomen={effectiefInkomen} budgetInkomenBron={budgetInkomenBron}
+        setHandmatigInkomen={setHandmatigInkomen} allTransactions={allTransactions} />
     </>
   )
 }

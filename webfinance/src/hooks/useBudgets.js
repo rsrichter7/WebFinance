@@ -351,6 +351,7 @@ export default function useBudgets() {
     budgetInkomenBron,
     aantalMaanden,
     setHandmatigInkomen,
+    allTransactions,
     totaalBudget:        effectiefInkomen,
     totaalBesteed,
     totaalResterend:     effectiefInkomen - totaalBesteed,

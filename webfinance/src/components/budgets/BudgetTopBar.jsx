@@ -10,7 +10,7 @@ const MAANDEN = [
   'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'
 ]
 
-export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
+export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig, onBudgetInstellen }) {
   const { T } = useTheme()
   const { maand, jaar } = geselecteerdeMaand
 
@@ -42,7 +42,14 @@ export default function BudgetTopBar({ geselecteerdeMaand, onMaandWijzig }) {
           ]}
         />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button onClick={onBudgetInstellen} style={{
+          height: 32, padding: '0 14px', borderRadius: 8, border: 'none',
+          background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          Budget instellen
+        </button>
         <button onClick={vorige} style={{
           width: 32, height: 32, borderRadius: 6, border: `1px solid ${T.border}`,
           background: T.card, cursor: 'pointer', display: 'grid', placeItems: 'center', color: T.ink3, fontSize: 14,
