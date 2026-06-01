@@ -5,11 +5,9 @@ import React from 'react'
 import { useTheme } from '../hooks/useTheme'
 import useFixedExpenses from '../hooks/useFixedExpenses'
 import IncomeTopBar from '../components/income/IncomeTopBar'
-import FixedStats from '../components/fixed/FixedStats'
-import FixedInkomstSection from '../components/fixed/FixedInkomstSection'
+import IncomeStats from '../components/income/IncomeStats'
+import IncomeSection from '../components/income/IncomeSection'
 import FixedForm from '../components/fixed/FixedForm'
-import { Card } from '../components/ui/Card'
-import { ICONS } from '../components/ui/Icons'
 
 export default function IncomePage() {
   const { T } = useTheme()
@@ -36,8 +34,8 @@ export default function IncomePage() {
           </div>
         ) : (
           <>
-            <FixedStats totals={totals} />
-            <FixedInkomstSection groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={removeItem} />
+            <IncomeStats totals={totals} />
+            <IncomeSection groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={removeItem} />
           </>
         )}
       </div>
