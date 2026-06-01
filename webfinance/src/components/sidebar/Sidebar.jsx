@@ -18,9 +18,10 @@ import NotificationPanel from '../ui/NotificationPanel'
 const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
   { to: '/transacties',  label: 'Transacties',  icon: ICONS.tx },
+  { to: '/inkomsten',    label: 'Inkomsten',    icon: ICONS.trending },
+  { to: '/vaste-lasten', label: 'Vaste lasten', icon: ICONS.fixed },
   { to: '/analytics',    label: 'Analyse',      icon: ICONS.analytics },
   { to: '/budgetten',    label: 'Budgetten',    icon: ICONS.budget },
-  { to: '/vaste-lasten', label: 'Vaste lasten', icon: ICONS.fixed },
   { to: '/kalender',     label: 'Kalender',     icon: ICONS.cal, premium: true },
 ]
 

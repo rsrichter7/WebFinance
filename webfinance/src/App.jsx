@@ -11,6 +11,7 @@ import TransactionsPage from './pages/TransactionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import BudgetsPage from './pages/BudgetsPage'
 import FixedPage from './pages/FixedPage'
+import IncomePage from './pages/IncomePage'
 import CalendarPage from './pages/CalendarPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './components/auth/LoginPage'
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/transacties" element={<TransactionsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/budgetten" element={<BudgetsPage />} />
+            <Route path="/inkomsten" element={<IncomePage />} />
             <Route path="/vaste-lasten" element={<FixedPage />} />
             <Route path="/kalender" element={<CalendarPage />} />
             <Route path="/instellingen" element={<SettingsPage />} />
