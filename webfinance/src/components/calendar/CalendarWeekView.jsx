@@ -70,7 +70,7 @@ export default function CalendarWeekView({ allTransactions, items, year, month, 
           return (
             <div key={i} onClick={() => onSelectDay(d, m, y)} style={{
               borderRight: i < 6 ? `1px solid ${T.border}` : 'none',
-              padding: 10, minHeight: 170,
+              padding: 10, minHeight: 170, minWidth: 0, overflow: 'hidden',
               background: isSelected ? T.blueSoft : T.card,
               opacity: isFuture ? 0.75 : 1, cursor: 'pointer',
             }}>
