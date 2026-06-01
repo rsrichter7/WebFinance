@@ -22,7 +22,6 @@ const NAV_ITEMS = [
   { to: '/budgetten',    label: 'Budgetten',    icon: ICONS.budget },
   { to: '/vaste-lasten', label: 'Vaste lasten', icon: ICONS.fixed },
   { to: '/kalender',     label: 'Kalender',     icon: ICONS.cal, premium: true },
-  { to: '/instellingen', label: 'Instellingen', icon: ICONS.settings },
 ]
 
 export default function Sidebar() {
@@ -171,6 +170,19 @@ export default function Sidebar() {
         }}>
           <span style={{ color: T.ink3, display: 'inline-flex' }}>{ICONS.messageSquare}</span>
           {!collapsed && <span>Feedback</span>}
+        </button>
+
+        {/* Instellingen */}
+        <button onClick={() => navigate('/instellingen')} style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          width: '100%', padding: collapsed ? '8px' : '8px 10px',
+          borderRadius: 8, border: 'none', background: 'transparent',
+          fontSize: 14, color: T.ink3, cursor: 'pointer',
+          fontFamily: "'Inter', sans-serif",
+          justifyContent: collapsed ? 'center' : 'flex-start',
+        }}>
+          <span style={{ color: T.ink3, display: 'inline-flex' }}>{ICONS.settings}</span>
+          {!collapsed && <span>Instellingen</span>}
         </button>
 
         {/* Uitloggen */}
