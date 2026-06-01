@@ -12,7 +12,8 @@ import useSettings from '../../hooks/useSettings'
 import DashboardIncomeModal from './DashboardIncomeModal'
 
 export default function DashboardCostSplit({ allTransactions }) {
-  const { T } = useTheme()
+  const { T, resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   const { persons } = useProfiles()
   const { settings, updateSetting } = useSettings()
   const [showModal, setShowModal] = useState(false)
@@ -110,17 +111,22 @@ export default function DashboardCostSplit({ allTransactions }) {
               const verschil = betaald - bijdrage
               const teVeel   = verschil > 0.005
               const teWeinig = verschil < -0.005
+              const textKleur = isDark ? p.kleur.bg : p.kleur.fg
               return (
-                <div key={p.initialen} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: p.kleur.bg, border: `1.5px solid ${p.kleur.fg}22` }}>
+                <div key={p.initialen} style={{
+                  flex: 1, padding: '10px 12px', borderRadius: 10,
+                  background: isDark ? p.kleur.fg + '1E' : p.kleur.bg,
+                  border: `1.5px solid ${p.kleur.fg}${isDark ? '44' : '22'}`,
+                }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.kleur.fg + '22', color: p.kleur.fg, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.kleur.fg + (isDark ? '35' : '22'), color: textKleur, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
                       {p.initialen}
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: p.kleur.fg }}>{p.naam} ({pct.toFixed(0)}%)</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: textKleur }}>{p.naam} ({pct.toFixed(0)}%)</span>
                   </div>
-                  <Row label="Inkomen"  waarde={inkomen[p.initialen] || 0} kleur={p.kleur.fg} />
-                  <Row label="Bijdrage" waarde={bijdrage} kleur={p.kleur.fg} />
-                  <Row label="Betaald"  waarde={betaald}  kleur={p.kleur.fg} />
+                  <Row label="Inkomen"  waarde={inkomen[p.initialen] || 0} kleur={textKleur} />
+                  <Row label="Bijdrage" waarde={bijdrage} kleur={textKleur} />
+                  <Row label="Betaald"  waarde={betaald}  kleur={textKleur} />
                   {(teVeel || teWeinig) && (
                     <div style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: teVeel ? T.redSoft : T.greenSoft, color: teVeel ? T.redText : T.greenText }}>
                       {teVeel ? '▲' : '▼'} {fmt(Math.abs(verschil))} {teVeel ? 'te veel' : 'te weinig'}

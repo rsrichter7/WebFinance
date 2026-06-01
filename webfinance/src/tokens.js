@@ -73,9 +73,9 @@ export const darkTokens = {
   teal:      '#0D9488',
   tealSoft:  'rgba(13,148,136,0.15)',
 
-  uitgaveBtnBg:   'rgba(220,38,38,0.2)',
+  uitgaveBtnBg:   'rgba(220,38,38,0.42)',
   uitgaveBtnText: '#FCA5A5',
-  inkomstBtnBg:   'rgba(5,150,105,0.2)',
+  inkomstBtnBg:   'rgba(5,150,105,0.42)',
   inkomstBtnText: '#6EE7B7',
   statGreen:      '#6EE7B7',
   statRed:        '#FCA5A5',

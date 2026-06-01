@@ -10,9 +10,10 @@ import FixedInkomstSection from '../components/fixed/FixedInkomstSection'
 import FixedForm from '../components/fixed/FixedForm'
 import { Card } from '../components/ui/Card'
 import { ICONS } from '../components/ui/Icons'
-import { T } from '../tokens'
+import { useTheme } from '../hooks/useTheme'
 
 export default function FixedPage() {
+  const { T } = useTheme()
   const [activeTab, setActiveTab] = useState('uitgaven')
 
   const {
@@ -81,8 +82,12 @@ export default function FixedPage() {
                     fontSize: 14, fontWeight: activeTab === tab.id ? 600 : 500,
                     cursor: 'pointer', fontFamily: 'inherit',
                     border: activeTab === tab.id ? 'none' : `1px solid ${T.rule}`,
-                    background: activeTab === tab.id ? T.blue : T.card,
-                    color: activeTab === tab.id ? '#fff' : T.ink2,
+                    background: activeTab === tab.id
+                      ? (tab.id === 'uitgaven' ? T.uitgaveBtnBg : T.inkomstBtnBg)
+                      : T.card,
+                    color: activeTab === tab.id
+                      ? (tab.id === 'uitgaven' ? T.uitgaveBtnText : T.inkomstBtnText)
+                      : T.ink2,
                     transition: 'background 0.15s',
                   }}
                 >
