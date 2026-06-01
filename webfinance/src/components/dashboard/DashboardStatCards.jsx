@@ -60,11 +60,11 @@ export default function DashboardStatCards({ maand, jaar, inkomsten, uitgaven, p
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-      <StatCard label="Inkomsten" value={inkomsten} color={T.green} accent={T.green}
+      <StatCard label="Inkomsten" value={inkomsten} color={T.statGreen} accent={T.statGreen}
         trend={inkomstenTrend} trendGood="up" vorigeMaandNaam={vorigeMaandNaam} />
-      <StatCard label="Uitgaven" value={uitgaven} color={T.red} accent={T.red}
+      <StatCard label="Uitgaven" value={uitgaven} color={T.statRed} accent={T.statRed}
         trend={uitgavenTrend} trendGood="down" vorigeMaandNaam={vorigeMaandNaam} />
-      <StatCard label="Huidig Saldo" value={saldo} color={T.blue} accent={T.blue} />
+      <StatCard label="Huidig Saldo" value={saldo} color={T.statBlue} accent={T.statBlue} />
     </div>
   )
 }

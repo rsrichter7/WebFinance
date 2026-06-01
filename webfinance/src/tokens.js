@@ -32,6 +32,14 @@ export const lightTokens = {
   teal:      '#0D9488',
   tealSoft:  '#F0FDFA',
 
+  uitgaveBtnBg:   '#111827',
+  uitgaveBtnText: '#ffffff',
+  inkomstBtnBg:   '#059669',
+  inkomstBtnText: '#ffffff',
+  statGreen:      '#059669',
+  statRed:        '#DC2626',
+  statBlue:       '#2563EB',
+
   shadow:    '0 1px 3px rgba(17,24,39,0.04), 0 1px 2px rgba(17,24,39,0.03)',
 }
 
@@ -64,6 +72,14 @@ export const darkTokens = {
   violetSoft:'rgba(124,58,237,0.15)',
   teal:      '#0D9488',
   tealSoft:  'rgba(13,148,136,0.15)',
+
+  uitgaveBtnBg:   'rgba(220,38,38,0.2)',
+  uitgaveBtnText: '#FCA5A5',
+  inkomstBtnBg:   'rgba(5,150,105,0.2)',
+  inkomstBtnText: '#6EE7B7',
+  statGreen:      '#6EE7B7',
+  statRed:        '#FCA5A5',
+  statBlue:       '#93C5FD',
 
   shadow:    '0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4)',
 }

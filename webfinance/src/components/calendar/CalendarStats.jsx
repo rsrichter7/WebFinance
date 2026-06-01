@@ -22,17 +22,17 @@ function MiniCard({ label, children, accentColor }) {
 export default function CalendarStats({ totalIncome, totalExpenses }) {
   const { T } = useTheme()
   const diff = totalIncome - totalExpenses
-  const diffColor = diff >= 0 ? T.green : T.red
+  const diffColor = diff >= 0 ? T.statGreen : T.statRed
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-      <MiniCard label="Inkomsten" accentColor={T.green}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: T.green, ...TAB }}>{fmt(totalIncome)}</div>
+      <MiniCard label="Inkomsten" accentColor={T.statGreen}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.statGreen, ...TAB }}>{fmt(totalIncome)}</div>
       </MiniCard>
-      <MiniCard label="Uitgaven" accentColor={T.red}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: T.red, ...TAB }}>{fmt(totalExpenses)}</div>
+      <MiniCard label="Uitgaven" accentColor={T.statRed}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.statRed, ...TAB }}>{fmt(totalExpenses)}</div>
       </MiniCard>
-      <MiniCard label="Verschil" accentColor={T.blue}>
+      <MiniCard label="Verschil" accentColor={T.statBlue}>
         <div style={{ fontSize: 22, fontWeight: 700, color: diffColor, ...TAB }}>
           {diff >= 0 ? '+' : '−'} {fmt(Math.abs(diff))}
         </div>

@@ -70,9 +70,9 @@ export default function FixedStats({ totals }) {
   const { T } = useTheme()
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-      <StatCard label="Vaste inkomsten / maand" value={totals.inkomsten} color={T.green} accent={T.green} />
-      <StatCard label="Vaste lasten / maand" value={totals.uitgaven} color={T.red} accent={T.red} />
-      <StatCard label="Restant / maand" value={totals.restant} color={T.blueText} accent={T.blue} />
+      <StatCard label="Vaste inkomsten / maand" value={totals.inkomsten} color={T.statGreen} accent={T.statGreen} />
+      <StatCard label="Vaste lasten / maand" value={totals.uitgaven} color={T.statRed} accent={T.statRed} />
+      <StatCard label="Restant / maand" value={totals.restant} color={T.statBlue} accent={T.statBlue} />
     </div>
   )
 }

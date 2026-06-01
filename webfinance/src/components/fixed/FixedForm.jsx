@@ -100,8 +100,8 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
                 <button key={t} onClick={() => update('type', t)} style={{
                   flex: 1, padding: '8px 0', border: 'none', fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'inherit',
-                  background: form.type === t ? (t === 'Uitgave' ? T.ink : T.green) : T.card,
-                  color: form.type === t ? '#fff' : T.ink3,
+                  background: form.type === t ? (t === 'Uitgave' ? T.uitgaveBtnBg : T.inkomstBtnBg) : T.card,
+                  color: form.type === t ? (t === 'Uitgave' ? T.uitgaveBtnText : T.inkomstBtnText) : T.ink3,
                 }}>{t}</button>
               ))}
             </div>
