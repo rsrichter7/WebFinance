@@ -41,6 +41,27 @@ export const lightTokens = {
   statBlue:       '#2563EB',
 
   shadow:    '0 1px 3px rgba(17,24,39,0.04), 0 1px 2px rgba(17,24,39,0.03)',
+
+  // Gradienten — finance-blauw als hero, accent kleuren voor badges en charts
+  gradHero:    'linear-gradient(135deg, #0F2D52 0%, #1E5AA8 55%, #2563EB 100%)',
+  gradAccent:  'linear-gradient(135deg, #1E5AA8 0%, #2563EB 100%)',
+  gradGreen:   'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+  gradRed:     'linear-gradient(135deg, #EF4444 0%, #F97316 100%)',
+  gradPurple:  'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+  gradBlue:    'linear-gradient(135deg, #1E5AA8 0%, #2563EB 100%)',
+  gradPink:    'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)',
+  gradAmber:   'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+  gradTeal:    'linear-gradient(135deg, #0D9488 0%, #2DD4BF 100%)',
+
+  // Glow — radiale gradients voor subtiele kleurzwemen onder mini stat-kaarten
+  glowBlue:    'radial-gradient(circle, rgba(30,90,168,0.12) 0%, rgba(30,90,168,0) 70%)',
+  glowGreen:   'radial-gradient(circle, rgba(16,185,129,0.18) 0%, rgba(16,185,129,0) 70%)',
+  glowRed:     'radial-gradient(circle, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0) 70%)',
+  glowPink:    'radial-gradient(circle, rgba(236,72,153,0.12) 0%, rgba(236,72,153,0) 70%)',
+  glowAmber:   'radial-gradient(circle, rgba(245,158,11,0.13) 0%, rgba(245,158,11,0) 70%)',
+  glowEmerald: 'radial-gradient(circle, rgba(16,185,129,0.14) 0%, rgba(16,185,129,0) 70%)',
+  glowCyan:    'radial-gradient(circle, rgba(6,182,212,0.10) 0%, rgba(6,182,212,0) 70%)',
+  glowViolet:  'radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0) 70%)',
 }
 
 export const darkTokens = {
@@ -82,6 +103,27 @@ export const darkTokens = {
   statBlue:       '#93C5FD',
 
   shadow:    '0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4)',
+
+  // Gradienten — zelfde als light (werken op donkere achtergrond)
+  gradHero:    'linear-gradient(135deg, #0F2D52 0%, #1E5AA8 55%, #2563EB 100%)',
+  gradAccent:  'linear-gradient(135deg, #1E5AA8 0%, #2563EB 100%)',
+  gradGreen:   'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+  gradRed:     'linear-gradient(135deg, #EF4444 0%, #F97316 100%)',
+  gradPurple:  'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+  gradBlue:    'linear-gradient(135deg, #1E5AA8 0%, #2563EB 100%)',
+  gradPink:    'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)',
+  gradAmber:   'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+  gradTeal:    'linear-gradient(135deg, #0D9488 0%, #2DD4BF 100%)',
+
+  // Glow — hogere opacity (×1.4) voor zichtbaarheid op donkere achtergrond
+  glowBlue:    'radial-gradient(circle, rgba(30,90,168,0.22) 0%, rgba(30,90,168,0) 70%)',
+  glowGreen:   'radial-gradient(circle, rgba(16,185,129,0.28) 0%, rgba(16,185,129,0) 70%)',
+  glowRed:     'radial-gradient(circle, rgba(239,68,68,0.28) 0%, rgba(239,68,68,0) 70%)',
+  glowPink:    'radial-gradient(circle, rgba(236,72,153,0.22) 0%, rgba(236,72,153,0) 70%)',
+  glowAmber:   'radial-gradient(circle, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0) 70%)',
+  glowEmerald: 'radial-gradient(circle, rgba(16,185,129,0.24) 0%, rgba(16,185,129,0) 70%)',
+  glowCyan:    'radial-gradient(circle, rgba(6,182,212,0.20) 0%, rgba(6,182,212,0) 70%)',
+  glowViolet:  'radial-gradient(circle, rgba(139,92,246,0.22) 0%, rgba(139,92,246,0) 70%)',
 }
 
 export function getTokens(theme) {

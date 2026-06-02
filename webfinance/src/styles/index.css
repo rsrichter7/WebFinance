@@ -28,3 +28,31 @@ input, select, button { font-family: inherit; }
 
 ::selection { background: rgba(37,99,235,0.2); }
 [data-theme="dark"] ::selection { background: rgba(37,99,235,0.35); }
+
+/* ─── Dashboard animaties ─── */
+@keyframes wf-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wf-anim-card {
+  animation: wf-fade-up 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes wf-grow-width {
+  from { width: 0; }
+}
+.wf-anim-bar {
+  animation: wf-grow-width 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 200ms;
+}
+
+.wf-card-hover {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.wf-card-hover:hover {
+  box-shadow: 0 4px 20px rgba(17, 24, 39, 0.08);
+  transform: translateY(-1px);
+}
+[data-theme="dark"] .wf-card-hover:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}

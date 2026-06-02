@@ -1,5 +1,5 @@
 // ─── DashboardTopBar ───
-// Begroeting op basis van tijdstip + maandselector + transactie-knop.
+// Begroeting op basis van tijdstip + maandselector + transactie-knop (finance-blauw gradient).
 
 import React from 'react'
 import { useTheme } from '../../hooks/useTheme'
@@ -43,17 +43,12 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx, v
     minWidth: 148, textAlign: 'center', textTransform: 'capitalize',
   }
 
-  const addBtnStyle = {
-    height: 32, padding: '0 14px', borderRadius: 8, border: 'none',
-    background: T.blue, color: '#fff', fontSize: 13, fontWeight: 500,
-    cursor: 'pointer', fontFamily: 'inherit',
-  }
-
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '18px 28px', borderBottom: `1px solid ${T.border}`, background: T.card,
     }}>
+      {/* Begroeting + ?-icoon */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ fontSize: 21, fontWeight: 600, color: T.ink, letterSpacing: -0.3 }}>
           {begroeting()}{voornaam ? `, ${voornaam}` : ''}
@@ -62,27 +57,30 @@ export default function DashboardTopBar({ maand, jaar, onMaandWijzig, onAddTx, v
           titel="Hoe werkt deze pagina?"
           intro="Het dashboard geeft een overzicht van je financiën per maand."
           bullets={[
-            'Bekijk je inkomsten, uitgaven en huidig saldo bovenaan de pagina.',
-            'De grafieken tonen je bestedingspatroon per categorie en per maand.',
-            'Volg je voortgang op spaardoelen en je 50/30/20 score.',
+            'Bekijk hoeveel je vrij te besteden hebt na vaste lasten en gemiddelde uitgaven.',
+            'De mini-stats tonen inkomsten, uitgaven en huidig saldo.',
+            'De trend-grafiek laat het verloop van de afgelopen maanden zien.',
             'Gebruik de maandnavigatie om andere periodes te bekijken.',
           ]}
         />
       </div>
 
+      {/* Maand-selector + Transactie-knop */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button onClick={vorige} style={navBtnStyle}>‹</button>
-          <div style={maandLabelStyle}>
-            {MAANDEN[maand - 1]} {jaar}
-          </div>
+          <div style={maandLabelStyle}>{MAANDEN[maand - 1]} {jaar}</div>
           <button onClick={volgende} style={navBtnStyle}>›</button>
         </div>
-        <button onClick={onAddTx} style={addBtnStyle}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {ICONS.plus}
-            Transactie
-          </span>
+        <button onClick={onAddTx} style={{
+          height: 32, padding: '0 14px', borderRadius: 8, border: 'none',
+          background: T.gradAccent, color: '#fff', fontSize: 13, fontWeight: 500,
+          cursor: 'pointer', fontFamily: 'inherit',
+          boxShadow: '0 2px 8px rgba(30, 90, 168, 0.25)',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          {ICONS.plus}
+          Transactie
         </button>
       </div>
     </div>
