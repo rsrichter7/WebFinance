@@ -1,5 +1,5 @@
 // ─── FixedPage ───
-// Overzichtspagina voor vaste lasten (alleen uitgaven).
+// Overzichtspagina voor vaste lasten (alleen uitgaven) en leningen.
 
 import React from 'react'
 import useFixedExpenses from '../hooks/useFixedExpenses'
@@ -7,6 +7,7 @@ import FixedTopBar from '../components/fixed/FixedTopBar'
 import FixedStats, { FixedUitgavenDonut } from '../components/fixed/FixedStats'
 import FixedCategoryGroup from '../components/fixed/FixedCategoryGroup'
 import FixedForm from '../components/fixed/FixedForm'
+import FixedLoanSection from '../components/fixed/FixedLoanSection'
 import { Card } from '../components/ui/Card'
 import { ICONS } from '../components/ui/Icons'
 import { useTheme } from '../hooks/useTheme'
@@ -77,6 +78,7 @@ export default function FixedPage() {
                 onRemove={removeItem}
               />
             ))}
+            <FixedLoanSection />
           </>
         )}
       </div>
