@@ -64,7 +64,11 @@ export default function FixedPage() {
         ) : (
           <>
             <FixedStats totals={totals} />
-            <FixedUitgavenDonut donutData={donutData} />
+            {/* Verdeling + leningen naast elkaar op donut-plek */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+              <FixedUitgavenDonut donutData={donutData} />
+              <FixedLoanSection />
+            </div>
             {groupedUitgaven.map(group => (
               <FixedCategoryGroup
                 key={group.name}
@@ -78,7 +82,6 @@ export default function FixedPage() {
                 onRemove={removeItem}
               />
             ))}
-            <FixedLoanSection />
           </>
         )}
       </div>

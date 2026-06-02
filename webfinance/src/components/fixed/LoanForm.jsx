@@ -237,7 +237,7 @@ export default function LoanForm({ open, editingLoan, onClose, onSave }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={L}>Startdatum *</label>
-              <DatePicker value={form.startdatum} onChange={v => update('startdatum', v)} />
+              <DatePicker value={form.startdatum} onChange={v => update('startdatum', v)} usePortal />
             </div>
             <div>
               <label style={L}>Rekening / Bank <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
