@@ -46,34 +46,57 @@ export function saldoVerloopMaand(transactions, startsaldo, maand, jaar) {
   return result
 }
 
-/** Vrij besteedbaar = inkomsten – vaste lasten – gem. variabele uitgaven (6M). */
-export function berekenVrijBesteedbaar(transactions, fixedExpenses, maand, jaar) {
-  const nu = new Date()
-  const inkomsten = transactions
-    .filter(t => { const d = new Date(t.datum); return d.getMonth() + 1 === maand && d.getFullYear() === jaar && t.type === 'Inkomst' })
-    .reduce((s, t) => s + t.bedrag, 0)
-
-  const vasteLasten = (fixedExpenses || [])
-    .filter(fe => fe.type === 'Uitgave' && fe.actief)
-    .reduce((s, fe) => {
-      if (fe.herhaling === 'Wekelijks')  return s + fe.bedrag * 52 / 12
-      if (fe.herhaling === 'Jaarlijks')  return s + fe.bedrag / 12
-      if (fe.herhaling === 'Kwartaal')   return s + fe.bedrag / 3
-      return s + fe.bedrag
-    }, 0)
-
-  const maandTotalen = []
-  for (let i = 1; i <= 6; i++) {
-    const d = new Date(nu.getFullYear(), nu.getMonth() - i, 1)
-    const m = d.getMonth() + 1
-    const j = d.getFullYear()
-    const som = transactions
-      .filter(t => { const td = new Date(t.datum); return td.getMonth() + 1 === m && td.getFullYear() === j && t.type === 'Uitgave' && t.bron !== 'auto' && t.soort !== 'Sparen' })
-      .reduce((s, t) => s + t.bedrag, 0)
-    if (som > 0) maandTotalen.push(som)
+/** Frequentie (frontend-veldnaam: herhaling) omrekenen naar maandbedrag. */
+function naarMaandbedrag(bedrag, herhaling) {
+  switch (herhaling) {
+    case 'Maandelijks': return bedrag
+    case 'Jaarlijks':   return bedrag / 12
+    case 'Kwartaal':    return bedrag / 3
+    case 'Wekelijks':   return bedrag * 4.33
+    default:            return bedrag
   }
-  const gemVariabel = maandTotalen.length > 0 ? maandTotalen.reduce((s, v) => s + v, 0) / maandTotalen.length : 0
-  return inkomsten - vasteLasten - gemVariabel
+}
+
+/**
+ * Vrij te besteden deze maand.
+ * 1. Verwachte inkomsten  = vaste inkomsten (fixed_expenses type 'Inkomst') → maandbedrag
+ * 2. Verwachte vaste lasten = vaste uitgaven (fixed_expenses type 'Uitgave') → maandbedrag
+ * 3. Variabele uitgaven   = handmatige/import uitgave-transacties deze maand excl. Sparen
+ * 4. Vrij = (1) − (2) − (3)
+ */
+export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, jaar) {
+  const verwachteInkomsten = (fixedExpenses || [])
+    .filter(f => f.type === 'Inkomst')
+    .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
+
+  const verwachteVasteLasten = (fixedExpenses || [])
+    .filter(f => f.type === 'Uitgave')
+    .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
+
+  const variabeleUitgaven = (allTransactions || [])
+    .filter(t => {
+      const d = new Date(t.datum)
+      return t.type === 'Uitgave'
+        && t.bron !== 'auto'
+        && t.soort !== 'Sparen'
+        && d.getMonth() + 1 === maand
+        && d.getFullYear() === jaar
+    })
+    .reduce((sum, t) => sum + t.bedrag, 0)
+
+  return verwachteInkomsten - verwachteVasteLasten - variabeleUitgaven
+}
+
+/**
+ * Verschil vrij te besteden t.o.v. vorige maand.
+ * Positief = meer vrij dan vorige maand.
+ */
+export function verschilVorigeMaand(allTransactions, fixedExpenses, maand, jaar) {
+  const huidig    = berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, jaar)
+  const prevMaand = maand === 1 ? 12 : maand - 1
+  const prevJaar  = maand === 1 ? jaar - 1 : jaar
+  const vorig     = berekenVrijBesteedbaar(allTransactions, fixedExpenses, prevMaand, prevJaar)
+  return huidig - vorig
 }
 
 /** Komende afschrijvingen binnen N dagen. */

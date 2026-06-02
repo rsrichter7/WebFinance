@@ -4,7 +4,7 @@
 import React, { useMemo } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { TAB, fmtShort } from '../../tokens'
-import { berekenVrijBesteedbaar, saldoVerloopMaand } from '../../utils/dashboardCalculations'
+import { berekenVrijBesteedbaar, verschilVorigeMaand, saldoVerloopMaand } from '../../utils/dashboardCalculations'
 
 const MAANDEN = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
 
@@ -49,17 +49,15 @@ export default function DashboardHero({ allTransactions, fixedExpenses, settings
     () => berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, jaar),
     [allTransactions, fixedExpenses, maand, jaar]
   )
-  const prevVrij = useMemo(() => {
-    const pm = maand === 1 ? 12 : maand - 1
-    const pj = maand === 1 ? jaar - 1 : jaar
-    return berekenVrijBesteedbaar(allTransactions, fixedExpenses, pm, pj)
-  }, [allTransactions, fixedExpenses, maand, jaar])
+  const verschil = useMemo(
+    () => verschilVorigeMaand(allTransactions, fixedExpenses, maand, jaar),
+    [allTransactions, fixedExpenses, maand, jaar]
+  )
   const saldoData = useMemo(
     () => saldoVerloopMaand(allTransactions, settings.startsaldo, maand, jaar),
     [allTransactions, settings.startsaldo, maand, jaar]
   )
 
-  const verschil   = vrijBesteedbaar - prevVrij
   const isNegatief = vrijBesteedbaar < 0
   const absVrij    = Math.abs(vrijBesteedbaar)
   const geheel     = Math.floor(absVrij).toLocaleString('nl-NL')
@@ -91,7 +89,7 @@ export default function DashboardHero({ allTransactions, fixedExpenses, settings
 
       {/* Context */}
       <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)', position: 'relative', marginBottom: 'auto' }}>
-        Na vaste lasten en gemiddelde uitgaven
+        Na vaste lasten en variabele uitgaven
         {Math.abs(verschil) > 5 && (
           <span style={{
             marginLeft: 8, padding: '2px 8px', borderRadius: 20,
