@@ -16,7 +16,7 @@ import useNotifications from '../../hooks/useNotifications'
 import NotificationPanel from '../ui/NotificationPanel'
 
 const NAV_ITEMS = [
-  { to: '/',             label: 'Dashboard',    icon: ICONS.dashboard },
+  { to: '/dashboard',    label: 'Dashboard',    icon: ICONS.dashboard },
   { to: '/transacties',  label: 'Transacties',  icon: ICONS.tx },
   { to: '/inkomsten',    label: 'Inkomsten',    icon: ICONS.trending },
   { to: '/vaste-lasten', label: 'Vaste lasten', icon: ICONS.fixed },
@@ -71,7 +71,7 @@ export default function Sidebar() {
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
         {NAV_ITEMS.map(item => (
-          <NavLink key={item.to} to={item.to} end={item.to === '/'}
+          <NavLink key={item.to} to={item.to} end={item.to === '/dashboard'}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 10,
               padding: collapsed ? '8px' : '8px 10px', borderRadius: 8,

@@ -46,7 +46,7 @@ export default function LoginPage() {
       sessionStorage.removeItem('invitation_token')
       navigate(`/uitnodiging/${invToken}`)
     } else {
-      navigate('/')
+      navigate('/dashboard')
     }
   }
 
