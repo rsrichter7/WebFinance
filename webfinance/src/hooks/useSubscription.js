@@ -51,7 +51,12 @@ export default function useSubscription() {
   useEffect(() => {
     if (householdLoading) return
     if (!householdId) { setLoading(false); return }
-    if (cacheHit) { setLoading(false); return }
+    if (cacheHit) {
+      // State synchen vanuit cache: subscription kan null zijn als useState vóór cache-populatie draaide
+      setSubscription(subCache.data)
+      setLoading(false)
+      return
+    }
     fetchSubscription()
   }, [householdLoading, householdId, fetchSubscription])
 
