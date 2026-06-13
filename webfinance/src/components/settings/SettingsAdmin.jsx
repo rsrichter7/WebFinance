@@ -4,7 +4,6 @@
 import React, { useState } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
-import usePremium from '../../hooks/usePremium'
 import useSettings from '../../hooks/useSettings'
 import SettingsFeedback from './SettingsFeedback'
 
@@ -12,7 +11,6 @@ const ADMIN_KEY = 'webfinance_admin_unlocked'
 
 export default function SettingsAdmin({ onAdminLock }) {
   const { T } = useTheme()
-  const { isPremium, setPremium } = usePremium()
   const { settings, updateSetting } = useSettings()
   const [maxRegels, setMaxRegels] = useState(String(settings.import_max_regels ?? 1000))
 
@@ -31,22 +29,6 @@ export default function SettingsAdmin({ onAdminLock }) {
         <span style={{ color: T.amber, display: 'inline-flex', marginTop: 1 }}>{ICONS.warn}</span>
         <div style={{ fontSize: 12.5, color: '#78350F', lineHeight: 1.5 }}>
           <strong>Wees voorzichtig.</strong> Deze instellingen zijn bedoeld voor ontwikkelaars en niet voor eindgebruikers.
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.ink2, marginBottom: 12 }}>Feature flags</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', border: `1px solid ${T.border}`, borderRadius: 10 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 500, color: T.ink }}>
-              Premium modus
-              {isPremium && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: T.amberSoft, color: T.amber }}>ACTIEF</span>}
-            </div>
-            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
-              App-breed via <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11.5, color: T.violet }}>usePremium()</code> hook
-            </div>
-          </div>
-          <Toggle on={isPremium} onClick={() => setPremium(!isPremium)} T={T} />
         </div>
       </div>
 
@@ -74,7 +56,6 @@ export default function SettingsAdmin({ onAdminLock }) {
           <div>build: <span style={{ color: T.ink }}>0.1.0-dev</span></div>
           <div>storage: <span style={{ color: T.ink }}>localStorage</span></div>
           <div>locale: <span style={{ color: T.ink }}>nl-NL · Europe/Amsterdam</span></div>
-          <div>premium: <span style={{ color: isPremium ? T.green : T.ink }}>{isPremium ? 'aan' : 'uit'}</span></div>
         </div>
       </div>
 
@@ -84,14 +65,6 @@ export default function SettingsAdmin({ onAdminLock }) {
           Admin vergrendelen
         </button>
       </div>
-    </div>
-  )
-}
-
-function Toggle({ on, onClick, T }) {
-  return (
-    <div onClick={onClick} style={{ width: 36, height: 20, borderRadius: 10, background: on ? T.blue : T.borderHi, padding: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: on ? 'flex-end' : 'flex-start', transition: 'background 0.2s', flexShrink: 0 }}>
-      <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
     </div>
   )
 }

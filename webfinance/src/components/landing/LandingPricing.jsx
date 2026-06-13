@@ -45,7 +45,7 @@ export default function LandingPricing() {
             Eén app. Eén prijs. Kies hoe je betaalt.
           </h2>
           <p style={{ fontSize: 15, color: T.ink3, maxWidth: 500, margin: '0 auto', lineHeight: 1.6 }}>
-            Probeer Webfinance een maand gratis. Daarna kies je zelf hoe je betaalt — hoe langer je vooruit betaalt, hoe goedkoper.
+            Probeer Webfinance een maand gratis. Daarna kies je zelf hoe je betaalt, hoe langer je vooruit betaalt, hoe goedkoper.
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export default function LandingPricing() {
             Wil je nóg minder werk? Koppel je bank.
           </div>
           <p style={{ fontSize: 14, color: T.ink3, lineHeight: 1.6, margin: 0 }}>
-            Met de bankkoppeling stromen je transacties automatisch binnen — geen CSV meer importeren. Beschikbaar als los abonnement bovenop je Webfinance-plan.
+            Met de bankkoppeling stromen je transacties automatisch binnen, geen CSV meer importeren. Beschikbaar als los abonnement bovenop je Webfinance-plan.
           </p>
         </div>
       </div>

@@ -4,13 +4,11 @@
 import React from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
-import { Badge } from '../ui/Card'
-import usePremium from '../../hooks/usePremium'
+
 import PageInfoPopover from '../ui/PageInfoPopover'
 
 export default function TransactionTopBar({ onNewClick, onImportClick }) {
   const { T } = useTheme()
-  const { isPremium } = usePremium()
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -32,29 +30,16 @@ export default function TransactionTopBar({ onNewClick, onImportClick }) {
         />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {isPremium ? (
-          <button onClick={onImportClick} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 8,
-            border: `1px solid ${T.border}`, background: T.card,
-            fontSize: 13, fontWeight: 500, color: T.ink2, cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}>
-            <span style={{ display: 'inline-flex' }}>{ICONS.upload}</span>
-            Importeren
-          </button>
-        ) : (
-          <button style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 8,
-            border: `1px solid ${T.border}`, background: T.card,
-            fontSize: 13, fontWeight: 500, color: T.ink3, cursor: 'default',
-            fontFamily: 'inherit',
-          }}>
-            Importeren
-            <Badge color={T.amber} bg={T.amberSoft}>PREMIUM</Badge>
-          </button>
-        )}
+        <button onClick={onImportClick} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '8px 14px', borderRadius: 8,
+          border: `1px solid ${T.border}`, background: T.card,
+          fontSize: 13, fontWeight: 500, color: T.ink2, cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}>
+          <span style={{ display: 'inline-flex' }}>{ICONS.upload}</span>
+          Importeren
+        </button>
         <button
           onClick={onNewClick}
           style={{

@@ -98,7 +98,7 @@ export default function LandingHero() {
               fontSize: 17, color: 'rgba(255,255,255,0.76)',
               lineHeight: 1.65, maxWidth: 460, marginBottom: 36,
             }}>
-              Daar geeft Webfinance antwoord op. Geen muur aan transacties om zelf uit te pluizen — gewoon het ene bedrag dat telt, bijgewerkt tot vandaag.
+              Daar geeft Webfinance antwoord op. Geen muur aan transacties om zelf uit te pluizen. Gewoon het ene bedrag dat telt, bijgewerkt tot vandaag.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link to="/login?modus=registreren" style={{

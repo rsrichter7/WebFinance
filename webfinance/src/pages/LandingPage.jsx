@@ -19,7 +19,7 @@ import UpcomingMockup from '../components/landing/mockups/UpcomingMockup'
 const VRAGEN = [
   {
     vraag: 'Waar is mijn geld eigenlijk gebleven?',
-    uitleg: 'In één oogopslag zie je dat boodschappen je grootste post is — niet je avondjes uit.',
+    uitleg: 'In één oogopslag zie je dat boodschappen je grootste post is, niet je avondjes uit.',
     kant: 'left',
     bg: T.card,
     Mockup: DonutMockup,

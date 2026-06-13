@@ -11,7 +11,6 @@ const DEFAULTS = {
   datumformaat:      'long',
   taal:              'nl',
   thema:             'light',
-  premium:           false,
   custom_categories: { customSubs: {}, customCats: [] },
   kosten_inkomen:    {},
   verdeel_methode:   'ratio',
@@ -24,7 +23,7 @@ const DEFAULTS = {
   notif_vaste_lasten: true,
 }
 
-const SELECT_COLS = 'datumformaat, taal, thema, premium, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten'
+const SELECT_COLS = 'datumformaat, taal, thema, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten'
 
 let sCache = { settings: null, userId: null }
 function clearCache() { sCache = { settings: null, userId: null } }
@@ -33,7 +32,6 @@ registerCache(clearCache)
 function syncLocalStorage(data) {
   if (data.datumformaat)      localStorage.setItem('webfinance_datumformaat', data.datumformaat)
   if (data.custom_categories) localStorage.setItem('webfinance_custom_categories', JSON.stringify(data.custom_categories))
-  if (typeof data.premium === 'boolean') localStorage.setItem('webfinance_premium', JSON.stringify(data.premium))
   if (data.thema)             localStorage.setItem('webfinance_thema', data.thema)
 }
 

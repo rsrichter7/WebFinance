@@ -1,9 +1,8 @@
 // ─── AnalyticsPage ───
-// Analyse pagina: vier grafieken in een versleepbaar 2×2 grid + premium sectie.
+// Analyse pagina: vier grafieken in een versleepbaar 2×2 grid.
 
 import React, { useState, useEffect } from 'react'
 import useTransactions from '../hooks/useTransactions'
-import usePremium from '../hooks/usePremium'
 import useSettings from '../hooks/useSettings'
 import AnalyticsTopBar         from '../components/analytics/AnalyticsTopBar'
 import AnalyticsChartCard      from '../components/analytics/AnalyticsChartCard'
@@ -11,7 +10,6 @@ import AnalyticsTopCategories  from '../components/analytics/AnalyticsTopCategor
 import AnalyticsTopSubcategories from '../components/analytics/AnalyticsTopSubcategories'
 import AnalyticsSoortDonut     from '../components/analytics/AnalyticsSoortDonut'
 import AnalyticsIncomeExpense  from '../components/analytics/AnalyticsIncomeExpense'
-import AnalyticsPremiumSection from '../components/analytics/AnalyticsPremiumSection'
 
 const DEFAULT_ORDER = ['categories', 'subcategories', 'soort', 'inkexp']
 
@@ -24,7 +22,6 @@ const CHART_DEFS = {
 
 export default function AnalyticsPage() {
   const { allTransactions, loading: txLoading } = useTransactions()
-  const { isPremium } = usePremium()
   const { settings, loading: settingsLoading, updateSetting } = useSettings()
 
   const [order,  setOrder]  = useState(DEFAULT_ORDER)
@@ -76,7 +73,6 @@ export default function AnalyticsPage() {
               <AnalyticsChartCard
                 key={id}
                 title={title}
-                isPremium={isPremium}
                 isDragging={dragId === id}
                 isOver={overId === id && dragId !== id}
                 onDragStart={() => setDragId(id)}
@@ -90,7 +86,6 @@ export default function AnalyticsPage() {
           })}
         </div>
 
-        <AnalyticsPremiumSection />
       </div>
     </>
   )

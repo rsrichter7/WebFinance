@@ -17,7 +17,6 @@ const WF_KEYS = [
   'webfinance_admin_unlocked',
   'webfinance_datumformaat',
   'webfinance_custom_categories',
-  'webfinance_premium',
 ]
 
 export default function SettingsDataManagement() {
