@@ -40,16 +40,21 @@ module.exports = async (req, res) => {
 
   try {
     // Household_id ophalen van de ingelogde gebruiker
+    // Gebruik maybeSingle() zodat 0 resultaten geen error zetten in memberError
+    console.error('[create-checkout] user.id:', user.id);
+
     const { data: member, error: memberError } = await supabase
       .from('household_members')
       .select('household_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (memberError || !member) {
+      console.error('[create-checkout] household niet gevonden — memberError:', memberError, 'member:', member, 'user_id:', user.id);
       return res.status(400).json({ error: 'Huishouden niet gevonden' });
     }
     const householdId = member.household_id;
+    console.error('[create-checkout] household_id:', householdId);
 
     // Bestaande stripe_customer_id ophalen uit subscriptions-tabel
     const { data: existingSub } = await supabase
