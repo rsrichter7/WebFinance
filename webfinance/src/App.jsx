@@ -20,6 +20,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import PrivacyPage from './pages/PrivacyPage'
 import InvitationPage from './pages/InvitationPage'
 import LandingPage from './pages/LandingPage'
+import RequireSubscription from './components/paywall/RequireSubscription'
 import { T } from './tokens'
 
 // Laat ingelogde gebruikers naar dashboard, bezoekers naar landingspagina
@@ -47,7 +48,9 @@ export default function App() {
           <Route path="/uitnodiging/:token" element={<InvitationPage />} />
           <Route element={
             <ProtectedRoute>
-              <MainLayout />
+              <RequireSubscription>
+                <MainLayout />
+              </RequireSubscription>
             </ProtectedRoute>
           }>
             <Route path="/dashboard" element={<DashboardPage />} />

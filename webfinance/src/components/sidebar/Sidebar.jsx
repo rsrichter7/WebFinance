@@ -14,6 +14,7 @@ import useProfiles, { genInitialen } from '../../hooks/useProfiles'
 import useSettings from '../../hooks/useSettings'
 import useNotifications from '../../hooks/useNotifications'
 import NotificationPanel from '../ui/NotificationPanel'
+import useSubscription from '../../hooks/useSubscription'
 
 const NAV_ITEMS = [
   { to: '/dashboard',    label: 'Dashboard',    icon: ICONS.dashboard },
@@ -37,6 +38,7 @@ export default function Sidebar() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
   const { persons } = useProfiles()
   const { settings } = useSettings()
+  const { isTrialing, trialDaysLeft } = useSubscription()
   const navigate = useNavigate()
   const w = collapsed ? 64 : 240
 
@@ -115,6 +117,11 @@ export default function Sidebar() {
           {!collapsed && (
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, wordBreak: 'break-word', lineHeight: 1.3 }}>{displayNaam}</div>
+              {isTrialing && trialDaysLeft > 0 && (
+                <div style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>
+                  Nog {trialDaysLeft} {trialDaysLeft === 1 ? 'dag' : 'dagen'} gratis
+                </div>
+              )}
             </div>
           )}
         </div>
