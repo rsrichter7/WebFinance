@@ -96,6 +96,22 @@ export default function Sidebar() {
 
       <div style={{ flex: 1 }} />
 
+      {/* Trial-indicator: subtiel regeltje boven profielchip tijdens proefmaand */}
+      {!collapsed && isTrialing && trialDaysLeft > 0 && (
+        <div style={{
+          margin: '0 4px 6px',
+          padding: '7px 10px',
+          borderRadius: 8,
+          background: T.bg,
+          border: `1px solid ${T.border}`,
+          fontSize: 12,
+          color: T.ink3,
+          letterSpacing: 0.1,
+        }}>
+          Nog {trialDaysLeft} {trialDaysLeft === 1 ? 'dag' : 'dagen'} gratis
+        </div>
+      )}
+
       <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
         {/* Profiel */}
         <div
@@ -117,11 +133,6 @@ export default function Sidebar() {
           {!collapsed && (
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: T.ink, wordBreak: 'break-word', lineHeight: 1.3 }}>{displayNaam}</div>
-              {isTrialing && trialDaysLeft > 0 && (
-                <div style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>
-                  Nog {trialDaysLeft} {trialDaysLeft === 1 ? 'dag' : 'dagen'} gratis
-                </div>
-              )}
             </div>
           )}
         </div>
