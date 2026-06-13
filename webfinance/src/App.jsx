@@ -3,7 +3,7 @@
 // Elke pagina wordt geladen binnen MainLayout (sidebar + content).
 
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { ThemeProvider } from './hooks/useTheme'
 import { useAuth } from './hooks/useAuth'
 import MainLayout from './layouts/MainLayout'
@@ -21,6 +21,8 @@ import PrivacyPage from './pages/PrivacyPage'
 import InvitationPage from './pages/InvitationPage'
 import LandingPage from './pages/LandingPage'
 import RequireSubscription from './components/paywall/RequireSubscription'
+import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
+import CheckoutCancelPage from './pages/CheckoutCancelPage'
 import { T } from './tokens'
 
 // Laat ingelogde gebruikers naar dashboard, bezoekers naar landingspagina
@@ -61,6 +63,11 @@ export default function App() {
             <Route path="/vaste-lasten" element={<FixedPage />} />
             <Route path="/kalender" element={<CalendarPage />} />
             <Route path="/instellingen" element={<SettingsPage />} />
+          </Route>
+          {/* Ingelogd vereist, maar buiten de subscription-afscherming — betaalterugkeer-routes */}
+          <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+            <Route path="/abonnement/geslaagd"    element={<CheckoutSuccessPage />} />
+            <Route path="/abonnement/geannuleerd" element={<CheckoutCancelPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
