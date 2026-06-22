@@ -1,9 +1,10 @@
 // ─── Transacties pagina ───
 // Dunne pagina-component: roept useTransactions aan en geeft data door aan componenten.
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import useTransactions from '../hooks/useTransactions'
+import useSettings from '../hooks/useSettings'
 import TransactionTopBar from '../components/transactions/TransactionTopBar'
 import TransactionFilters from '../components/transactions/TransactionFilters'
 import TransactionTable from '../components/transactions/TransactionTable'
@@ -14,10 +15,20 @@ import { StatCard } from '../components/ui/Card'
 export default function TransactionsPage() {
   const { T } = useTheme()
   const {
-    transactions, totals, transactionCount, eersteJaar, loading,
+    transactions, allTransactions, totals, transactionCount, eersteJaar, loading,
     addTransaction, removeTransaction, updateTransaction, fetchTransactions,
     filters, updateFilter, sort, updateSort, formOpen, setFormOpen,
   } = useTransactions()
+
+  const { settings } = useSettings()
+
+  const huidigSaldo = useMemo(() => {
+    const sd = settings.startsaldo
+    const tx = sd?.datum ? allTransactions.filter(t => t.datum >= sd.datum) : allTransactions
+    const ink = tx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
+    const uit = tx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
+    return (sd?.bedrag ?? 0) + ink - uit
+  }, [allTransactions, settings.startsaldo])
 
   const [editingTx, setEditingTx]   = useState(null)
   const [importOpen, setImportOpen] = useState(false)
@@ -55,6 +66,7 @@ export default function TransactionsPage() {
         onSave={addTransaction}
         onUpdate={(id, fields) => { updateTransaction(id, fields); setEditingTx(null) }}
         editingTransaction={editingTx}
+        huidigSaldo={huidigSaldo}
       />
 
       <ImportFlow open={importOpen} onClose={() => setImportOpen(false)} onImportComplete={fetchTransactions} />

@@ -8,6 +8,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { CATEGORIES, getMergedCategories, SOORTEN } from '../../data/categories'
 import useProfiles from '../../hooks/useProfiles'
 import DatePicker from '../ui/DatePicker'
+import { fmt, TAB } from '../../tokens'
 
 const FORM_BASE = {
   type: 'Uitgave',
@@ -22,7 +23,28 @@ const FORM_BASE = {
   notitie: '',
 }
 
-export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction }) {
+function SaldoNaTransactie({ huidigSaldo, form, editingTransaction, T }) {
+  const nieuwBedrag = parseFloat(form.bedrag) || 0
+  const nieuwEffect = form.type === 'Inkomst' ? nieuwBedrag : -nieuwBedrag
+  let saldo = huidigSaldo + nieuwEffect
+  if (editingTransaction) {
+    const oudBedrag = parseFloat(editingTransaction.bedrag) || 0
+    const oudEffect = editingTransaction.type === 'Inkomst' ? oudBedrag : -oudBedrag
+    saldo = huidigSaldo - oudEffect + nieuwEffect
+  }
+  return (
+    <div style={{ padding: '12px 24px', borderTop: `1px solid ${T.rule}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: T.ink2 }}>Saldo na transactie</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: saldo >= 0 ? T.green : T.red, ...TAB }}>
+          {fmt(saldo)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction, huidigSaldo = 0 }) {
   const { T } = useTheme()
   const { profiles } = useProfiles()
 
@@ -223,6 +245,8 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
               style={{ ...inputStyle, resize: 'vertical', minHeight: 72 }} />
           </div>
         </div>
+
+        <SaldoNaTransactie huidigSaldo={huidigSaldo} form={form} editingTransaction={editingTransaction} T={T} />
 
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10 }}>
           <button onClick={() => handleSave(false)} style={{
