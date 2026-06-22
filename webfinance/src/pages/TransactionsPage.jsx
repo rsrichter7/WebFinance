@@ -22,12 +22,25 @@ export default function TransactionsPage() {
 
   const { settings } = useSettings()
 
-  const huidigSaldo = useMemo(() => {
+  // Doorlopend saldo per transactie-id (zelfde logica als Dashboard-saldoberekening)
+  const saldoMap = useMemo(() => {
     const sd = settings.startsaldo
-    const tx = sd?.datum ? allTransactions.filter(t => t.datum >= sd.datum) : allTransactions
-    const ink = tx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
-    const uit = tx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
-    return (sd?.bedrag ?? 0) + ink - uit
+    const startBedrag = sd?.bedrag ?? 0
+    const startDatum  = sd?.datum  ?? null
+    const tx = startDatum
+      ? allTransactions.filter(t => t.datum >= startDatum)
+      : [...allTransactions]
+    const gesorteerd = [...tx].sort((a, b) => {
+      if (a.datum !== b.datum) return a.datum.localeCompare(b.datum)
+      return (a.createdAt || '').localeCompare(b.createdAt || '')
+    })
+    const map = {}
+    let saldo = startBedrag
+    for (const t of gesorteerd) {
+      saldo += t.type === 'Inkomst' ? t.bedrag : -t.bedrag
+      map[t.id] = saldo
+    }
+    return map
   }, [allTransactions, settings.startsaldo])
 
   const [editingTx, setEditingTx]   = useState(null)
@@ -66,7 +79,7 @@ export default function TransactionsPage() {
         onSave={addTransaction}
         onUpdate={(id, fields) => { updateTransaction(id, fields); setEditingTx(null) }}
         editingTransaction={editingTx}
-        huidigSaldo={huidigSaldo}
+        saldoNaTransactie={editingTx != null ? (saldoMap[editingTx.id] ?? null) : null}
       />
 
       <ImportFlow open={importOpen} onClose={() => setImportOpen(false)} onImportComplete={fetchTransactions} />

@@ -23,28 +23,21 @@ const FORM_BASE = {
   notitie: '',
 }
 
-function SaldoNaTransactie({ huidigSaldo, form, editingTransaction, T }) {
-  const nieuwBedrag = parseFloat(form.bedrag) || 0
-  const nieuwEffect = form.type === 'Inkomst' ? nieuwBedrag : -nieuwBedrag
-  let saldo = huidigSaldo + nieuwEffect
-  if (editingTransaction) {
-    const oudBedrag = parseFloat(editingTransaction.bedrag) || 0
-    const oudEffect = editingTransaction.type === 'Inkomst' ? oudBedrag : -oudBedrag
-    saldo = huidigSaldo - oudEffect + nieuwEffect
-  }
+function SaldoNaTransactie({ saldoNaTransactie, T }) {
+  if (saldoNaTransactie == null || !isFinite(saldoNaTransactie)) return null
   return (
     <div style={{ padding: '12px 24px', borderTop: `1px solid ${T.rule}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: T.ink2 }}>Saldo na transactie</span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: saldo >= 0 ? T.green : T.red, ...TAB }}>
-          {fmt(saldo)}
+        <span style={{ fontSize: 14, fontWeight: 600, color: saldoNaTransactie >= 0 ? T.green : T.red, ...TAB }}>
+          {fmt(saldoNaTransactie)}
         </span>
       </div>
     </div>
   )
 }
 
-export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction, huidigSaldo = 0 }) {
+export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction, saldoNaTransactie = null }) {
   const { T } = useTheme()
   const { profiles } = useProfiles()
 
@@ -246,7 +239,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
           </div>
         </div>
 
-        <SaldoNaTransactie huidigSaldo={huidigSaldo} form={form} editingTransaction={editingTransaction} T={T} />
+        {editingTransaction && <SaldoNaTransactie saldoNaTransactie={saldoNaTransactie} T={T} />}
 
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10 }}>
           <button onClick={() => handleSave(false)} style={{
