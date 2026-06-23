@@ -144,6 +144,11 @@ export default function DashboardPage() {
         onPeriodeVorige={() => setPeriodeOffset(o => o - 1)}
         onPeriodeVolgende={() => setPeriodeOffset(o => o + 1)}
         onOverrideStart={onOverrideStart}
+        kanVolgende={
+          dashboardPeriode === 'loon'
+            ? periodeOffset < 1
+            : (jaar * 12 + (maand - 1)) <= (now.getFullYear() * 12 + now.getMonth())
+        }
       />
 
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 14 }}>
