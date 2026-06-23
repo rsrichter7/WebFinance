@@ -5,6 +5,7 @@ import React, { useMemo } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import useFixedExpenses from '../hooks/useFixedExpenses'
 import useTransactions from '../hooks/useTransactions'
+import useProfiles from '../hooks/useProfiles'
 import IncomeTopBar from '../components/income/IncomeTopBar'
 import IncomeStats from '../components/income/IncomeStats'
 import IncomeCostSplit from '../components/income/IncomeCostSplit'
@@ -23,6 +24,7 @@ export default function IncomePage() {
   } = useFixedExpenses()
 
   const { allTransactions } = useTransactions()
+  const { persons } = useProfiles()
 
   const allItems = useMemo(
     () => groupedInkomsten.flatMap(g => g.items),
@@ -45,10 +47,12 @@ export default function IncomePage() {
         ) : (
           <>
             <IncomeStats totals={totals} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              <IncomeCostSplit allTransactions={allTransactions} />
-              <IncomeDonutCard items={allItems} />
-            </div>
+            {persons.length > 1 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <IncomeCostSplit allTransactions={allTransactions} />
+                <IncomeDonutCard items={allItems} />
+              </div>
+            )}
             <IncomeSection groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={removeItem} />
           </>
         )}

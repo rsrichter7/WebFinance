@@ -16,10 +16,20 @@ const EMPTY_FORM = {
   winkel: '', herhaling: 'Maandelijks', soort: 'Noodzaak', wie: 'GZ',
 }
 
+function WeekendHint({ T }) {
+  return (
+    <p style={{ margin: 0, fontSize: 12, color: T.ink4, lineHeight: 1.5 }}>
+      De automatische verwerking kan ±1 dag afwijken door het weekend: valt de datum op zaterdag, dan meestal de vrijdag ervoor; op zondag, dan meestal de maandag erna.
+    </p>
+  )
+}
+
 export default function FixedForm({ open, editingItem, onClose, onSave, initialType = 'Uitgave' }) {
   const { T } = useTheme()
-  const { profiles } = useProfiles()
+  const { profiles, persons } = useProfiles()
   const [form, setForm] = useState(EMPTY_FORM)
+
+  const defaultWie = persons.length > 1 ? 'GZ' : (persons[0]?.initialen ?? '')
 
   useEffect(() => {
     if (!open) return
@@ -29,12 +39,12 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
         startdatum: editingItem.startdatum, omschrijving: editingItem.omschrijving,
         categorie: editingItem.categorie, sub: editingItem.sub,
         winkel: editingItem.winkel || '', herhaling: editingItem.herhaling,
-        soort: editingItem.soort || 'Noodzaak', wie: editingItem.wie || 'GZ',
+        soort: editingItem.soort || 'Noodzaak', wie: editingItem.wie || defaultWie,
       })
     } else {
-      setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], type: initialType })
+      setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], type: initialType, wie: defaultWie })
     }
-  }, [open, editingItem, initialType])
+  }, [open, editingItem, initialType, defaultWie])
 
   const allCats = getMergedCategories()
   const currentCat = allCats.find(c => c.name === form.categorie)
@@ -61,7 +71,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
       sub: form.sub, winkel: form.winkel.trim(), herhaling: form.herhaling,
       soort: form.soort, wie: form.wie,
     }, isEdit)
-    setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0] })
+    setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], wie: defaultWie })
     if (!keepOpen) onClose()
   }
 
@@ -122,6 +132,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
               <DatePicker value={form.startdatum} onChange={v => update('startdatum', v)} />
             </div>
           </div>
+          {form.type === 'Inkomst' && <WeekendHint T={T} />}
 
           <div>
             <label style={L}>Omschrijving *</label>
@@ -185,7 +196,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
           <div>
             <label style={L}>Wie *</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {profiles.map(p => (
+              {(persons.length > 1 ? profiles : persons).map(p => (
                 <button key={p.initialen} onClick={() => update('wie', p.initialen)} style={{
                   flex: 1, minWidth: 80, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'inherit',

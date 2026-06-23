@@ -39,10 +39,10 @@ function SaldoNaTransactie({ saldoNaTransactie, T }) {
 
 export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction, saldoNaTransactie = null }) {
   const { T } = useTheme()
-  const { profiles } = useProfiles()
+  const { profiles, persons } = useProfiles()
 
   function emptyForm() {
-    const defaultWie = profiles.find(p => !p.isGezamenlijk)?.initialen || 'GZ'
+    const defaultWie = persons.length > 1 ? 'GZ' : (persons[0]?.initialen ?? '')
     return { ...FORM_BASE, wie: defaultWie }
   }
 
@@ -213,7 +213,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
           <div>
             <label style={labelStyle}>Wie *</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {profiles.map(p => (
+              {(persons.length > 1 ? profiles : persons).map(p => (
                 <button key={p.initialen} onClick={() => update('wie', p.initialen)} style={{
                   flex: 1, minWidth: 80, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'inherit',
