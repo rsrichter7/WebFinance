@@ -32,7 +32,7 @@ export function saldoVerloopPeriode(transactions, startsaldo, startDatum, eindDa
     saldoVoorStart += t.type === 'Inkomst' ? t.bedrag : -t.bedrag
   }
 
-  const vandaagStr = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, '0')}-${String(nu.getDate()).padStart(2, '0')}`
+  const vandaagStr = toDateStr(nu)
   const maxDatum   = eindDatum < vandaagStr ? eindDatum : vandaagStr
 
   const result = []
@@ -64,12 +64,81 @@ function naarMaandbedrag(bedrag, herhaling) {
   }
 }
 
+/** Date → 'YYYY-MM-DD'. */
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Geeft de afschrijfdatum van een vaste last die binnen [startDatum, eindDatum]
+ * valt terug als 'YYYY-MM-DD', of null als er geen afschrijving in die periode zit.
+ */
+function afschrijfdatumInPeriode(item, startDatum, eindDatum) {
+  const dag   = item.afschrijfdag || 1
+  const start = new Date(startDatum + 'T00:00:00')
+  const eind  = new Date(eindDatum  + 'T00:00:00')
+  const base  = item.startdatum ? new Date(item.startdatum + 'T00:00:00') : start
+
+  const clampedDate = (y, m) => new Date(y, m, Math.min(dag, new Date(y, m + 1, 0).getDate()))
+  const inPeriod    = d => d >= start && d <= eind
+
+  if (item.herhaling === 'Maandelijks') {
+    let y = start.getFullYear(), m = start.getMonth()
+    const endY = eind.getFullYear(), endM = eind.getMonth()
+    while (y < endY || (y === endY && m <= endM)) {
+      const d = clampedDate(y, m)
+      if (inPeriod(d)) return toDateStr(d)
+      if (m === 11) { y++; m = 0 } else m++
+    }
+    return null
+  }
+
+  if (item.herhaling === 'Kwartaal') {
+    for (let i = -20; i <= 20; i++) {
+      const totalM = base.getMonth() + i * 3
+      const y = base.getFullYear() + Math.floor(totalM / 12)
+      const m = ((totalM % 12) + 12) % 12
+      const d = clampedDate(y, m)
+      if (inPeriod(d)) return toDateStr(d)
+    }
+    return null
+  }
+
+  if (item.herhaling === 'Jaarlijks') {
+    for (let y = start.getFullYear() - 1; y <= eind.getFullYear() + 1; y++) {
+      const d = clampedDate(y, base.getMonth())
+      if (inPeriod(d)) return toDateStr(d)
+    }
+    return null
+  }
+
+  if (item.herhaling === 'Wekelijks') {
+    let d = new Date(base); d.setHours(0, 0, 0, 0)
+    if (d > eind) return null
+    if (d < start) {
+      const days = Math.ceil((start - d) / 86400000)
+      d.setDate(d.getDate() + Math.floor(days / 7) * 7)
+      if (d < start) d.setDate(d.getDate() + 7)
+    }
+    return d <= eind ? toDateStr(d) : null
+  }
+
+  const d = clampedDate(start.getFullYear(), start.getMonth())
+  return inPeriod(d) ? toDateStr(d) : null
+}
+
 /**
  * Vrij te besteden in periode [startDatum, eindDatum].
- * Verwachte inkomsten/lasten = maandbedragen uit vaste lasten (één periode ≈ één maand).
- * Variabele uitgaven = handmatige/import uitgaven in het datumbereik excl. Sparen.
+ * Inkomsten = max(verwacht maandloon, werkelijk in periode).
+ * Uitgaven = werkelijke transacties (auto + import + handmatig) excl. spaarstortingen.
+ * Reserve = vaste lasten die in de periode nog moeten afschrijven (datum > vandaag).
+ * Zo telt elke vaste last precies één keer: al afgeschreven via werkelijke transactie,
+ * nog niet afgeschreven via reserve.
  */
 export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, startDatum, eindDatum) {
+  const nu = new Date(); nu.setHours(0, 0, 0, 0)
+  const vandaag = toDateStr(nu)
+
   const verwachteInkomsten = (fixedExpenses || [])
     .filter(f => f.type === 'Inkomst')
     .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
@@ -80,21 +149,24 @@ export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, startDatu
 
   const inkomsten = Math.max(verwachteInkomsten, werkelijkeInkomsten)
 
-  const verwachteVasteLasten = (fixedExpenses || [])
-    .filter(f => f.type === 'Uitgave')
-    .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
-
-  const variabeleUitgaven = (allTransactions || [])
+  const werkelijkeUitgaven = (allTransactions || [])
     .filter(t =>
       t.type === 'Uitgave'
-      && t.bron !== 'auto'
       && t.soort !== 'Sparen'
       && t.datum >= startDatum
       && t.datum <= eindDatum
     )
     .reduce((sum, t) => sum + t.bedrag, 0)
 
-  return inkomsten - verwachteVasteLasten - variabeleUitgaven
+  const reserve = (fixedExpenses || [])
+    .filter(f => {
+      if (f.type !== 'Uitgave') return false
+      const afschrijfDatum = afschrijfdatumInPeriode(f, startDatum, eindDatum)
+      return afschrijfDatum !== null && afschrijfDatum > vandaag
+    })
+    .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
+
+  return inkomsten - werkelijkeUitgaven - reserve
 }
 
 /** Komende afschrijvingen binnen N dagen. */
