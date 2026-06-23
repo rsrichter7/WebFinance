@@ -1,7 +1,7 @@
 // ─── Dashboard pagina ───
-// Vraag-georiënteerde financiële coach: hero, mini-stats, verdeling, komende, leningen, trend, recente.
+// Orchestratie: Kalendermaand-modus of Loonperiode-modus, op basis van instellingen.
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import useTransactions from '../hooks/useTransactions'
 import useFixedExpenses from '../hooks/useFixedExpenses'
@@ -10,46 +10,99 @@ import useProfiles from '../hooks/useProfiles'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { sparklineData, relatiefTijdstip } from '../utils/dashboardCalculations'
+import { getLoonPeriodeByOffset } from '../utils/loonperiode'
 
-import TransactionForm from '../components/transactions/TransactionForm'
-import DashboardTopBar    from '../components/dashboard/DashboardTopBar'
-import DashboardHero      from '../components/dashboard/DashboardHero'
-import DashboardMiniStat  from '../components/dashboard/DashboardMiniStat'
+import TransactionForm   from '../components/transactions/TransactionForm'
+import DashboardTopBar   from '../components/dashboard/DashboardTopBar'
+import DashboardHero     from '../components/dashboard/DashboardHero'
+import DashboardMiniStat from '../components/dashboard/DashboardMiniStat'
 import DashboardVerdeling from '../components/dashboard/DashboardVerdeling'
-import DashboardKomende   from '../components/dashboard/DashboardKomende'
-import DashboardLeningen  from '../components/dashboard/DashboardLeningen'
-import DashboardTrend     from '../components/dashboard/DashboardTrend'
-import DashboardRecente   from '../components/dashboard/DashboardRecente'
+import DashboardKomende  from '../components/dashboard/DashboardKomende'
+import DashboardLeningen from '../components/dashboard/DashboardLeningen'
+import DashboardTrend    from '../components/dashboard/DashboardTrend'
+import DashboardRecente  from '../components/dashboard/DashboardRecente'
 
 const now = new Date()
 
+function datumBereikMaand(maand, jaar) {
+  const start     = `${jaar}-${String(maand).padStart(2, '0')}-01`
+  const lastDay   = new Date(jaar, maand, 0).getDate()
+  const eind      = `${jaar}-${String(maand).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  const prevM     = maand === 1 ? 12 : maand - 1
+  const prevJ     = maand === 1 ? jaar - 1 : jaar
+  const prevStart = `${prevJ}-${String(prevM).padStart(2, '0')}-01`
+  const prevLast  = new Date(prevJ, prevM, 0).getDate()
+  const prevEind  = `${prevJ}-${String(prevM).padStart(2, '0')}-${String(prevLast).padStart(2, '0')}`
+  return { startDatum: start, eindDatum: eind, prevStartDatum: prevStart, prevEindDatum: prevEind, label: null }
+}
+
 export default function DashboardPage() {
-  const { T }  = useTheme()
+  const { T }    = useTheme()
   const { user } = useAuth()
   const { allTransactions, addTransaction } = useTransactions()
   const { items: fixedItems } = useFixedExpenses()
-  const { settings } = useSettings()
-  const { persons }  = useProfiles()
+  const { settings }  = useSettings()
+  const { persons }   = useProfiles()
 
   const voornaam = (user?.user_metadata?.full_name || '').split(' ')[0]
 
+  const dashboardPeriode = settings.dashboard_periode || 'maand'
+  const loonDag          = settings.loon_dag || 25
+
+  // Kalendermaand-navigatie
   const [maand, setMaand] = useState(now.getMonth() + 1)
   const [jaar,  setJaar]  = useState(now.getFullYear())
+
+  // Loonperiode-navigatie
+  const [periodeOffset, setPeriodeOffset] = useState(0)
+  const [loonOverrides, setLoonOverrides] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('webfinance_loonperiode_override') || '{}') }
+    catch { return {} }
+  })
+
+  // Reset offset naar 0 bij wisselen naar loon-modus
+  useEffect(() => {
+    if (dashboardPeriode === 'loon') setPeriodeOffset(0)
+  }, [dashboardPeriode])
+
   const [showForm, setShowForm] = useState(false)
 
   function onMaandWijzig({ maand: m, jaar: j }) { setMaand(m); setJaar(j) }
 
-  // ─── Maandtransacties ───
-  const monthTx = useMemo(() => allTransactions.filter(t => {
-    const d = new Date(t.datum)
-    return d.getMonth() + 1 === maand && d.getFullYear() === jaar
-  }), [allTransactions, maand, jaar])
+  function onOverrideStart(ankerMaand, dateStr) {
+    const updated = { ...loonOverrides, [ankerMaand]: dateStr }
+    setLoonOverrides(updated)
+    localStorage.setItem('webfinance_loonperiode_override', JSON.stringify(updated))
+  }
 
-  // ─── StatCard waarden ───
+  // ─── Actief datumbereik ───
+  const bereik = useMemo(() => {
+    if (dashboardPeriode === 'loon') {
+      const huidig = getLoonPeriodeByOffset(allTransactions, loonDag, periodeOffset, loonOverrides)
+      const vorig  = getLoonPeriodeByOffset(allTransactions, loonDag, periodeOffset - 1, loonOverrides)
+      if (!huidig) return datumBereikMaand(maand, jaar)
+      return {
+        startDatum:    huidig.start,
+        eindDatum:     huidig.eind,
+        label:         huidig.label,
+        prevStartDatum: vorig?.start || null,
+        prevEindDatum:  vorig?.eind  || null,
+      }
+    }
+    return datumBereikMaand(maand, jaar)
+  }, [dashboardPeriode, loonDag, periodeOffset, loonOverrides, allTransactions, maand, jaar])
+
+  // ─── Periode-transacties ───
+  const monthTx = useMemo(() =>
+    allTransactions.filter(t => t.datum >= bereik.startDatum && t.datum <= bereik.eindDatum),
+    [allTransactions, bereik.startDatum, bereik.eindDatum]
+  )
+
+  // ─── MiniStat waarden ───
   const inkomsten = useMemo(() => monthTx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0), [monthTx])
   const uitgaven  = useMemo(() => monthTx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0), [monthTx])
 
-  // ─── Huidig saldo (cumulatief, maand-onafhankelijk) ───
+  // ─── Huidig saldo (cumulatief, periode-onafhankelijk) ───
   const huidigSaldo = useMemo(() => {
     const sd = settings.startsaldo
     const tx = sd?.datum ? allTransactions.filter(t => t.datum >= sd.datum) : allTransactions
@@ -82,7 +135,16 @@ export default function DashboardPage() {
 
   return (
     <>
-      <DashboardTopBar maand={maand} jaar={jaar} onMaandWijzig={onMaandWijzig} onAddTx={() => setShowForm(true)} voornaam={voornaam} />
+      <DashboardTopBar
+        maand={maand} jaar={jaar} onMaandWijzig={onMaandWijzig}
+        onAddTx={() => setShowForm(true)} voornaam={voornaam}
+        dashboardPeriode={dashboardPeriode}
+        startDatum={bereik.startDatum} eindDatum={bereik.eindDatum}
+        periodeLabel={bereik.label}
+        onPeriodeVorige={() => setPeriodeOffset(o => o - 1)}
+        onPeriodeVolgende={() => setPeriodeOffset(o => o + 1)}
+        onOverrideStart={onOverrideStart}
+      />
 
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
@@ -90,7 +152,10 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14 }}>
           <DashboardHero
             allTransactions={allTransactions} fixedExpenses={fixedItems}
-            settings={settings} maand={maand} jaar={jaar}
+            settings={settings}
+            startDatum={bereik.startDatum} eindDatum={bereik.eindDatum}
+            prevStartDatum={bereik.prevStartDatum} prevEindDatum={bereik.prevEindDatum}
+            periodeLabel={bereik.label}
           />
           <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
             <DashboardMiniStat label="Inkomsten" value={inkomsten} color="#059669"
@@ -117,7 +182,8 @@ export default function DashboardPage() {
           {persons.length > 1 && (
             <DashboardVerdeling
               allTransactions={allTransactions} persons={persons}
-              settings={settings} maand={maand} jaar={jaar}
+              settings={settings}
+              startDatum={bereik.startDatum} eindDatum={bereik.eindDatum}
               animDelay={80}
             />
           )}

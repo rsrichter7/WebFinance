@@ -1,5 +1,6 @@
 // ─── Dashboard berekeningen ───
 // Vrij besteedbaar, sparklines, saldo-verloop, komende afschrijvingen, verdeling.
+// Periode-gebonden functies accepteren startDatum/eindDatum ('YYYY-MM-DD') i.p.v. maand/jaar.
 
 /** Sparkline: laatste N maanden totaal voor 'Inkomst' of 'Uitgave'. */
 export function sparklineData(transactions, type, maanden = 6) {
@@ -14,34 +15,40 @@ export function sparklineData(transactions, type, maanden = 6) {
   })
 }
 
-/** Saldo-verloop: cumulatief saldo per dag in geselecteerde maand tot vandaag. */
-export function saldoVerloopMaand(transactions, startsaldo, maand, jaar) {
-  const nu = new Date()
-  const startBedrag = startsaldo?.bedrag ?? 0
-  const startDatum  = startsaldo?.datum  ?? null
+/**
+ * Saldo-verloop: cumulatief saldo per dag van startDatum t/m min(eindDatum, vandaag).
+ * Zelfde uitkomst als voorheen bij start=1e en eind=laatste dag van de maand.
+ */
+export function saldoVerloopPeriode(transactions, startsaldo, startDatum, eindDatum) {
+  const nu = new Date(); nu.setHours(0, 0, 0, 0)
+  const saldoBedrag  = startsaldo?.bedrag ?? 0
+  const saldoVanaf   = startsaldo?.datum  ?? null
 
-  let saldoVoorMaand = startBedrag
+  // Cumulatief saldo vóór de periode
+  let saldoVoorStart = saldoBedrag
   for (const t of transactions) {
-    if (startDatum && t.datum < startDatum) continue
-    const d = new Date(t.datum)
-    if (d < new Date(jaar, maand - 1, 1)) {
-      saldoVoorMaand += t.type === 'Inkomst' ? t.bedrag : -t.bedrag
-    }
+    if (saldoVanaf && t.datum < saldoVanaf) continue
+    if (t.datum >= startDatum) continue
+    saldoVoorStart += t.type === 'Inkomst' ? t.bedrag : -t.bedrag
   }
 
-  const isHuidig = maand === nu.getMonth() + 1 && jaar === nu.getFullYear()
-  const maxDag   = isHuidig ? nu.getDate() : new Date(jaar, maand, 0).getDate()
-  const result   = []
-  let saldo      = saldoVoorMaand
+  const vandaagStr = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, '0')}-${String(nu.getDate()).padStart(2, '0')}`
+  const maxDatum   = eindDatum < vandaagStr ? eindDatum : vandaagStr
 
-  for (let dag = 1; dag <= maxDag; dag++) {
-    const datumStr = `${jaar}-${String(maand).padStart(2,'0')}-${String(dag).padStart(2,'0')}`
+  const result = []
+  let saldo = saldoVoorStart
+  const d   = new Date(startDatum + 'T00:00:00')
+  const max = new Date(maxDatum   + 'T00:00:00')
+
+  while (d <= max) {
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     for (const t of transactions) {
-      if (t.datum !== datumStr) continue
-      if (startDatum && t.datum < startDatum) continue
+      if (t.datum !== ds) continue
+      if (saldoVanaf && t.datum < saldoVanaf) continue
       saldo += t.type === 'Inkomst' ? t.bedrag : -t.bedrag
     }
     result.push(saldo)
+    d.setDate(d.getDate() + 1)
   }
   return result
 }
@@ -58,13 +65,11 @@ function naarMaandbedrag(bedrag, herhaling) {
 }
 
 /**
- * Vrij te besteden deze maand.
- * 1. Verwachte inkomsten  = vaste inkomsten (fixed_expenses type 'Inkomst') → maandbedrag
- * 2. Verwachte vaste lasten = vaste uitgaven (fixed_expenses type 'Uitgave') → maandbedrag
- * 3. Variabele uitgaven   = handmatige/import uitgave-transacties deze maand excl. Sparen
- * 4. Vrij = (1) − (2) − (3)
+ * Vrij te besteden in periode [startDatum, eindDatum].
+ * Verwachte inkomsten/lasten = maandbedragen uit vaste lasten (één periode ≈ één maand).
+ * Variabele uitgaven = handmatige/import uitgaven in het datumbereik excl. Sparen.
  */
-export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, jaar) {
+export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, startDatum, eindDatum) {
   const verwachteInkomsten = (fixedExpenses || [])
     .filter(f => f.type === 'Inkomst')
     .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
@@ -74,29 +79,16 @@ export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, ja
     .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
 
   const variabeleUitgaven = (allTransactions || [])
-    .filter(t => {
-      const d = new Date(t.datum)
-      return t.type === 'Uitgave'
-        && t.bron !== 'auto'
-        && t.soort !== 'Sparen'
-        && d.getMonth() + 1 === maand
-        && d.getFullYear() === jaar
-    })
+    .filter(t =>
+      t.type === 'Uitgave'
+      && t.bron !== 'auto'
+      && t.soort !== 'Sparen'
+      && t.datum >= startDatum
+      && t.datum <= eindDatum
+    )
     .reduce((sum, t) => sum + t.bedrag, 0)
 
   return verwachteInkomsten - verwachteVasteLasten - variabeleUitgaven
-}
-
-/**
- * Verschil vrij te besteden t.o.v. vorige maand.
- * Positief = meer vrij dan vorige maand.
- */
-export function verschilVorigeMaand(allTransactions, fixedExpenses, maand, jaar) {
-  const huidig    = berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, jaar)
-  const prevMaand = maand === 1 ? 12 : maand - 1
-  const prevJaar  = maand === 1 ? jaar - 1 : jaar
-  const vorig     = berekenVrijBesteedbaar(allTransactions, fixedExpenses, prevMaand, prevJaar)
-  return huidig - vorig
 }
 
 /** Komende afschrijvingen binnen N dagen. */
@@ -140,15 +132,17 @@ export function komendeAfschrijvingen(fixedExpenses, dagen = 30) {
   return result.sort((a, b) => a.datum.localeCompare(b.datum))
 }
 
-/** Verdeling per persoon: betaald vs eerlijk deel, GZ gelijk gesplitst. */
-export function verdelingPerPersoon(transactions, persons, settings, maand, jaar) {
+/** Verdeling per persoon in periode [startDatum, eindDatum]: betaald vs eerlijk deel, GZ gelijk gesplitst. */
+export function verdelingPerPersoon(transactions, persons, settings, startDatum, eindDatum) {
   if (!persons || persons.length < 2) return null
-  const maandTx = transactions.filter(t => { const d = new Date(t.datum); return d.getMonth() + 1 === maand && d.getFullYear() === jaar && t.type === 'Uitgave' })
-  const totaal = maandTx.reduce((s, t) => s + t.bedrag, 0)
+  const periodeTx = transactions.filter(t =>
+    t.datum >= startDatum && t.datum <= eindDatum && t.type === 'Uitgave'
+  )
+  const totaal = periodeTx.reduce((s, t) => s + t.bedrag, 0)
   const perPersoon = {}
   for (const p of persons) perPersoon[p.initialen] = { naam: p.naam, kleur: p.kleur, betaald: 0, eerlijkDeel: 0 }
 
-  for (const tx of maandTx) {
+  for (const tx of periodeTx) {
     if (tx.wie === 'GZ') {
       const deel = tx.bedrag / persons.length
       for (const p of persons) perPersoon[p.initialen].betaald += deel

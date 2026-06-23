@@ -8,22 +8,24 @@ import { useAuth } from './useAuth'
 import { registerCache } from './cacheManager'
 
 const DEFAULTS = {
-  datumformaat:      'long',
-  taal:              'nl',
-  thema:             'light',
-  custom_categories: { customSubs: {}, customCats: [] },
-  kosten_inkomen:    {},
-  verdeel_methode:   'ratio',
-  startsaldo:        null,
-  profiel_naam:      '',
-  profiel_email:     '',
-  analytics_order:   ['categories', 'subcategories', 'soort', 'inkexp'],
-  import_max_regels: 1000,
-  notif_budget:       true,
-  notif_vaste_lasten: true,
+  datumformaat:       'long',
+  taal:               'nl',
+  thema:              'light',
+  custom_categories:  { customSubs: {}, customCats: [] },
+  kosten_inkomen:     {},
+  verdeel_methode:    'ratio',
+  startsaldo:         null,
+  profiel_naam:       '',
+  profiel_email:      '',
+  analytics_order:    ['categories', 'subcategories', 'soort', 'inkexp'],
+  import_max_regels:  1000,
+  notif_budget:        true,
+  notif_vaste_lasten:  true,
+  dashboard_periode:  'maand',
+  loon_dag:           25,
 }
 
-const SELECT_COLS = 'datumformaat, taal, thema, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten'
+const SELECT_COLS = 'datumformaat, taal, thema, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten, dashboard_periode, loon_dag'
 
 let sCache = { settings: null, userId: null }
 function clearCache() { sCache = { settings: null, userId: null } }

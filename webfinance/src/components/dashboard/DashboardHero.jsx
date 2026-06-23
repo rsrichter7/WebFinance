@@ -1,12 +1,10 @@
 // ─── DashboardHero ───
-// Gradient hero card: vrij besteedbaar deze maand + saldo-sparkline + voortgangsbalk.
+// Gradient hero card: vrij besteedbaar in de actieve periode + saldo-sparkline + voortgangsbalk.
 
 import React, { useMemo } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { TAB, fmtShort } from '../../tokens'
-import { berekenVrijBesteedbaar, verschilVorigeMaand, saldoVerloopMaand } from '../../utils/dashboardCalculations'
-
-const MAANDEN = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
+import { berekenVrijBesteedbaar, saldoVerloopPeriode } from '../../utils/dashboardCalculations'
 
 function SparkArea({ data }) {
   if (!data || data.length < 2) return null
@@ -36,32 +34,55 @@ function SparkArea({ data }) {
   )
 }
 
-export default function DashboardHero({ allTransactions, fixedExpenses, settings, maand, jaar }) {
+/**
+ * Props:
+ *   startDatum / eindDatum     — actieve periode ('YYYY-MM-DD')
+ *   prevStartDatum / prevEindDatum — vorige periode voor verschil-badge
+ *   periodeLabel               — displaynaam bv. "23 jun – 24 jul" (null = gebruik maandnaam)
+ */
+export default function DashboardHero({
+  allTransactions, fixedExpenses, settings,
+  startDatum, eindDatum, prevStartDatum, prevEindDatum, periodeLabel,
+}) {
   const { T } = useTheme()
 
-  const nu          = new Date()
-  const isHuidig    = maand === nu.getMonth() + 1 && jaar === nu.getFullYear()
-  const dagVan      = isHuidig ? nu.getDate() : new Date(jaar, maand, 0).getDate()
-  const dagenTotaal = new Date(jaar, maand, 0).getDate()
+  // Dag-voortgang binnen de periode
+  const nu       = new Date(); nu.setHours(0, 0, 0, 0)
+  const vandaagStr = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2,'0')}-${String(nu.getDate()).padStart(2,'0')}`
+  const isHuidig = vandaagStr >= startDatum && vandaagStr <= eindDatum
+  const startD   = new Date(startDatum + 'T00:00:00')
+  const eindD    = new Date(eindDatum  + 'T00:00:00')
+  const dagenTotaal = Math.round((eindD - startD) / 86400000) + 1
+  const dagVan      = isHuidig ? Math.round((nu - startD) / 86400000) + 1 : dagenTotaal
   const dagPct      = (dagVan / dagenTotaal) * 100
 
   const vrijBesteedbaar = useMemo(
-    () => berekenVrijBesteedbaar(allTransactions, fixedExpenses, maand, jaar),
-    [allTransactions, fixedExpenses, maand, jaar]
+    () => berekenVrijBesteedbaar(allTransactions, fixedExpenses, startDatum, eindDatum),
+    [allTransactions, fixedExpenses, startDatum, eindDatum]
   )
-  const verschil = useMemo(
-    () => verschilVorigeMaand(allTransactions, fixedExpenses, maand, jaar),
-    [allTransactions, fixedExpenses, maand, jaar]
-  )
+
+  const verschil = useMemo(() => {
+    if (!prevStartDatum || !prevEindDatum) return 0
+    const vorig = berekenVrijBesteedbaar(allTransactions, fixedExpenses, prevStartDatum, prevEindDatum)
+    return vrijBesteedbaar - vorig
+  }, [allTransactions, fixedExpenses, vrijBesteedbaar, prevStartDatum, prevEindDatum])
+
   const saldoData = useMemo(
-    () => saldoVerloopMaand(allTransactions, settings.startsaldo, maand, jaar),
-    [allTransactions, settings.startsaldo, maand, jaar]
+    () => saldoVerloopPeriode(allTransactions, settings.startsaldo, startDatum, eindDatum),
+    [allTransactions, settings.startsaldo, startDatum, eindDatum]
   )
 
   const isNegatief = vrijBesteedbaar < 0
   const absVrij    = Math.abs(vrijBesteedbaar)
   const geheel     = Math.floor(absVrij).toLocaleString('nl-NL')
   const dec        = (absVrij % 1).toFixed(2).slice(1)
+
+  // Label voor het hero-kopje
+  const label = periodeLabel || (() => {
+    const MAANDEN = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
+    const d = new Date(startDatum + 'T00:00:00')
+    return MAANDEN[d.getMonth()]
+  })()
 
   return (
     <div className="wf-anim-card" style={{
@@ -74,12 +95,10 @@ export default function DashboardHero({ allTransactions, fixedExpenses, settings
       <div style={{ position: 'absolute', top: -70, left: -50, width: 240, height: 240, background: 'radial-gradient(circle, rgba(59,130,246,0.28) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: -20, right: -40, width: 200, height: 200, background: 'radial-gradient(circle, rgba(14,165,233,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-      {/* Label */}
       <div style={{ fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10, position: 'relative' }}>
-        Vrij te besteden {MAANDEN[maand - 1]}
+        Vrij te besteden {label}
       </div>
 
-      {/* Bedrag */}
       <div style={{ position: 'relative', marginBottom: 6, lineHeight: 1 }}>
         <span style={{ fontSize: 46, fontWeight: 500, color: isNegatief ? '#FCA5A5' : '#fff', ...TAB }}>
           {isNegatief ? '−' : ''}€{geheel}
@@ -87,7 +106,6 @@ export default function DashboardHero({ allTransactions, fixedExpenses, settings
         </span>
       </div>
 
-      {/* Context */}
       <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)', position: 'relative', marginBottom: 'auto' }}>
         Na vaste lasten en variabele uitgaven
         {Math.abs(verschil) > 5 && (
@@ -97,23 +115,21 @@ export default function DashboardHero({ allTransactions, fixedExpenses, settings
             color: verschil >= 0 ? '#34D399' : '#FCA5A5',
             fontSize: 11.5, fontWeight: 600, ...TAB,
           }}>
-            {verschil >= 0 ? '↑' : '↓'} {fmtShort(Math.abs(verschil))} vs vorige maand
+            {verschil >= 0 ? '↑' : '↓'} {fmtShort(Math.abs(verschil))} vs vorige periode
           </span>
         )}
       </div>
 
-      {/* Sparkline */}
       {saldoData.length > 3 && (
         <div style={{ position: 'relative', marginTop: 16, marginBottom: 14, opacity: 0.75 }}>
           <SparkArea data={saldoData} />
         </div>
       )}
 
-      {/* Dag-voortgang */}
       <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 5 }}>
-          <span>{isHuidig ? `Dag ${dagVan} van ${dagenTotaal}` : MAANDEN[maand - 1]}</span>
-          <span>{isHuidig ? `Nog ${dagenTotaal - dagVan} dagen` : 'Volledige maand'}</span>
+          <span>{isHuidig ? `Dag ${dagVan} van ${dagenTotaal}` : label}</span>
+          <span>{isHuidig ? `Nog ${dagenTotaal - dagVan} dagen` : 'Volledige periode'}</span>
         </div>
         <div style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
           <div className="wf-anim-bar" style={{

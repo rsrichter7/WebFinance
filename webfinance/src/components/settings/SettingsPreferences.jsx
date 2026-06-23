@@ -1,10 +1,11 @@
 // ─── SettingsPreferences ───
-// Voorkeuren: taal, valuta, datumformaat en thema (Licht / Donker / Automatisch).
+// Voorkeuren: taal, valuta, datumformaat, thema en dashboard-periode.
 
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import useSettings from '../../hooks/useSettings'
+import SettingsDashboardPeriode from './SettingsDashboardPeriode'
 
 const DATE_OPTIONS = [
   { val: 'long', label: '8 mei 2026',  desc: 'Lang formaat' },
@@ -86,6 +87,8 @@ export default function SettingsPreferences() {
           ))}
         </div>
       </SubSection>
+
+      <SettingsDashboardPeriode />
 
       <SubSection title="Thema" T={T}>
         <div style={{ display: 'flex', gap: 10 }}>

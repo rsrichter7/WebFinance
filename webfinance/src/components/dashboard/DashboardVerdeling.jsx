@@ -8,12 +8,12 @@ import { verdelingPerPersoon } from '../../utils/dashboardCalculations'
 
 const GRADS = ['gradBlue', 'gradPink', 'gradGreen', 'gradAmber']
 
-export default function DashboardVerdeling({ allTransactions, persons, settings, maand, jaar, animDelay = 0 }) {
+export default function DashboardVerdeling({ allTransactions, persons, settings, startDatum, eindDatum, animDelay = 0 }) {
   const { T } = useTheme()
 
   const verdeling = useMemo(
-    () => verdelingPerPersoon(allTransactions, persons, settings, maand, jaar),
-    [allTransactions, persons, settings, maand, jaar]
+    () => verdelingPerPersoon(allTransactions, persons, settings, startDatum, eindDatum),
+    [allTransactions, persons, settings, startDatum, eindDatum]
   )
 
   if (!verdeling || persons.length < 2) return null
