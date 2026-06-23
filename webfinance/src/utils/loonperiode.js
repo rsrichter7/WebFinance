@@ -1,8 +1,6 @@
 // ─── Loonperiode helper ───
-// Berekent periode-grenzen op basis van salarisdatums + loon_dag instelling.
+// Berekent periode-grenzen op basis van transacties van de hoofdinkomst.
 
-const SALARIS_CAT = 'Financieel'
-const SALARIS_SUB = 'Salaris / Inkomsten'
 const MAANDEN_KORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec']
 
 function toDateStr(d) {
@@ -15,10 +13,10 @@ function addDays(dateStr, n) {
   return toDateStr(d)
 }
 
-// Weekend-gecorrigeerde projectie: als loon_dag op za/zo valt → vrijdag ervoor
-function projeceerGrens(jaar, maand, loonDag) {
+// Weekend-gecorrigeerde projectie: als afschrijfdag op za/zo valt → vrijdag ervoor
+function projeceerGrens(jaar, maand, afschrijfdag) {
   const maxDag = new Date(jaar, maand, 0).getDate()
-  const dag = Math.min(loonDag, maxDag)
+  const dag = Math.min(afschrijfdag, maxDag)
   const d = new Date(jaar, maand - 1, dag)
   const dow = d.getDay()
   if (dow === 0) d.setDate(d.getDate() - 2) // zondag → vrijdag
@@ -33,13 +31,16 @@ export function kortLabel(dateStr) {
 
 /**
  * Berekent geordende lijst van periodes { start, eind, label }.
- * Voor maanden met salaris: grens = datum dichtst bij loon_dag (bij gelijkspel → vroegste).
- * Voor maanden zonder salaris: projecteer op loon_dag (weekend → vrijdag ervoor).
+ * hoofdinkomst: { id, afschrijfdag } of null — zonder hoofdinkomst return [].
+ * Grens per maand = vroegste transactie van de hoofdinkomst in die maand;
+ * geen transactie → projeceerGrens op afschrijfdag.
  * Overrides uit localStorage overschrijven de detectie.
  */
-export function getLoonPeriodes(allTransactions, loonDag, overrides = {}) {
+export function getLoonPeriodes(allTransactions, hoofdinkomst, overrides = {}) {
+  if (!hoofdinkomst) return []
+
   const salarisTransacties = (allTransactions || []).filter(t =>
-    t.type === 'Inkomst' && t.categorie === SALARIS_CAT && t.subcategorie === SALARIS_SUB
+    t.vasteLast === hoofdinkomst.id
   )
 
   const byMaand = {}
@@ -74,22 +75,13 @@ export function getLoonPeriodes(allTransactions, loonDag, overrides = {}) {
     m++; if (m > 12) { m = 1; y++ }
   }
 
-  // Bepaal grens per maand
+  // Bepaal grens per maand: vroegste transactie van hoofdinkomst, anders projectie
   const grenzen = maanden.map(({ jaar, maand, key }) => {
     if (overrides[key]) return overrides[key]
     if (byMaand[key]) {
-      // Dichtst bij loon_dag; bij gelijkspel → vroegste datum
-      let best = null, minDist = Infinity
-      for (const d of byMaand[key]) {
-        const dag = parseInt(d.slice(8, 10))
-        const dist = Math.abs(dag - loonDag)
-        if (dist < minDist || (dist === minDist && d < best)) {
-          minDist = dist; best = d
-        }
-      }
-      return best
+      return byMaand[key].slice().sort()[0]
     }
-    return projeceerGrens(jaar, maand, loonDag)
+    return projeceerGrens(jaar, maand, hoofdinkomst.afschrijfdag)
   })
 
   grenzen.sort()
@@ -107,10 +99,10 @@ export function getLoonPeriodes(allTransactions, loonDag, overrides = {}) {
 
 /**
  * Geeft de periode op basis van offset (0 = huidige, -1 = vorige, …).
- * Retourneert null als er geen periodes zijn.
+ * Retourneert null als er geen hoofdinkomst of periodes zijn.
  */
-export function getLoonPeriodeByOffset(allTransactions, loonDag, offset = 0, overrides = {}) {
-  const periodes = getLoonPeriodes(allTransactions, loonDag, overrides)
+export function getLoonPeriodeByOffset(allTransactions, hoofdinkomst, offset = 0, overrides = {}) {
+  const periodes = getLoonPeriodes(allTransactions, hoofdinkomst, overrides)
   if (periodes.length === 0) return null
 
   const vandaag = toDateStr(new Date())

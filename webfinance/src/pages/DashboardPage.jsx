@@ -40,14 +40,13 @@ export default function DashboardPage() {
   const { T }    = useTheme()
   const { user } = useAuth()
   const { allTransactions, addTransaction } = useTransactions()
-  const { items: fixedItems } = useFixedExpenses()
+  const { items: fixedItems, hoofdinkomst } = useFixedExpenses()
   const { settings }  = useSettings()
   const { persons }   = useProfiles()
 
   const voornaam = (user?.user_metadata?.full_name || '').split(' ')[0]
 
   const dashboardPeriode = settings.dashboard_periode || 'maand'
-  const loonDag          = settings.loon_dag || 25
 
   // Kalendermaand-navigatie
   const [maand, setMaand] = useState(now.getMonth() + 1)
@@ -75,11 +74,17 @@ export default function DashboardPage() {
     localStorage.setItem('webfinance_loonperiode_override', JSON.stringify(updated))
   }
 
+  // ─── Vroegste transactiedatum (grens voor terugnavigatie) ───
+  const eersteDatum = useMemo(() => {
+    if (allTransactions.length === 0) return new Date().toISOString().split('T')[0]
+    return allTransactions.reduce((min, t) => t.datum < min ? t.datum : min, allTransactions[0].datum)
+  }, [allTransactions])
+
   // ─── Actief datumbereik ───
   const bereik = useMemo(() => {
     if (dashboardPeriode === 'loon') {
-      const huidig = getLoonPeriodeByOffset(allTransactions, loonDag, periodeOffset, loonOverrides)
-      const vorig  = getLoonPeriodeByOffset(allTransactions, loonDag, periodeOffset - 1, loonOverrides)
+      const huidig = getLoonPeriodeByOffset(allTransactions, hoofdinkomst, periodeOffset, loonOverrides)
+      const vorig  = getLoonPeriodeByOffset(allTransactions, hoofdinkomst, periodeOffset - 1, loonOverrides)
       if (!huidig) return datumBereikMaand(maand, jaar)
       return {
         startDatum:    huidig.start,
@@ -90,7 +95,7 @@ export default function DashboardPage() {
       }
     }
     return datumBereikMaand(maand, jaar)
-  }, [dashboardPeriode, loonDag, periodeOffset, loonOverrides, allTransactions, maand, jaar])
+  }, [dashboardPeriode, hoofdinkomst, periodeOffset, loonOverrides, allTransactions, maand, jaar])
 
   // ─── Periode-transacties ───
   const monthTx = useMemo(() =>
@@ -144,6 +149,7 @@ export default function DashboardPage() {
         onPeriodeVorige={() => setPeriodeOffset(o => o - 1)}
         onPeriodeVolgende={() => setPeriodeOffset(o => o + 1)}
         onOverrideStart={onOverrideStart}
+        kanVorige={bereik.startDatum > eersteDatum}
         kanVolgende={
           dashboardPeriode === 'loon'
             ? periodeOffset < 1

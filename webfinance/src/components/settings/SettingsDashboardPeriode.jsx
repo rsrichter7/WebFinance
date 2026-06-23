@@ -1,5 +1,5 @@
 // ─── SettingsDashboardPeriode ───
-// Sectie in Voorkeuren: kies Kalendermaand of Loonperiode (incl. loon_dag invoer).
+// Sectie in Voorkeuren: kies Kalendermaand of Loonperiode.
 
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../hooks/useTheme'
@@ -15,34 +15,17 @@ export default function SettingsDashboardPeriode() {
   const { settings, loading, updateSettings } = useSettings()
 
   const [periode, setPeriode] = useState('maand')
-  const [loonDag, setLoonDag] = useState(25)
   const [saved, setSaved]    = useState(false)
 
   useEffect(() => {
-    if (!loading) {
-      setPeriode(settings.dashboard_periode || 'maand')
-      setLoonDag(settings.loon_dag || 25)
-    }
-  }, [loading, settings.dashboard_periode, settings.loon_dag])
+    if (!loading) setPeriode(settings.dashboard_periode || 'maand')
+  }, [loading, settings.dashboard_periode])
 
-  async function save(newPeriode, newLoonDag) {
-    await updateSettings({ dashboard_periode: newPeriode, loon_dag: newLoonDag })
+  async function handlePeriodeChange(val) {
+    setPeriode(val)
+    await updateSettings({ dashboard_periode: val })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
-  }
-
-  function handlePeriodeChange(val) {
-    setPeriode(val)
-    save(val, loonDag)
-  }
-
-  function handleLoonDagChange(e) {
-    const val = Math.max(1, Math.min(28, parseInt(e.target.value) || 25))
-    setLoonDag(val)
-  }
-
-  function handleLoonDagBlur() {
-    save(periode, loonDag)
   }
 
   return (
@@ -78,25 +61,8 @@ export default function SettingsDashboardPeriode() {
 
       {periode === 'loon' && (
         <div style={{ paddingLeft: 4 }}>
-          <label style={{ fontSize: 12.5, fontWeight: 500, color: T.ink2, display: 'block', marginBottom: 6 }}>
-            Verwachte loondag (1–28)
-          </label>
-          <input
-            type="number"
-            min={1} max={28}
-            value={loonDag}
-            onChange={handleLoonDagChange}
-            onBlur={handleLoonDagBlur}
-            style={{
-              width: 80, padding: '7px 10px', borderRadius: 8,
-              border: `1.5px solid ${T.border}`, background: T.card,
-              fontSize: 13, color: T.ink, fontFamily: 'inherit',
-              outline: 'none',
-            }}
-          />
-          <div style={{ fontSize: 11.5, color: T.ink4, marginTop: 6, maxWidth: 380 }}>
-            Dit is de verwachte grens voor periodes zonder salaristransactie. Afgeronde periodes
-            worden automatisch afgeleid uit je werkelijke salarisdatums.
+          <div style={{ fontSize: 11.5, color: T.ink4, maxWidth: 380 }}>
+            De loonperiode volgt je hoofdinkomst. Kies je hoofdinkomst op de Inkomsten-pagina (sterretje).
           </div>
           {saved && (
             <div style={{ fontSize: 12, color: T.green, marginTop: 6 }}>Opgeslagen ✓</div>

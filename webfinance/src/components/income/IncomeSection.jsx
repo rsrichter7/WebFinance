@@ -8,7 +8,7 @@ import { Card } from '../ui/Card'
 import { ICONS } from '../ui/Icons'
 import IncomeCategoryGroup from './IncomeCategoryGroup'
 
-export default function IncomeSection({ groupedInkomsten, onEdit, onRemove }) {
+export default function IncomeSection({ groupedInkomsten, onEdit, onRemove, hoofdinkomstId, setHoofdinkomst }) {
   const { T } = useTheme()
 
   if (groupedInkomsten.length === 0) {
@@ -30,7 +30,8 @@ export default function IncomeSection({ groupedInkomsten, onEdit, onRemove }) {
       {groupedInkomsten.map(group => (
         <IncomeCategoryGroup key={group.name} icon={group.icon} title={group.name}
           color={group.color} colorSoft={group.colorSoft} items={group.items}
-          subtotal={group.subtotal} onEdit={onEdit} onRemove={onRemove} />
+          subtotal={group.subtotal} onEdit={onEdit} onRemove={onRemove}
+          hoofdinkomstId={hoofdinkomstId} setHoofdinkomst={setHoofdinkomst} />
       ))}
     </div>
   )

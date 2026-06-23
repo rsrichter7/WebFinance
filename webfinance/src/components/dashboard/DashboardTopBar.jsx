@@ -98,11 +98,12 @@ export default function DashboardTopBar({
   maand, jaar, onMaandWijzig, onAddTx, voornaam,
   dashboardPeriode, startDatum, eindDatum, periodeLabel,
   onPeriodeVorige, onPeriodeVolgende, onOverrideStart,
-  kanVolgende = true,
+  kanVorige = true, kanVolgende = true,
 }) {
   const { T } = useTheme()
 
   function vorige() {
+    if (!kanVorige) return
     if (dashboardPeriode === 'loon') { onPeriodeVorige(); return }
     if (maand === 1) onMaandWijzig({ maand: 12, jaar: jaar - 1 })
     else onMaandWijzig({ maand: maand - 1, jaar })
@@ -166,7 +167,14 @@ export default function DashboardTopBar({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button onClick={vorige} style={navBtnStyle}>‹</button>
+          <button
+            onClick={vorige}
+            disabled={!kanVorige}
+            style={{
+              ...navBtnStyle,
+              ...(!kanVorige ? { opacity: 0.35, cursor: 'not-allowed', color: T.ink4 } : {}),
+            }}
+          >‹</button>
           {selectorLabel}
           <button
             onClick={volgende}

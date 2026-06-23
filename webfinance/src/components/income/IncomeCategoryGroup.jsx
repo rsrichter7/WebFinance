@@ -58,7 +58,7 @@ function WieAvatar({ initials }) {
   )
 }
 
-export default function IncomeCategoryGroup({ icon, title, color, colorSoft, items, subtotal, onEdit, onRemove }) {
+export default function IncomeCategoryGroup({ icon, title, color, colorSoft, items, subtotal, onEdit, onRemove, hoofdinkomstId, setHoofdinkomst }) {
   const { T } = useTheme()
   const ico = ICONS[icon] || ICONS.grip
 
@@ -91,6 +91,7 @@ export default function IncomeCategoryGroup({ icon, title, color, colorSoft, ite
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
+              <th style={{ ...TH, width: 36 }} />
               <th style={TH}>Volgende inkomst</th>
               <th style={TH}>Bedrag</th>
               <th style={TH}>Omschrijving</th>
@@ -109,6 +110,21 @@ export default function IncomeCategoryGroup({ icon, title, color, colorSoft, ite
                 onMouseEnter={e => e.currentTarget.querySelectorAll('.row-action').forEach(b => b.style.opacity = 1)}
                 onMouseLeave={e => e.currentTarget.querySelectorAll('.row-action').forEach(b => b.style.opacity = 0)}
               >
+                <td style={{ ...TD, width: 36, padding: '12px 8px 12px 14px' }}>
+                  <button
+                    onClick={() => setHoofdinkomst?.(item.id)}
+                    title={item.id === hoofdinkomstId ? 'Hoofdinkomst' : 'Instellen als hoofdinkomst'}
+                    style={{
+                      border: 'none', background: 'transparent', padding: 4, borderRadius: 6,
+                      cursor: 'pointer', display: 'inline-flex', color: item.id === hoofdinkomstId ? T.amber : T.ink4,
+                      transition: 'color 0.15s',
+                    }}
+                    onMouseEnter={e => { if (item.id !== hoofdinkomstId) e.currentTarget.style.color = T.amber }}
+                    onMouseLeave={e => { if (item.id !== hoofdinkomstId) e.currentTarget.style.color = T.ink4 }}
+                  >
+                    {item.id === hoofdinkomstId ? ICONS.starFill : ICONS.starEmpty}
+                  </button>
+                </td>
                 <td style={{ ...TD, color: T.ink3, whiteSpace: 'nowrap' }}>{fmtDate(volgendeDatum(item.afschrijfdag))}</td>
                 <td style={{ ...TD, fontWeight: 600, color: T.ink, whiteSpace: 'nowrap', ...TAB }}>
                   <span style={{ color: T.green, marginRight: 4, fontSize: 11 }}>↑</span>

@@ -17,6 +17,7 @@ export default function IncomePage() {
   const { T } = useTheme()
   const {
     groupedInkomsten, totals,
+    hoofdinkomst, setHoofdinkomst,
     addItem, updateItem, removeItem,
     formOpen, setFormOpen,
     editingItem, openEdit, closeForm,
@@ -53,7 +54,10 @@ export default function IncomePage() {
                 <IncomeDonutCard items={allItems} />
               </div>
             )}
-            <IncomeSection groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={removeItem} />
+            <IncomeSection
+              groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={removeItem}
+              hoofdinkomstId={hoofdinkomst?.id} setHoofdinkomst={setHoofdinkomst}
+            />
           </>
         )}
       </div>

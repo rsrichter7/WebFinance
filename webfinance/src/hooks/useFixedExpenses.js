@@ -10,7 +10,7 @@ import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
 
-const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, type, winkel, created_at'
+const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, type, winkel, is_hoofdinkomst, created_at'
 
 let feCache = { data: null, householdId: null }
 function clearCache() { feCache = { data: null, householdId: null } }
@@ -38,11 +38,12 @@ function dbNaarFrontend(row) {
     soort:        row.soort ?? 'Noodzaak',
     wie:          row.wie ?? 'GZ',
     afschrijfdag: row.afschrijfdag ?? 1,
-    actief:       row.actief ?? true,
-    type:         row.type ?? 'Uitgave',
-    winkel:       row.winkel ?? '',
-    startdatum:   maakStartdatum(row.created_at, row.afschrijfdag),
-    createdAt:    row.created_at,
+    actief:          row.actief ?? true,
+    type:            row.type ?? 'Uitgave',
+    winkel:          row.winkel ?? '',
+    isHoofdinkomst:  row.is_hoofdinkomst ?? false,
+    startdatum:      maakStartdatum(row.created_at, row.afschrijfdag),
+    createdAt:       row.created_at,
   }
 }
 
@@ -60,9 +61,10 @@ function frontendNaarDb(item) {
     soort:        item.soort ?? 'Noodzaak',
     wie:          item.wie ?? 'GZ',
     afschrijfdag: dag,
-    actief:       item.actief !== false,
-    type:         item.type ?? 'Uitgave',
-    winkel:       item.winkel ?? '',
+    actief:           item.actief !== false,
+    type:             item.type ?? 'Uitgave',
+    winkel:           item.winkel ?? '',
+    is_hoofdinkomst:  item.isHoofdinkomst ?? false,
   }
 }
 
@@ -260,6 +262,27 @@ export default function useFixedExpenses() {
     setEditingItem(null)
   }, [])
 
+  // ─── Hoofdinkomst: expliciete keuze of fallback op hoogste maandbedrag ───
+  const hoofdinkomst = useMemo(() => {
+    const inkomsten = items.filter(i => i.type === 'Inkomst')
+    if (inkomsten.length === 0) return null
+    const expliciet = inkomsten.find(i => i.isHoofdinkomst)
+    if (expliciet) return expliciet
+    return inkomsten.reduce((best, i) => toMonthly(i) > toMonthly(best) ? i : best, inkomsten[0])
+  }, [items])
+
+  // ─── Hoofdinkomst instellen: eerst alles op false, dan gekozen op true ───
+  const setHoofdinkomst = useCallback(async (id) => {
+    if (!householdId) return
+    const inkomstIds = items.filter(i => i.type === 'Inkomst').map(i => i.id)
+    for (const iid of inkomstIds) {
+      await supabase.from('fixed_expenses').update({ is_hoofdinkomst: false }).eq('id', iid)
+    }
+    await supabase.from('fixed_expenses').update({ is_hoofdinkomst: true }).eq('id', id)
+    feCache = { data: null, householdId: null }
+    fetchItems()
+  }, [householdId, items, fetchItems])
+
   // ─── Groepeer per categorie (gesplitst op type) ───
   const groupedUitgaven  = useMemo(() => groupByCategorie(items.filter(i => i.type === 'Uitgave')),  [items])
   const groupedInkomsten = useMemo(() => groupByCategorie(items.filter(i => i.type === 'Inkomst')), [items])
@@ -289,6 +312,8 @@ export default function useFixedExpenses() {
     groupedInkomsten,
     totals,
     donutData,
+    hoofdinkomst,
+    setHoofdinkomst,
     addItem,
     removeItem,
     updateItem,
