@@ -74,6 +74,12 @@ export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, startDatu
     .filter(f => f.type === 'Inkomst')
     .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
 
+  const werkelijkeInkomsten = (allTransactions || [])
+    .filter(t => t.type === 'Inkomst' && t.datum >= startDatum && t.datum <= eindDatum)
+    .reduce((sum, t) => sum + t.bedrag, 0)
+
+  const inkomsten = Math.max(verwachteInkomsten, werkelijkeInkomsten)
+
   const verwachteVasteLasten = (fixedExpenses || [])
     .filter(f => f.type === 'Uitgave')
     .reduce((sum, f) => sum + naarMaandbedrag(f.bedrag, f.herhaling), 0)
@@ -88,7 +94,7 @@ export function berekenVrijBesteedbaar(allTransactions, fixedExpenses, startDatu
     )
     .reduce((sum, t) => sum + t.bedrag, 0)
 
-  return verwachteInkomsten - verwachteVasteLasten - variabeleUitgaven
+  return inkomsten - verwachteVasteLasten - variabeleUitgaven
 }
 
 /** Komende afschrijvingen binnen N dagen. */

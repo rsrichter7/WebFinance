@@ -21,7 +21,7 @@ const DEFAULTS = {
   import_max_regels:  1000,
   notif_budget:        true,
   notif_vaste_lasten:  true,
-  dashboard_periode:  'maand',
+  dashboard_periode:  'loon',
   loon_dag:           25,
 }
 
