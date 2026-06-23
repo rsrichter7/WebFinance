@@ -96,27 +96,17 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
       }}>
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>{isEdit ? 'Vaste last bewerken' : 'Nieuwe vaste last'}</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink }}>
+            {isEdit
+              ? (form.type === 'Inkomst' ? 'Vaste inkomst bewerken' : 'Vaste last bewerken')
+              : (form.type === 'Inkomst' ? 'Nieuwe vaste inkomst' : 'Nieuwe vaste last')}
+          </div>
             <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>{isEdit ? 'Wijzig de gegevens' : 'Voeg een terugkerende post toe'}</div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: 20, color: T.ink3, cursor: 'pointer', padding: '4px 8px', borderRadius: 6 }}>×</button>
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div>
-            <label style={L}>Type *</label>
-            <div style={{ display: 'flex', gap: 0, border: `1px solid ${T.border}`, borderRadius: 8, overflow: 'hidden' }}>
-              {['Uitgave', 'Inkomst'].map(t => (
-                <button key={t} onClick={() => update('type', t)} style={{
-                  flex: 1, padding: '8px 0', border: 'none', fontSize: 13, fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  background: form.type === t ? (t === 'Uitgave' ? T.uitgaveBtnBg : T.inkomstBtnBg) : T.card,
-                  color: form.type === t ? (t === 'Uitgave' ? T.uitgaveBtnText : T.inkomstBtnText) : T.ink3,
-                }}>{t}</button>
-              ))}
-            </div>
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={L}>Bedrag *</label>
