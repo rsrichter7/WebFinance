@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import CalendarDayCell from './CalendarDayCell'
+import { maakActualsIndex, isVerwachtGedekt } from '../../utils/kalenderMatch'
 
 const WEEKDAYS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
 
@@ -20,6 +21,7 @@ function getOccurrencesInMonth(item, year, month) {
     if (cur >= targetStart) results.push({ day: cur.getDate(), item })
     if (item.herhaling === 'Wekelijks')        { cur = new Date(cur); cur.setDate(cur.getDate() + 7) }
     else if (item.herhaling === 'Maandelijks') { cur = new Date(cur); cur.setMonth(cur.getMonth() + 1) }
+    else if (item.herhaling === 'Kwartaal')    { cur = new Date(cur); cur.setMonth(cur.getMonth() + 3) }
     else if (item.herhaling === 'Jaarlijks')   { cur = new Date(cur); cur.setFullYear(cur.getFullYear() + 1) }
     else break
     safety++
@@ -35,7 +37,7 @@ export function buildDayMap(allTransactions, items, year, month, dismissedExpect
       if (!map[day]) map[day] = { expected: [], actual: [] }
       map[day].expected.push({
         id: item.id, name: item.omschrijving, winkel: item.winkel || '',
-        amount: item.bedrag, income: item.type === 'Inkomst',
+        amount: item.bedrag, income: item.type === 'Inkomst', herhaling: item.herhaling,
       })
     }
   }
@@ -51,32 +53,20 @@ export function buildDayMap(allTransactions, items, year, month, dismissedExpect
     }
   }
 
-  // Filter verwachte items voor vandaag en het verleden:
-  // verwijder automatische matches (vaste last betaald) en handmatig verwijderde
+  // Filter verwachte items voor vandaag en het verleden: verberg items die al gedekt
+  // zijn door een echte transactie (speling op datum + bedrag) of handmatig verwijderd.
   const today = new Date()
   const p = n => String(n).padStart(2, '0')
+  const actuals = maakActualsIndex(allTransactions)
 
   for (const dayStr of Object.keys(map)) {
     const day = parseInt(dayStr)
-    if (new Date(year, month, day) > today) continue // toekomstige dagen overslaan
+    if (new Date(year, month, day) > today) continue
 
-    const datum   = `${year}-${p(month + 1)}-${p(day)}`
-    const dayData = map[day]
-
-    dayData.expected = dayData.expected.filter(exp => {
-      // Handmatig verwijderd door gebruiker
+    const datum = `${year}-${p(month + 1)}-${p(day)}`
+    map[day].expected = map[day].expected.filter(exp => {
       if (dismissedExpected.some(d => d.vastelastId === exp.id && d.datum === datum)) return false
-      // Automatische match: zoek in ±1 dag naar gekoppelde of vergelijkbare transactie
-      for (const delta of [0, -1, 1]) {
-        const acts = map[day + delta]?.actual || []
-        for (const a of acts) {
-          if (a.vasteLast === exp.id) return false // directe koppeling via vaste_last_id
-          if (Math.abs(a.amount - exp.amount) < 0.01 &&
-              a.name && exp.name &&
-              a.name.toLowerCase() === exp.name.toLowerCase()) return false // naam + bedrag
-        }
-      }
-      return true
+      return !isVerwachtGedekt(exp, datum, actuals)
     })
   }
 
