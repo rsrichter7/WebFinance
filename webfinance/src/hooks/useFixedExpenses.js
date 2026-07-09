@@ -5,7 +5,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
-import { registerCache } from './cacheManager'
+import { registerCache, emit } from './cacheManager'
+import { berekenVerwachteDatums, periodeKey, localISO } from '../utils/vasteLastenDatums'
 import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
@@ -16,14 +17,13 @@ let feCache = { data: null, householdId: null }
 function clearCache() { feCache = { data: null, householdId: null } }
 registerCache(clearCache)
 
-function pad(n) { return String(n).padStart(2, '0') }
-
 // Reconstrueer startdatum vanuit created_at en afschrijfdag
 function maakStartdatum(createdAt, afschrijfdag) {
   const d = new Date(createdAt || new Date())
   const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
   const dag = Math.min(afschrijfdag || 1, maxDay)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(dag)}`
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(dag)}`
 }
 
 // DB (snake_case) → frontend (legacy veldnamen voor componentcompatibiliteit)
@@ -101,43 +101,6 @@ function groupByCategorie(items) {
     })
 }
 
-// Genereer de verwachte datum voor een vaste last — alleen vandaag of eerder
-function berekenVerwachteDatums(item, today) {
-  const dates = []
-  const dag = item.afschrijfdag ?? 1
-  const now = new Date()
-
-  if (item.herhaling === 'Maandelijks') {
-    const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr <= today) dates.push(dateStr)
-  } else if (item.herhaling === 'Kwartaal') {
-    const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr <= today) dates.push(dateStr)
-  } else if (item.herhaling === 'Jaarlijks') {
-    const base = new Date(item.createdAt || now)
-    const maxDay = new Date(now.getFullYear(), base.getMonth() + 1, 0).getDate()
-    const dateStr = `${now.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(Math.min(dag, maxDay))}`
-    if (dateStr <= today) dates.push(dateStr)
-  } else if (item.herhaling === 'Wekelijks') {
-    // Zoek de laatste wekelijkse datum die <= vandaag is
-    let cur = new Date(item.startdatum || item.createdAt || today)
-    let safety = 0
-    while (safety < 200) {
-      const next = new Date(cur)
-      next.setDate(next.getDate() + 7)
-      if (next.toISOString().split('T')[0] > today) break
-      cur = next
-      safety++
-    }
-    const dateStr = cur.toISOString().split('T')[0]
-    if (dateStr <= today) dates.push(dateStr)
-  }
-
-  return dates
-}
-
 export default function useFixedExpenses() {
   const { householdId, loading: householdLoading } = useHousehold()
 
@@ -149,39 +112,51 @@ export default function useFixedExpenses() {
   const [formOpen, setFormOpen]         = useState(false)
   const [editingItem, setEditingItem]   = useState(null)
 
-  // ─── Auto-transacties aanmaken voor vandaag of verleden ───
+  // ─── Auto-transacties aanmaken: backfill t/m vandaag, batch-insert, dedupliceert per periode ───
   const verwerkAutoTransacties = useCallback(async (fixedItems) => {
     if (!householdId || fixedItems.length === 0) return
-    const today = new Date().toISOString().split('T')[0]
+    const today = localISO(new Date())
 
+    const { data: bestaande } = await supabase
+      .from('transactions')
+      .select('vaste_last_id, datum')
+      .eq('household_id', householdId)
+      .not('vaste_last_id', 'is', null)
+
+    const perItem = {}
+    for (const r of (bestaande || [])) {
+      if (!perItem[r.vaste_last_id]) perItem[r.vaste_last_id] = []
+      perItem[r.vaste_last_id].push(r.datum)
+    }
+
+    const nieuweRijen = []
     for (const item of fixedItems) {
       if (!item.actief) continue
-      const dates = berekenVerwachteDatums(item, today)
-
-      for (const datum of dates) {
-        const { data: existing } = await supabase
-          .from('transactions')
-          .select('id')
-          .eq('vaste_last_id', item.id)
-          .eq('datum', datum)
-
-        if (!existing || existing.length === 0) {
-          await supabase.from('transactions').insert({
-            household_id:  householdId,
-            datum,
-            beschrijving:  item.omschrijving,
-            bedrag:        item.bedrag,
-            type:          item.type ?? 'Uitgave',
-            categorie:     item.categorie,
-            subcategorie:  item.sub ?? '',
-            soort:         item.soort ?? 'Noodzaak',
-            wie:           item.wie ?? 'GZ',
-            winkel:        item.winkel ?? '',
-            bron:          'auto',
-            vaste_last_id: item.id,
-          })
-        }
+      const gedekt = new Set((perItem[item.id] || []).map(d => periodeKey(d, item.herhaling)))
+      for (const datum of berekenVerwachteDatums(item, today)) {
+        const key = periodeKey(datum, item.herhaling)
+        if (gedekt.has(key)) continue
+        gedekt.add(key)
+        nieuweRijen.push({
+          household_id:  householdId,
+          datum,
+          beschrijving:  item.omschrijving,
+          bedrag:        item.bedrag,
+          type:          item.type ?? 'Uitgave',
+          categorie:     item.categorie,
+          subcategorie:  item.sub ?? '',
+          soort:         item.soort ?? 'Noodzaak',
+          wie:           item.wie ?? 'GZ',
+          winkel:        item.winkel ?? '',
+          bron:          'auto',
+          vaste_last_id: item.id,
+        })
       }
+    }
+
+    if (nieuweRijen.length > 0) {
+      const { error: insErr } = await supabase.from('transactions').insert(nieuweRijen)
+      if (!insErr) emit('transactions:changed')
     }
   }, [householdId])
 

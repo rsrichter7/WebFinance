@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
-import { registerCache } from './cacheManager'
+import { registerCache, subscribe } from './cacheManager'
 
 const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, bron, vaste_last_id, spaardoel_id, created_at'
 
@@ -108,6 +108,14 @@ export default function useTransactions() {
   useEffect(() => {
     if (!householdLoading) fetchTransactions()
   }, [fetchTransactions, householdLoading])
+
+  useEffect(() => {
+    const unsub = subscribe('transactions:changed', () => {
+      clearCache()
+      fetchTransactions()
+    })
+    return unsub
+  }, [fetchTransactions])
 
   // ─── Transactie toevoegen — cache direct bijwerken ───
   const addTransaction = useCallback(async (tx) => {
