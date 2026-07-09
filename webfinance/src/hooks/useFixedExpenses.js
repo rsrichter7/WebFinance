@@ -1,12 +1,11 @@
 // ─── useFixedExpenses Hook ───
-// Beheer van vaste lasten: CRUD, groepering, totalen en auto-transacties.
-// Gecacht op household_id — cache wordt bij mutaties gewist zodat auto-transacties opnieuw lopen.
+// Beheer van vaste lasten: CRUD, groepering en totalen. Puur overzicht, geen automatische transacties.
+// Gecacht op household_id — cache wordt bij mutaties gewist.
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
-import { registerCache, emit } from './cacheManager'
-import { berekenVerwachteDatums, periodeKey, localISO } from '../utils/vasteLastenDatums'
+import { registerCache } from './cacheManager'
 import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
@@ -112,59 +111,11 @@ export default function useFixedExpenses() {
   const [formOpen, setFormOpen]         = useState(false)
   const [editingItem, setEditingItem]   = useState(null)
 
-  // ─── Auto-transacties aanmaken: backfill t/m vandaag, batch-insert, dedupliceert per periode ───
-  const verwerkAutoTransacties = useCallback(async (fixedItems) => {
-    if (!householdId || fixedItems.length === 0) return
-    const today = localISO(new Date())
-
-    const { data: bestaande } = await supabase
-      .from('transactions')
-      .select('vaste_last_id, datum')
-      .eq('household_id', householdId)
-      .not('vaste_last_id', 'is', null)
-
-    const perItem = {}
-    for (const r of (bestaande || [])) {
-      if (!perItem[r.vaste_last_id]) perItem[r.vaste_last_id] = []
-      perItem[r.vaste_last_id].push(r.datum)
-    }
-
-    const nieuweRijen = []
-    for (const item of fixedItems) {
-      if (!item.actief) continue
-      const gedekt = new Set((perItem[item.id] || []).map(d => periodeKey(d, item.herhaling)))
-      for (const datum of berekenVerwachteDatums(item, today)) {
-        const key = periodeKey(datum, item.herhaling)
-        if (gedekt.has(key)) continue
-        gedekt.add(key)
-        nieuweRijen.push({
-          household_id:  householdId,
-          datum,
-          beschrijving:  item.omschrijving,
-          bedrag:        item.bedrag,
-          type:          item.type ?? 'Uitgave',
-          categorie:     item.categorie,
-          subcategorie:  item.sub ?? '',
-          soort:         item.soort ?? 'Noodzaak',
-          wie:           item.wie ?? 'GZ',
-          winkel:        item.winkel ?? '',
-          bron:          'auto',
-          vaste_last_id: item.id,
-        })
-      }
-    }
-
-    if (nieuweRijen.length > 0) {
-      const { error: insErr } = await supabase.from('transactions').insert(nieuweRijen)
-      if (!insErr) emit('transactions:changed')
-    }
-  }, [householdId])
-
   // ─── Data ophalen uit Supabase ───
   const fetchItems = useCallback(async () => {
     if (!householdId) return
 
-    // Cache geldig voor dit huishouden (auto-transacties al gedraaid bij eerste fetch)
+    // Cache geldig voor dit huishouden
     if (feCache.data !== null && feCache.householdId === householdId) {
       setItems(feCache.data)
       setLoading(false)
@@ -190,8 +141,7 @@ export default function useFixedExpenses() {
     feCache = { data: mapped, householdId }
     setItems(mapped)
     setLoading(false)
-    await verwerkAutoTransacties(mapped)
-  }, [householdId, verwerkAutoTransacties])
+  }, [householdId])
 
   useEffect(() => {
     if (!householdLoading) fetchItems()
