@@ -7,7 +7,7 @@ import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
 import { registerCache } from './cacheManager'
 
-const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, gocardless_id, koppeling_vervalt, created_at'
+const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, gocardless_id, koppeling_vervalt, startsaldo_bedrag, startsaldo_datum, created_at'
 
 // DB (snake_case) → frontend rekening object
 function dbNaarFrontend(row) {
@@ -22,6 +22,8 @@ function dbNaarFrontend(row) {
     bron:              row.bron,
     gocardlessId:      row.gocardless_id,
     koppelingVervalt:  row.koppeling_vervalt,
+    startsaldoBedrag:  row.startsaldo_bedrag ?? null,
+    startsaldoDatum:   row.startsaldo_datum ?? null,
     createdAt:         row.created_at,
   }
 }
@@ -37,6 +39,8 @@ function frontendNaarDb(acc) {
   if (acc.gocardlessId     !== undefined) updates.gocardless_id      = acc.gocardlessId
   if (acc.koppelingVervalt !== undefined) updates.koppeling_vervalt  = acc.koppelingVervalt
   if (acc.userId           !== undefined) updates.user_id            = acc.userId
+  if (acc.startsaldoBedrag !== undefined) updates.startsaldo_bedrag  = acc.startsaldoBedrag
+  if (acc.startsaldoDatum  !== undefined) updates.startsaldo_datum   = acc.startsaldoDatum
   return updates
 }
 

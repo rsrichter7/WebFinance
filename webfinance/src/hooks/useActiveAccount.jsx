@@ -33,8 +33,12 @@ export function AccountProvider({ children }) {
 
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) || null
 
+  const activeStartsaldo = (activeAccount?.startsaldoBedrag !== null && activeAccount?.startsaldoBedrag !== undefined)
+    ? { bedrag: activeAccount.startsaldoBedrag, datum: activeAccount.startsaldoDatum }
+    : null
+
   return (
-    <AccountContext.Provider value={{ accounts, activeAccount, activeAccountId, setActiveAccount, loading }}>
+    <AccountContext.Provider value={{ accounts, activeAccount, activeAccountId, activeStartsaldo, setActiveAccount, loading }}>
       {children}
     </AccountContext.Provider>
   )
@@ -43,7 +47,7 @@ export function AccountProvider({ children }) {
 export function useActiveAccount() {
   const ctx = useContext(AccountContext)
   if (!ctx) {
-    return { accounts: [], activeAccount: null, activeAccountId: null, setActiveAccount: () => {}, loading: true }
+    return { accounts: [], activeAccount: null, activeAccountId: null, activeStartsaldo: null, setActiveAccount: () => {}, loading: true }
   }
   return ctx
 }

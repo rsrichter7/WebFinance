@@ -7,6 +7,7 @@ import useTransactions from '../hooks/useTransactions'
 import useFixedExpenses from '../hooks/useFixedExpenses'
 import useSettings from '../hooks/useSettings'
 import useProfiles from '../hooks/useProfiles'
+import { useActiveAccount } from '../hooks/useActiveAccount'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { sparklineData, relatiefTijdstip } from '../utils/dashboardCalculations'
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const { items: fixedItems, hoofdinkomst } = useFixedExpenses()
   const { settings }  = useSettings()
   const { persons }   = useProfiles()
+  const { activeStartsaldo } = useActiveAccount()
 
   const voornaam = (user?.user_metadata?.full_name || '').split(' ')[0]
 
@@ -109,12 +111,12 @@ export default function DashboardPage() {
 
   // ─── Huidig saldo (cumulatief, periode-onafhankelijk) ───
   const huidigSaldo = useMemo(() => {
-    const sd = settings.startsaldo
+    const sd = activeStartsaldo
     const tx = sd?.datum ? allTransactions.filter(t => t.datum >= sd.datum) : allTransactions
     const ink = tx.filter(t => t.type === 'Inkomst').reduce((s, t) => s + t.bedrag, 0)
     const uit = tx.filter(t => t.type === 'Uitgave').reduce((s, t) => s + t.bedrag, 0)
     return (sd?.bedrag ?? 0) + ink - uit
-  }, [allTransactions, settings.startsaldo])
+  }, [allTransactions, activeStartsaldo])
 
   // ─── Sparklines ───
   const inSparkline  = useMemo(() => sparklineData(allTransactions, 'Inkomst', 6), [allTransactions])
@@ -163,7 +165,6 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14 }}>
           <DashboardHero
             allTransactions={allTransactions} fixedExpenses={fixedItems}
-            settings={settings}
             startDatum={bereik.startDatum} eindDatum={bereik.eindDatum}
             prevStartDatum={bereik.prevStartDatum} prevEindDatum={bereik.prevEindDatum}
             periodeLabel={bereik.label}

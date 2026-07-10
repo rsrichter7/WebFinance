@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react'
 import { useTheme } from '../../hooks/useTheme'
+import { useActiveAccount } from '../../hooks/useActiveAccount'
 import { TAB, fmtShort } from '../../tokens'
 import { berekenVrijBesteedbaar, saldoVerloopPeriode } from '../../utils/dashboardCalculations'
 
@@ -41,10 +42,11 @@ function SparkArea({ data }) {
  *   periodeLabel               — displaynaam bv. "23 jun – 24 jul" (null = gebruik maandnaam)
  */
 export default function DashboardHero({
-  allTransactions, fixedExpenses, settings,
+  allTransactions, fixedExpenses,
   startDatum, eindDatum, prevStartDatum, prevEindDatum, periodeLabel,
 }) {
   const { T } = useTheme()
+  const { activeStartsaldo } = useActiveAccount()
 
   // Dag-voortgang binnen de periode
   const nu       = new Date(); nu.setHours(0, 0, 0, 0)
@@ -68,8 +70,8 @@ export default function DashboardHero({
   }, [allTransactions, fixedExpenses, vrijBesteedbaar, prevStartDatum, prevEindDatum])
 
   const saldoData = useMemo(
-    () => saldoVerloopPeriode(allTransactions, settings.startsaldo, startDatum, eindDatum),
-    [allTransactions, settings.startsaldo, startDatum, eindDatum]
+    () => saldoVerloopPeriode(allTransactions, activeStartsaldo, startDatum, eindDatum),
+    [allTransactions, activeStartsaldo, startDatum, eindDatum]
   )
 
   const isNegatief = vrijBesteedbaar < 0

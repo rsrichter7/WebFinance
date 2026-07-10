@@ -6,39 +6,43 @@ import { useTheme } from '../../hooks/useTheme'
 import { TAB, fmt, fmtDate } from '../../tokens'
 import DatePicker from '../ui/DatePicker'
 import { ICONS } from '../ui/Icons'
-import useSettings from '../../hooks/useSettings'
+import { useActiveAccount } from '../../hooks/useActiveAccount'
+import useAccounts from '../../hooks/useAccounts'
 import SettingsSaldoCheck from './SettingsSaldoCheck'
 
 export default function SettingsSaldo() {
   const { T } = useTheme()
-  const { settings, loading, updateSetting } = useSettings()
+  const { activeAccount, activeAccountId, activeStartsaldo, loading } = useActiveAccount()
+  const { updateAccount } = useAccounts()
   const [bedrag, setBedrag] = useState('')
   const [datum, setDatum]   = useState('')
   const [saved, setSaved]   = useState(false)
 
   useEffect(() => {
-    if (!loading && settings.startsaldo) {
-      setBedrag(String(settings.startsaldo.bedrag ?? ''))
-      setDatum(settings.startsaldo.datum || '')
+    if (!loading && activeStartsaldo) {
+      setBedrag(String(activeStartsaldo.bedrag ?? ''))
+      setDatum(activeStartsaldo.datum || '')
+    } else if (!loading) {
+      setBedrag(''); setDatum('')
     }
-  }, [loading, settings.startsaldo])
+  }, [loading, activeStartsaldo])
 
   async function handleOpslaan() {
     const b = parseFloat(bedrag.replace(',', '.'))
     if (isNaN(b) || !datum) return
-    await updateSetting('startsaldo', { bedrag: b, datum })
+    await updateAccount(activeAccountId, { startsaldoBedrag: b, startsaldoDatum: datum })
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
   async function handleWissen() {
-    await updateSetting('startsaldo', null)
+    await updateAccount(activeAccountId, { startsaldoBedrag: null, startsaldoDatum: null })
     setBedrag(''); setDatum(''); setSaved(false)
   }
 
   const isValid   = bedrag !== '' && !isNaN(parseFloat(bedrag.replace(',', '.'))) && datum !== ''
   const heeftData = bedrag !== '' || datum !== ''
-  const opgeslagen = settings.startsaldo
+  const opgeslagen = activeStartsaldo
 
   return (
     <div>
@@ -46,6 +50,9 @@ export default function SettingsSaldo() {
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Startsaldo</div>
         <div style={{ fontSize: 13.5, color: T.ink3, lineHeight: 1.6 }}>
           Voer je banksaldo in op een bepaalde datum. Transacties van vóór deze datum worden niet meegerekend bij het huidige saldo op het Dashboard.
+          {activeAccount && (
+            <span style={{ color: T.ink4 }}> Dit geldt voor de actieve rekening: {activeAccount.naam}.</span>
+          )}
         </div>
       </div>
 

@@ -6,7 +6,8 @@ import React, { useState, useMemo } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { TAB, fmt } from '../../tokens'
 import DatePicker from '../ui/DatePicker'
-import useSettings from '../../hooks/useSettings'
+import { useActiveAccount } from '../../hooks/useActiveAccount'
+import useAccounts from '../../hooks/useAccounts'
 import useTransactions from '../../hooks/useTransactions'
 import { berekendSaldoOpDatum } from '../../utils/dashboardCalculations'
 
@@ -22,7 +23,8 @@ function volgendeDag(datumStr) {
 
 export default function SettingsSaldoCheck() {
   const { T } = useTheme()
-  const { settings, updateSetting } = useSettings()
+  const { activeAccountId, activeStartsaldo } = useActiveAccount()
+  const { updateAccount } = useAccounts()
   const { allTransactions } = useTransactions()
   const [bedrag, setBedrag] = useState('')
   const [datum, setDatum]   = useState(isoVandaag())
@@ -32,8 +34,8 @@ export default function SettingsSaldoCheck() {
   const heeftInvoer = bedrag !== '' && !isNaN(werkelijk) && !!datum
 
   const berekend = useMemo(
-    () => berekendSaldoOpDatum(allTransactions, settings.startsaldo, datum),
-    [allTransactions, settings.startsaldo, datum]
+    () => berekendSaldoOpDatum(allTransactions, activeStartsaldo, datum),
+    [allTransactions, activeStartsaldo, datum]
   )
   const verschil = heeftInvoer ? werkelijk - berekend : 0
   const klopt = Math.abs(verschil) < 0.01
@@ -41,7 +43,7 @@ export default function SettingsSaldoCheck() {
 
   async function corrigeer() {
     if (!heeftInvoer) return
-    await updateSetting('startsaldo', { bedrag: werkelijk, datum: volgendeDag(datum) })
+    await updateAccount(activeAccountId, { startsaldoBedrag: werkelijk, startsaldoDatum: volgendeDag(datum) })
     setGecorrigeerd(true)
     setTimeout(() => setGecorrigeerd(false), 2500)
   }

@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import useTransactions from '../hooks/useTransactions'
-import useSettings from '../hooks/useSettings'
+import { useActiveAccount } from '../hooks/useActiveAccount'
 import TransactionTopBar from '../components/transactions/TransactionTopBar'
 import TransactionFilters from '../components/transactions/TransactionFilters'
 import TransactionTable from '../components/transactions/TransactionTable'
@@ -21,11 +21,11 @@ export default function TransactionsPage() {
     filters, updateFilter, sort, updateSort, formOpen, setFormOpen,
   } = useTransactions()
 
-  const { settings } = useSettings()
+  const { activeStartsaldo } = useActiveAccount()
 
   // Doorlopend saldo per transactie-id (zelfde logica als Dashboard-saldoberekening)
   const saldoMap = useMemo(() => {
-    const sd = settings.startsaldo
+    const sd = activeStartsaldo
     const startBedrag = sd?.bedrag ?? 0
     const startDatum  = sd?.datum  ?? null
     const tx = startDatum
@@ -42,7 +42,7 @@ export default function TransactionsPage() {
       map[t.id] = saldo
     }
     return map
-  }, [allTransactions, settings.startsaldo])
+  }, [allTransactions, activeStartsaldo])
 
   const [editingTx, setEditingTx]   = useState(null)
   const [importOpen, setImportOpen] = useState(false)
