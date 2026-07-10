@@ -7,7 +7,9 @@ import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { CATEGORIES, getMergedCategories, SOORTEN } from '../../data/categories'
 import useProfiles from '../../hooks/useProfiles'
+import { useActiveAccount } from '../../hooks/useActiveAccount'
 import DatePicker from '../ui/DatePicker'
+import WieKeuze from '../ui/WieKeuze'
 import { fmt, TAB } from '../../tokens'
 
 const FORM_BASE = {
@@ -40,8 +42,18 @@ function SaldoNaTransactie({ saldoNaTransactie, T }) {
 export default function TransactionForm({ open, onClose, onSave, onUpdate, initialDate, editingTransaction, saldoNaTransactie = null }) {
   const { T } = useTheme()
   const { profiles, persons } = useProfiles()
+  const { activeAccount } = useActiveAccount()
+
+  // Persoonlijke rekening: wie ligt vast op de eigenaar, geen keuze nodig.
+  // Veiligheidsklep: als de eigenaar niet naar een profiel te herleiden is, gedraag je als gedeelde rekening.
+  const isPersoonlijk = !!(activeAccount && activeAccount.gedeeld === false)
+  const eigenaarInitialen = isPersoonlijk
+    ? (profiles.find(p => p.userId === activeAccount.userId)?.initialen ?? null)
+    : null
+  const toonWieKeuze = !(isPersoonlijk && eigenaarInitialen)
 
   function emptyForm() {
+    if (isPersoonlijk && eigenaarInitialen) return { ...FORM_BASE, wie: eigenaarInitialen }
     const defaultWie = persons.length > 1 ? 'GZ' : (persons[0]?.initialen ?? '')
     return { ...FORM_BASE, wie: defaultWie }
   }
@@ -60,13 +72,20 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
         categorie: editingTransaction.categorie || CATEGORIES[0].name,
         subcategorie: editingTransaction.subcategorie || CATEGORIES[0].subs[0],
         soort: editingTransaction.soort || 'Noodzaak',
-        wie: editingTransaction.wie || '',
+        wie: (isPersoonlijk && eigenaarInitialen) ? eigenaarInitialen : (editingTransaction.wie || ''),
         notitie: editingTransaction.notitie || '',
       })
     } else {
       setForm({ ...emptyForm(), datum: initialDate || new Date().toISOString().split('T')[0] })
     }
   }, [open])
+
+  // Zet wie op de eigenaar zodra de actieve rekening persoonlijk is — ook bij wisselen van rekening terwijl het formulier open staat
+  useEffect(() => {
+    if (open && isPersoonlijk && eigenaarInitialen) {
+      setForm(prev => prev.wie === eigenaarInitialen ? prev : { ...prev, wie: eigenaarInitialen })
+    }
+  }, [open, isPersoonlijk, eigenaarInitialen])
 
   const allCats = getMergedCategories()
   const currentCat = allCats.find(c => c.name === form.categorie)
@@ -210,26 +229,10 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
             </div>
           </div>
 
-          <div>
-            <label style={labelStyle}>Wie *</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {(persons.length > 1 ? profiles : persons).map(p => (
-                <button key={p.initialen} onClick={() => update('wie', p.initialen)} style={{
-                  flex: 1, minWidth: 80, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  border: `1.5px solid ${form.wie === p.initialen ? T.blue : T.border}`,
-                  background: form.wie === p.initialen ? T.blueSoft : T.card,
-                  color: form.wie === p.initialen ? T.blueText : T.ink3,
-                  display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
-                }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.kleur.bg, color: p.kleur.fg, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 600, flexShrink: 0 }}>
-                    {p.initialen}
-                  </div>
-                  {p.naam.split(' ')[0]}
-                </button>
-              ))}
-            </div>
-          </div>
+          {toonWieKeuze && (
+            <WieKeuze profiles={profiles} persons={persons} value={form.wie}
+              onChange={v => update('wie', v)} T={T} labelStyle={labelStyle} />
+          )}
 
           <div>
             <label style={labelStyle}>Notitie <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>

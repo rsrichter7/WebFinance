@@ -5,7 +5,9 @@ import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { getMergedCategories, SOORTEN } from '../../data/categories'
 import useProfiles from '../../hooks/useProfiles'
+import { useActiveAccount } from '../../hooks/useActiveAccount'
 import DatePicker from '../ui/DatePicker'
+import WieKeuze from '../ui/WieKeuze'
 
 const HERHALINGEN = ['Wekelijks', 'Maandelijks', 'Jaarlijks']
 const CATS = getMergedCategories()
@@ -27,9 +29,18 @@ function WeekendHint({ T }) {
 export default function FixedForm({ open, editingItem, onClose, onSave, initialType = 'Uitgave' }) {
   const { T } = useTheme()
   const { profiles, persons } = useProfiles()
+  const { activeAccount } = useActiveAccount()
   const [form, setForm] = useState(EMPTY_FORM)
 
   const defaultWie = persons.length > 1 ? 'GZ' : (persons[0]?.initialen ?? '')
+
+  // Persoonlijke rekening: wie ligt vast op de eigenaar, geen keuze nodig.
+  // Veiligheidsklep: als de eigenaar niet naar een profiel te herleiden is, gedraag je als gedeelde rekening.
+  const isPersoonlijk = !!(activeAccount && activeAccount.gedeeld === false)
+  const eigenaarInitialen = isPersoonlijk
+    ? (profiles.find(p => p.userId === activeAccount.userId)?.initialen ?? null)
+    : null
+  const toonWieKeuze = !(isPersoonlijk && eigenaarInitialen)
 
   useEffect(() => {
     if (!open) return
@@ -39,12 +50,23 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
         startdatum: editingItem.startdatum, omschrijving: editingItem.omschrijving,
         categorie: editingItem.categorie, sub: editingItem.sub,
         winkel: editingItem.winkel || '', herhaling: editingItem.herhaling,
-        soort: editingItem.soort || 'Noodzaak', wie: editingItem.wie || defaultWie,
+        soort: editingItem.soort || 'Noodzaak',
+        wie: (isPersoonlijk && eigenaarInitialen) ? eigenaarInitialen : (editingItem.wie || defaultWie),
       })
     } else {
-      setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], type: initialType, wie: defaultWie })
+      setForm({
+        ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], type: initialType,
+        wie: (isPersoonlijk && eigenaarInitialen) ? eigenaarInitialen : defaultWie,
+      })
     }
   }, [open, editingItem, initialType, defaultWie])
+
+  // Zet wie op de eigenaar zodra de actieve rekening persoonlijk is — ook bij wisselen van rekening terwijl het formulier open staat
+  useEffect(() => {
+    if (open && isPersoonlijk && eigenaarInitialen) {
+      setForm(prev => prev.wie === eigenaarInitialen ? prev : { ...prev, wie: eigenaarInitialen })
+    }
+  }, [open, isPersoonlijk, eigenaarInitialen])
 
   const allCats = getMergedCategories()
   const currentCat = allCats.find(c => c.name === form.categorie)
@@ -71,7 +93,10 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
       sub: form.sub, winkel: form.winkel.trim(), herhaling: form.herhaling,
       soort: form.soort, wie: form.wie,
     }, isEdit)
-    setForm({ ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0], wie: defaultWie })
+    setForm({
+      ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0],
+      wie: (isPersoonlijk && eigenaarInitialen) ? eigenaarInitialen : defaultWie,
+    })
     if (!keepOpen) onClose()
   }
 
@@ -183,26 +208,10 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
             </div>
           )}
 
-          <div>
-            <label style={L}>Wie *</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {(persons.length > 1 ? profiles : persons).map(p => (
-                <button key={p.initialen} onClick={() => update('wie', p.initialen)} style={{
-                  flex: 1, minWidth: 80, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  border: `1.5px solid ${form.wie === p.initialen ? T.blue : T.border}`,
-                  background: form.wie === p.initialen ? T.blueSoft : T.card,
-                  color: form.wie === p.initialen ? T.blueText : T.ink3,
-                  display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
-                }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.kleur.bg, color: p.kleur.fg, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 600, flexShrink: 0 }}>
-                    {p.initialen}
-                  </div>
-                  {p.naam.split(' ')[0]}
-                </button>
-              ))}
-            </div>
-          </div>
+          {toonWieKeuze && (
+            <WieKeuze profiles={profiles} persons={persons} value={form.wie}
+              onChange={v => update('wie', v)} T={T} labelStyle={L} />
+          )}
         </div>
 
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10 }}>
