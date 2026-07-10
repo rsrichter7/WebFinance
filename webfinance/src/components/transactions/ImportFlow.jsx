@@ -8,6 +8,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import { supabase } from '../../supabaseClient'
 import { useHousehold } from '../../hooks/useHousehold'
+import { useActiveAccount } from '../../hooks/useActiveAccount'
 import useProfiles from '../../hooks/useProfiles'
 import useSettings from '../../hooks/useSettings'
 import { parseCSV, markDuplicates, matchFixedExpenses } from '../../utils/csvParser'
@@ -18,6 +19,7 @@ import BankInstructies from './BankInstructies'
 export default function ImportFlow({ open, onClose, onImportComplete }) {
   const { T } = useTheme()
   const { householdId } = useHousehold()
+  const { activeAccountId, activeAccount } = useActiveAccount()
   const { profiles }    = useProfiles()
   const { settings }    = useSettings()
 
@@ -75,7 +77,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
       limitWarning = `CSV bevat ${result.transactions.length} regels — alleen de eerste ${maxRows} worden geladen.`
     }
     const [{ data: existing }, { data: fixedItems }] = await Promise.all([
-      supabase.from('transactions').select('datum, bedrag, winkel').eq('household_id', householdId),
+      supabase.from('transactions').select('datum, bedrag, winkel').eq('household_id', householdId).eq('account_id', activeAccountId),
       supabase.from('fixed_expenses').select('id, naam, categorie, subcategorie, soort, wie').eq('household_id', householdId).eq('actief', true),
     ])
     let processed = markDuplicates(limited, existing ?? [])
@@ -125,7 +127,7 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
     setValidationError('')
     setImporting(true)
     const toInsert = selected.map(r => ({
-      household_id: householdId, datum: r.datum, bedrag: r.bedrag, type: r.type,
+      household_id: householdId, account_id: activeAccountId, datum: r.datum, bedrag: r.bedrag, type: r.type,
       beschrijving: r.beschrijving, winkel: r.winkel, categorie: r.categorie || '',
       subcategorie: r.subcategorie || '', soort: r.soort || null, wie: r.wie,
       bron: 'import', vaste_last_id: r.vaste_last_id ?? null,
@@ -189,6 +191,11 @@ export default function ImportFlow({ open, onClose, onImportComplete }) {
                   {detectedBank && (
                     <div style={{ marginBottom: 14, padding: '8px 14px', borderRadius: 8, background: T.greenSoft, color: T.green, fontSize: 13, fontWeight: 500, border: `1px solid ${T.green}22` }}>
                       {detectedBank} CSV gedetecteerd — {rows.length} transacties gevonden
+                    </div>
+                  )}
+                  {activeAccount && (
+                    <div style={{ marginBottom: 14, fontSize: 12.5, color: T.ink3 }}>
+                      Importeren naar: <span style={{ fontWeight: 500, color: T.ink2 }}>{activeAccount.naam}</span>
                     </div>
                   )}
                   {validationError && (

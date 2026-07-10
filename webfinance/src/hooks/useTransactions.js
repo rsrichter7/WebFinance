@@ -5,12 +5,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { useActiveAccount } from './useActiveAccount'
 import { registerCache, subscribe } from './cacheManager'
 
-const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, bron, vaste_last_id, spaardoel_id, created_at'
+const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, bron, vaste_last_id, spaardoel_id, account_id, created_at'
 
-let txCache = { data: null, householdId: null }
-function clearCache() { txCache = { data: null, householdId: null } }
+let txCache = { data: null, householdId: null, accountId: null }
+function clearCache() { txCache = { data: null, householdId: null, accountId: null } }
 registerCache(clearCache)
 
 // snake_case (database) → camelCase (frontend)
@@ -29,6 +30,7 @@ function dbNaarFrontend(row) {
     bron:         row.bron ?? 'handmatig',
     vasteLast:    row.vaste_last_id ?? null,
     spaardoelId:  row.spaardoel_id ?? null,
+    accountId:    row.account_id,
     createdAt:    row.created_at,
   }
 }
@@ -53,8 +55,9 @@ function frontendNaarDb(tx) {
 
 export default function useTransactions() {
   const { householdId, loading: householdLoading } = useHousehold()
+  const { activeAccountId, loading: accountsLoading } = useActiveAccount()
 
-  const cacheHit = txCache.data !== null && txCache.householdId === householdId && householdId !== null
+  const cacheHit = txCache.data !== null && txCache.householdId === householdId && txCache.accountId === activeAccountId && householdId !== null
 
   const [transactions, setTransactions] = useState(cacheHit ? txCache.data : [])
   const [loading, setLoading]           = useState(!cacheHit)
@@ -76,10 +79,10 @@ export default function useTransactions() {
 
   // ─── Data ophalen uit Supabase ───
   const fetchTransactions = useCallback(async () => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
 
-    // Cache geldig voor dit huishouden
-    if (txCache.data !== null && txCache.householdId === householdId) {
+    // Cache geldig voor dit huishouden + deze rekening
+    if (txCache.data !== null && txCache.householdId === householdId && txCache.accountId === activeAccountId) {
       setTransactions(txCache.data)
       setLoading(false)
       return
@@ -92,6 +95,7 @@ export default function useTransactions() {
       .from('transactions')
       .select(KOLOMMEN)
       .eq('household_id', householdId)
+      .eq('account_id', activeAccountId)
       .order('datum', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -99,15 +103,15 @@ export default function useTransactions() {
       setError(err.message)
     } else {
       const result = (data ?? []).map(dbNaarFrontend)
-      txCache = { data: result, householdId }
+      txCache = { data: result, householdId, accountId: activeAccountId }
       setTransactions(result)
     }
     setLoading(false)
-  }, [householdId])
+  }, [householdId, activeAccountId])
 
   useEffect(() => {
-    if (!householdLoading) fetchTransactions()
-  }, [fetchTransactions, householdLoading])
+    if (!householdLoading && !accountsLoading) fetchTransactions()
+  }, [fetchTransactions, householdLoading, accountsLoading])
 
   useEffect(() => {
     const unsub = subscribe('transactions:changed', () => {
@@ -119,8 +123,8 @@ export default function useTransactions() {
 
   // ─── Transactie toevoegen — cache direct bijwerken ───
   const addTransaction = useCallback(async (tx) => {
-    if (!householdId) return
-    const row = { ...frontendNaarDb(tx), household_id: householdId }
+    if (!householdId || !activeAccountId) return
+    const row = { ...frontendNaarDb(tx), household_id: householdId, account_id: activeAccountId }
     const { data: rows, error: err } = await supabase
       .from('transactions')
       .insert(row)
@@ -132,7 +136,7 @@ export default function useTransactions() {
       txCache.data = updated
       setTransactions(updated)
     }
-  }, [householdId])
+  }, [householdId, activeAccountId])
 
   // ─── Transactie verwijderen — cache direct bijwerken ───
   const removeTransaction = useCallback(async (id) => {
@@ -161,16 +165,17 @@ export default function useTransactions() {
 
   // ─── Alle transacties verwijderen — cache wissen en state resetten ───
   const deleteAllTransactions = useCallback(async () => {
-    if (!householdId) return { error: 'Geen huishouden gevonden' }
+    if (!householdId || !activeAccountId) return { error: 'Geen huishouden gevonden' }
     const { error: err } = await supabase
       .from('transactions')
       .delete()
       .eq('household_id', householdId)
+      .eq('account_id', activeAccountId)
     if (err) return { error: err.message }
-    txCache = { data: [], householdId }
+    txCache = { data: [], householdId, accountId: activeAccountId }
     setTransactions([])
     return { error: null }
-  }, [householdId])
+  }, [householdId, activeAccountId])
 
   // ─── Filter updaten ───
   const updateFilter = useCallback((key, value) => {
