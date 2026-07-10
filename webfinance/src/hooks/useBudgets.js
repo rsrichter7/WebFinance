@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { useActiveAccount } from './useActiveAccount'
 import { registerCache } from './cacheManager'
 import { CATEGORIES } from '../data/categories'
 
@@ -13,8 +14,8 @@ const STANDAARD_VERDELING = { noodzaak: 50, wens: 30, sparen: 20 }
 // Financieel wordt uitgesloten van budgetberekeningen
 const UITGESLOTEN_CAT = 'Financieel'
 
-let bCache = { state: null, householdId: null }
-function clearCache() { bCache = { state: null, householdId: null } }
+let bCache = { state: null, householdId: null, accountId: null }
+function clearCache() { bCache = { state: null, householdId: null, accountId: null } }
 registerCache(clearCache)
 
 function verwerkData(budgetData, goalData, txData) {
@@ -55,9 +56,10 @@ function verwerkData(budgetData, goalData, txData) {
 
 export default function useBudgets() {
   const { householdId, loading: householdLoading } = useHousehold()
+  const { activeAccountId, loading: accountsLoading } = useActiveAccount()
   const now = new Date()
 
-  const cacheHit = bCache.state !== null && bCache.householdId === householdId && householdId !== null
+  const cacheHit = bCache.state !== null && bCache.householdId === householdId && bCache.accountId === activeAccountId && householdId !== null
   const cached   = cacheHit ? bCache.state : null
 
   const [budgetModus, setBudgetModusState]               = useState(cached?.budgetModus || '50/30/20')
@@ -91,9 +93,9 @@ export default function useBudgets() {
 
   // ─── Alles ophalen uit Supabase ───
   const fetchAll = useCallback(async (silent = false) => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
 
-    if (bCache.state !== null && bCache.householdId === householdId) {
+    if (bCache.state !== null && bCache.householdId === householdId && bCache.accountId === activeAccountId) {
       const s = bCache.state
       setBudgetModusState(s.budgetModus)
       setHandmatigeVerdelingState(s.handmatigeVerdeling)
@@ -114,13 +116,16 @@ export default function useBudgets() {
     ] = await Promise.all([
       supabase.from('budgets')
         .select('id, categorie, bedrag, modus, verdeling, subcategoriebudgetten')
-        .eq('household_id', householdId),
+        .eq('household_id', householdId)
+        .eq('account_id', activeAccountId),
       supabase.from('savings_goals')
         .select('id, naam, doelbedrag, deadline, icoon')
-        .eq('household_id', householdId),
+        .eq('household_id', householdId)
+        .eq('account_id', activeAccountId),
       supabase.from('transactions')
         .select('datum, bedrag, type, categorie, subcategorie, soort, spaardoel_id')
-        .eq('household_id', householdId),
+        .eq('household_id', householdId)
+        .eq('account_id', activeAccountId),
     ])
 
     if (budgetErr || goalErr || txErr) {
@@ -130,7 +135,7 @@ export default function useBudgets() {
     }
 
     const processed = verwerkData(budgetData, goalData, txData)
-    bCache = { state: processed, householdId }
+    bCache = { state: processed, householdId, accountId: activeAccountId }
 
     setBudgetModusState(processed.budgetModus)
     setHandmatigeVerdelingState(processed.handmatigeVerdeling)
@@ -138,14 +143,14 @@ export default function useBudgets() {
     setAllTransactions(processed.allTransactions)
     setSpaardoelen(processed.spaardoelen)
     setLoading(false)
-  }, [householdId])
+  }, [householdId, activeAccountId])
 
   useEffect(() => {
-    if (!householdLoading) fetchAll()
-  }, [fetchAll, householdLoading])
+    if (!householdLoading && !accountsLoading) fetchAll()
+  }, [fetchAll, householdLoading, accountsLoading])
 
   function invalideerEnHerlaad() {
-    bCache = { state: null, householdId: null }
+    bCache = { state: null, householdId: null, accountId: null }
     fetchAll(true)
   }
 
@@ -257,17 +262,18 @@ export default function useBudgets() {
 
   // ─── Budget acties ───
   const voegBudgetToe = useCallback(async (budget) => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
     await supabase.from('budgets').upsert({
       household_id:          householdId,
+      account_id:            activeAccountId,
       categorie:             budget.categorie,
       bedrag:                budget.totaalBudget ?? budget.bedrag ?? 0,
       subcategoriebudgetten: budget.subcategorieBudgetten ?? {},
       modus:                 budgetModus,
       verdeling:             handmatigeVerdeling,
-    }, { onConflict: 'household_id,categorie' })
+    }, { onConflict: 'household_id,account_id,categorie' })
     invalideerEnHerlaad()
-  }, [householdId, budgetModus, handmatigeVerdeling, fetchAll])
+  }, [householdId, activeAccountId, budgetModus, handmatigeVerdeling, fetchAll])
 
   const verwijderBudget = useCallback(async (id) => {
     await supabase.from('budgets').delete().eq('id', id)
@@ -286,16 +292,17 @@ export default function useBudgets() {
 
   // ─── Spaardoel acties ───
   const voegSpaardoelToe = useCallback(async (doel) => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
     const { error: err } = await supabase.from('savings_goals').insert({
       household_id: householdId,
+      account_id:   activeAccountId,
       naam:         doel.naam,
       doelbedrag:   doel.doelbedrag,
       deadline:     doel.deadline || null,
       icoon:        doel.icoon || null,
     })
     if (!err) invalideerEnHerlaad()
-  }, [householdId, fetchAll])
+  }, [householdId, activeAccountId, fetchAll])
 
   const verwijderSpaardoel = useCallback(async (id) => {
     await supabase.from('savings_goals').delete().eq('id', id)
@@ -303,11 +310,12 @@ export default function useBudgets() {
   }, [fetchAll])
 
   const stortOpSpaardoel = useCallback(async (id, bedrag) => {
-    if (!bedrag || bedrag <= 0 || !householdId) return
+    if (!bedrag || bedrag <= 0 || !householdId || !activeAccountId) return
     const doel  = spaardoelen.find(d => d.id === id)
     const today = new Date().toISOString().split('T')[0]
     await supabase.from('transactions').insert({
       household_id: householdId,
+      account_id:    activeAccountId,
       datum:         today,
       bedrag,
       beschrijving:  `Storting spaardoel: ${doel?.naam || ''}`,
@@ -320,7 +328,7 @@ export default function useBudgets() {
       spaardoel_id:  id,
     })
     invalideerEnHerlaad()
-  }, [householdId, spaardoelen, fetchAll])
+  }, [householdId, activeAccountId, spaardoelen, fetchAll])
 
   // ─── Globale instellingen persisteren ───
   const setBudgetModus = useCallback(async (modus) => {
