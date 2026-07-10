@@ -44,9 +44,10 @@ export default function DashboardPage() {
   const { items: fixedItems, hoofdinkomst } = useFixedExpenses()
   const { settings }  = useSettings()
   const { persons }   = useProfiles()
-  const { activeStartsaldo } = useActiveAccount()
+  const { activeAccount, activeStartsaldo } = useActiveAccount()
 
   const voornaam = (user?.user_metadata?.full_name || '').split(' ')[0]
+  const toonVerdeling = persons.length > 1 && activeAccount?.gedeeld === true
 
   const dashboardPeriode = settings.dashboard_periode || 'maand'
 
@@ -190,8 +191,8 @@ export default function DashboardPage() {
         </div>
 
         {/* RIJ 2: Verdeling + Komende + Leningen */}
-        <div style={{ display: 'grid', gridTemplateColumns: persons.length > 1 ? '1fr 1fr 1fr' : '1fr 1fr', gap: 14 }}>
-          {persons.length > 1 && (
+        <div style={{ display: 'grid', gridTemplateColumns: toonVerdeling ? '1fr 1fr 1fr' : '1fr 1fr', gap: 14 }}>
+          {toonVerdeling && (
             <DashboardVerdeling
               allTransactions={allTransactions} persons={persons}
               settings={settings}
