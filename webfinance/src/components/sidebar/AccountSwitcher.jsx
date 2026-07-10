@@ -59,7 +59,7 @@ export default function AccountSwitcher({ collapsed }) {
   }, [open])
 
   function kies(id) { setActiveAccount(id); setOpen(false) }
-  function beheren() { navigate('/instellingen'); setOpen(false) }
+  function beheren() { navigate('/instellingen?sectie=rekeningen'); setOpen(false) }
 
   const persoonlijk = accounts.filter(a => !a.gedeeld)
   const gedeeld = accounts.filter(a => a.gedeeld)

@@ -2,11 +2,13 @@
 // Instellingen pagina: eigen sidebar links, sectie-content rechts.
 
 import React, { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import SettingsTopBar         from '../components/settings/SettingsTopBar'
 import SettingsSidebar        from '../components/settings/SettingsSidebar'
 import SettingsProfile        from '../components/settings/SettingsProfile'
 import SettingsHousehold      from '../components/settings/SettingsHousehold'
+import SettingsAccounts       from '../components/settings/SettingsAccounts'
 import SettingsSaldo          from '../components/settings/SettingsSaldo'
 import SettingsPreferences    from '../components/settings/SettingsPreferences'
 import SettingsCategories     from '../components/settings/SettingsCategories'
@@ -19,9 +21,13 @@ function isAdminUnlocked() {
   return localStorage.getItem('webfinance_admin_unlocked') === 'true'
 }
 
+const VALID_SECTIONS = ['profiel', 'huishouden', 'rekeningen', 'saldo', 'voorkeuren', 'categorieen', 'data', 'notificaties', 'over', 'admin']
+
 export default function SettingsPage() {
   const { T } = useTheme()
-  const [section,       setSection]       = useState('profiel')
+  const [searchParams] = useSearchParams()
+  const gewensteSectie = searchParams.get('sectie')
+  const [section,       setSection]       = useState(VALID_SECTIONS.includes(gewensteSectie) ? gewensteSectie : 'profiel')
   const [adminUnlocked, setAdminUnlocked] = useState(isAdminUnlocked)
 
   function handleAdminUnlock() { setAdminUnlocked(true) }
@@ -30,6 +36,7 @@ export default function SettingsPage() {
   const CONTENT = {
     profiel:      <SettingsProfile />,
     huishouden:   <SettingsHousehold />,
+    rekeningen:   <SettingsAccounts />,
     saldo:        <SettingsSaldo />,
     voorkeuren:   <SettingsPreferences />,
     categorieen:  <SettingsCategories />,

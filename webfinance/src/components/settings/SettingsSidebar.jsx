@@ -8,6 +8,7 @@ import { ICONS } from '../ui/Icons'
 const SECTIONS = [
   { k: 'profiel',      label: 'Profiel',         icon: ICONS.user    },
   { k: 'huishouden',   label: 'Huishouden',       icon: ICONS.users   },
+  { k: 'rekeningen',   label: 'Rekeningen',       icon: ICONS.wallet  },
   { k: 'saldo',        label: 'Saldo',            icon: ICONS.wallet  },
   { k: 'voorkeuren',   label: 'Voorkeuren',       icon: ICONS.sliders },
   { k: 'categorieen',  label: 'Categorieën',      icon: ICONS.folder  },
