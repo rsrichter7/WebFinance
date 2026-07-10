@@ -243,6 +243,21 @@ export function verdelingPerPersoon(transactions, persons, settings, startDatum,
   return { perPersoon, totaal, maxVerschil, gelijkVerdeeld: maxVerschil < 10 }
 }
 
+/**
+ * Berekend saldo t/m een peildatum (inclusief), zelfde regel als het Dashboard.
+ */
+export function berekendSaldoOpDatum(allTransactions, startsaldo, peildatum) {
+  const basis = startsaldo?.bedrag ?? 0
+  const vanaf  = startsaldo?.datum  ?? null
+  let saldo = basis
+  for (const t of (allTransactions || [])) {
+    if (vanaf && t.datum < vanaf) continue
+    if (t.datum > peildatum) continue
+    saldo += t.type === 'Inkomst' ? t.bedrag : -t.bedrag
+  }
+  return saldo
+}
+
 /** Relatief tijdstip vanuit created_at timestamp. */
 export function relatiefTijdstip(createdAt) {
   const diff = Math.floor((Date.now() - new Date(createdAt || Date.now())) / 1000)

@@ -7,6 +7,7 @@ import { TAB, fmt, fmtDate } from '../../tokens'
 import DatePicker from '../ui/DatePicker'
 import { ICONS } from '../ui/Icons'
 import useSettings from '../../hooks/useSettings'
+import SettingsSaldoCheck from './SettingsSaldoCheck'
 
 export default function SettingsSaldo() {
   const { T } = useTheme()
@@ -100,6 +101,8 @@ export default function SettingsSaldo() {
           </div>
         </div>
       )}
+
+      <SettingsSaldoCheck />
     </div>
   )
 }
