@@ -1,6 +1,7 @@
 // ─── SettingsDeleteAccount ───
 // Account verwijderen met bevestigingsdialoog en inline tekstveld.
-// Vereist dat de delete_my_account() SQL-functie bestaat.
+// Roept /api/delete-account aan — solo-huishouden wist alles + zegt Stripe op,
+// gedeeld huishouden laat alleen deze gebruiker vertrekken.
 
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -21,9 +22,21 @@ export default function SettingsDeleteAccount() {
   async function verwijderAccount() {
     if (invoer !== 'VERWIJDEREN') return
     setBezig(true); setFout('')
-    const { error } = await supabase.rpc('delete_my_account')
-    if (error) { setFout('Er is iets misgegaan: ' + error.message); setBezig(false); return }
-    await signOut()
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/delete-account', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+
+    if (!response.ok) {
+      const { error } = await response.json().catch(() => ({ error: 'Onbekende fout' }))
+      setFout('Er is iets misgegaan: ' + error)
+      setBezig(false)
+      return
+    }
+
+    try { await signOut() } catch { /* negeer fout bij uitloggen */ }
     navigate('/login?deleted=true')
   }
 
@@ -38,9 +51,11 @@ export default function SettingsDeleteAccount() {
         Account verwijderen (AVG)
       </div>
       <div style={{ fontSize: 12, color: T.ink3, lineHeight: 1.5, marginBottom: 14 }}>
-        Let op: dit verwijdert permanent al je gegevens — transacties, vaste lasten, budgetten,
-        spaardoelen, profielen en instellingen. Als je onderdeel bent van een huishouden worden
-        alle gedeelde gegevens van dat huishouden ook verwijderd. Dit kan niet ongedaan worden gemaakt.
+        Let op: als je de enige bent in je huishouden, wordt alles permanent verwijderd —
+        transacties, vaste lasten, budgetten, spaardoelen, profielen en instellingen — en wordt
+        een lopend abonnement direct opgezegd. Deel je een huishouden met anderen, dan wordt
+        alleen jouw account verwijderd; de gedeelde gegevens blijven behouden voor de overige
+        leden. Dit kan niet ongedaan worden gemaakt.
       </div>
 
       {!open ? (
@@ -56,9 +71,12 @@ export default function SettingsDeleteAccount() {
         <div style={{ background: T.card, border: '1px solid #FECACA', borderRadius: 10, padding: 18 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: T.redText, marginBottom: 10 }}>Weet je het zeker?</div>
           <p style={{ fontSize: 13, color: T.ink2, lineHeight: 1.6, margin: '0 0 16px' }}>
-            Dit verwijdert permanent al je <strong>transacties</strong>, <strong>vaste lasten</strong>,{' '}
-            <strong>budgetten</strong>, <strong>spaardoelen</strong>, <strong>profielen</strong> en{' '}
-            <strong>instellingen</strong>. Dit kan niet ongedaan worden gemaakt.
+            Ben je de enige in je huishouden? Dan verwijdert dit permanent al je{' '}
+            <strong>transacties</strong>, <strong>vaste lasten</strong>, <strong>budgetten</strong>,{' '}
+            <strong>spaardoelen</strong>, <strong>profielen</strong> en <strong>instellingen</strong>,
+            en wordt een lopend abonnement direct opgezegd. Deel je een huishouden, dan wordt
+            alleen jouw account verwijderd — de gedeelde gegevens blijven behouden voor de andere
+            leden en het eigenaarschap gaat over. Dit kan niet ongedaan worden gemaakt.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
