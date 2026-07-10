@@ -5,15 +5,16 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { useActiveAccount } from './useActiveAccount'
 import { registerCache, subscribe } from './cacheManager'
 import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
 
-const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, type, winkel, is_hoofdinkomst, created_at'
+const KOLOMMEN = 'id, naam, bedrag, frequentie, categorie, subcategorie, soort, wie, afschrijfdag, actief, type, winkel, is_hoofdinkomst, account_id, created_at'
 
-let feCache = { data: null, householdId: null }
-function clearCache() { feCache = { data: null, householdId: null } }
+let feCache = { data: null, householdId: null, accountId: null }
+function clearCache() { feCache = { data: null, householdId: null, accountId: null } }
 registerCache(clearCache)
 
 // Reconstrueer startdatum vanuit created_at en afschrijfdag
@@ -41,6 +42,7 @@ function dbNaarFrontend(row) {
     type:            row.type ?? 'Uitgave',
     winkel:          row.winkel ?? '',
     isHoofdinkomst:  row.is_hoofdinkomst ?? false,
+    accountId:       row.account_id,
     startdatum:      maakStartdatum(row.created_at, row.afschrijfdag),
     createdAt:       row.created_at,
   }
@@ -102,8 +104,9 @@ function groupByCategorie(items) {
 
 export default function useFixedExpenses() {
   const { householdId, loading: householdLoading } = useHousehold()
+  const { activeAccountId, loading: accountsLoading } = useActiveAccount()
 
-  const cacheHit = feCache.data !== null && feCache.householdId === householdId && householdId !== null
+  const cacheHit = feCache.data !== null && feCache.householdId === householdId && feCache.accountId === activeAccountId && householdId !== null
 
   const [items, setItems]               = useState(cacheHit ? feCache.data : [])
   const [loading, setLoading]           = useState(!cacheHit)
@@ -113,10 +116,10 @@ export default function useFixedExpenses() {
 
   // ─── Data ophalen uit Supabase ───
   const fetchItems = useCallback(async () => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
 
-    // Cache geldig voor dit huishouden
-    if (feCache.data !== null && feCache.householdId === householdId) {
+    // Cache geldig voor dit huishouden + deze rekening
+    if (feCache.data !== null && feCache.householdId === householdId && feCache.accountId === activeAccountId) {
       setItems(feCache.data)
       setLoading(false)
       return
@@ -129,6 +132,7 @@ export default function useFixedExpenses() {
       .from('fixed_expenses')
       .select(KOLOMMEN)
       .eq('household_id', householdId)
+      .eq('account_id', activeAccountId)
       .order('created_at', { ascending: true })
 
     if (err) {
@@ -138,14 +142,14 @@ export default function useFixedExpenses() {
     }
 
     const mapped = (data ?? []).map(dbNaarFrontend)
-    feCache = { data: mapped, householdId }
+    feCache = { data: mapped, householdId, accountId: activeAccountId }
     setItems(mapped)
     setLoading(false)
-  }, [householdId])
+  }, [householdId, activeAccountId])
 
   useEffect(() => {
-    if (!householdLoading) fetchItems()
-  }, [fetchItems, householdLoading])
+    if (!householdLoading && !accountsLoading) fetchItems()
+  }, [fetchItems, householdLoading, accountsLoading])
 
   useEffect(() => {
     const unsub = subscribe('fixed_expenses:changed', () => {
@@ -157,20 +161,20 @@ export default function useFixedExpenses() {
 
   // ─── Vaste last toevoegen — cache wissen zodat auto-transacties opnieuw lopen ───
   const addItem = useCallback(async (item) => {
-    if (!householdId) return
-    const row = { ...frontendNaarDb(item), household_id: householdId }
+    if (!householdId || !activeAccountId) return
+    const row = { ...frontendNaarDb(item), household_id: householdId, account_id: activeAccountId }
     const { error: err } = await supabase.from('fixed_expenses').insert(row)
     if (!err) {
-      feCache = { data: null, householdId: null }
+      clearCache()
       fetchItems()
     }
-  }, [householdId, fetchItems])
+  }, [householdId, activeAccountId, fetchItems])
 
   // ─── Vaste last verwijderen — cache wissen ───
   const removeItem = useCallback(async (id) => {
     const { error: err } = await supabase.from('fixed_expenses').delete().eq('id', id)
     if (!err) {
-      feCache = { data: null, householdId: null }
+      clearCache()
       fetchItems()
     }
   }, [fetchItems])
@@ -180,7 +184,7 @@ export default function useFixedExpenses() {
     const dbFields = frontendNaarDb(changes)
     const { error: err } = await supabase.from('fixed_expenses').update(dbFields).eq('id', id)
     if (!err) {
-      feCache = { data: null, householdId: null }
+      clearCache()
       fetchItems()
     }
   }, [fetchItems])
@@ -212,7 +216,7 @@ export default function useFixedExpenses() {
       await supabase.from('fixed_expenses').update({ is_hoofdinkomst: false }).eq('id', iid)
     }
     await supabase.from('fixed_expenses').update({ is_hoofdinkomst: true }).eq('id', id)
-    feCache = { data: null, householdId: null }
+    clearCache()
     fetchItems()
   }, [householdId, items, fetchItems])
 

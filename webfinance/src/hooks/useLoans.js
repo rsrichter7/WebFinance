@@ -6,13 +6,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { useActiveAccount } from './useActiveAccount'
 import { registerCache, emit } from './cacheManager'
 import { huidigeMaandlast, berekenEinddatum, resterendeMaanden } from '../utils/loanCalculations'
 
-const KOLOMMEN = 'id, naam, type, aflossingsvorm, oorspronkelijk_bedrag, huidig_saldo, rente_percentage, looptijd_maanden, resterende_maanden, startdatum, einddatum, wie, rekening, notitie, vaste_last_id, created_at'
+const KOLOMMEN = 'id, naam, type, aflossingsvorm, oorspronkelijk_bedrag, huidig_saldo, rente_percentage, looptijd_maanden, resterende_maanden, startdatum, einddatum, wie, rekening, notitie, vaste_last_id, account_id, created_at'
 
-let loanCache = { data: null, householdId: null }
-function clearCache() { loanCache = { data: null, householdId: null } }
+let loanCache = { data: null, householdId: null, accountId: null }
+function clearCache() { loanCache = { data: null, householdId: null, accountId: null } }
 registerCache(clearCache)
 
 function dbNaarFrontend(row) {
@@ -32,6 +33,7 @@ function dbNaarFrontend(row) {
     rekening:              row.rekening ?? '',
     notitie:               row.notitie ?? '',
     vaste_last_id:         row.vaste_last_id,
+    accountId:             row.account_id,
     createdAt:             row.created_at,
   }
 }
@@ -56,17 +58,18 @@ function frontendNaarDb(data) {
 
 export default function useLoans() {
   const { householdId, loading: householdLoading } = useHousehold()
+  const { activeAccountId, loading: accountsLoading } = useActiveAccount()
 
-  const cacheHit = loanCache.data !== null && loanCache.householdId === householdId && householdId !== null
+  const cacheHit = loanCache.data !== null && loanCache.householdId === householdId && loanCache.accountId === activeAccountId && householdId !== null
 
   const [loans, setLoans]     = useState(cacheHit ? loanCache.data : [])
   const [loading, setLoading] = useState(!cacheHit)
   const [error, setError]     = useState(null)
 
   const fetchLoans = useCallback(async () => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
 
-    if (loanCache.data !== null && loanCache.householdId === householdId) {
+    if (loanCache.data !== null && loanCache.householdId === householdId && loanCache.accountId === activeAccountId) {
       setLoans(loanCache.data)
       setLoading(false)
       return
@@ -79,6 +82,7 @@ export default function useLoans() {
       .from('loans')
       .select(KOLOMMEN)
       .eq('household_id', householdId)
+      .eq('account_id', activeAccountId)
       .order('created_at', { ascending: true })
 
     if (err) {
@@ -88,25 +92,25 @@ export default function useLoans() {
     }
 
     const mapped = (data ?? []).map(dbNaarFrontend)
-    loanCache = { data: mapped, householdId }
+    loanCache = { data: mapped, householdId, accountId: activeAccountId }
     setLoans(mapped)
     setLoading(false)
-  }, [householdId])
+  }, [householdId, activeAccountId])
 
   useEffect(() => {
-    if (!householdLoading) fetchLoans()
-  }, [fetchLoans, householdLoading])
+    if (!householdLoading && !accountsLoading) fetchLoans()
+  }, [fetchLoans, householdLoading, accountsLoading])
 
   // ─── Lening toevoegen + bijbehorende vaste last aanmaken ───
   const addLoan = useCallback(async (data) => {
-    if (!householdId) return
+    if (!householdId || !activeAccountId) return
 
     const einddatum = berekenEinddatum(data.startdatum, data.looptijd_maanden)
     const restMaanden = resterendeMaanden(einddatum)
 
     const { data: newLoan, error: loanErr } = await supabase
       .from('loans')
-      .insert({ ...frontendNaarDb(data), einddatum, resterende_maanden: restMaanden, household_id: householdId })
+      .insert({ ...frontendNaarDb(data), einddatum, resterende_maanden: restMaanden, household_id: householdId, account_id: activeAccountId })
       .select()
       .single()
 
@@ -120,6 +124,7 @@ export default function useLoans() {
       .from('fixed_expenses')
       .insert({
         household_id:  householdId,
+        account_id:    activeAccountId,
         naam:          'Aflossing ' + data.naam,
         bedrag:        Math.round(maandlast * 100) / 100,
         frequentie:    'Maandelijks',
@@ -139,10 +144,10 @@ export default function useLoans() {
       await supabase.from('loans').update({ vaste_last_id: fe.id }).eq('id', newLoan.id)
     }
 
-    loanCache = { data: null, householdId: null }
+    clearCache()
     fetchLoans()
     emit('fixed_expenses:changed')
-  }, [householdId, fetchLoans])
+  }, [householdId, activeAccountId, fetchLoans])
 
   // ─── Lening bijwerken — herbereken maandlast bij financiële wijzigingen ───
   const updateLoan = useCallback(async (id, data) => {
@@ -168,7 +173,7 @@ export default function useLoans() {
         .eq('id', bestaande.vaste_last_id)
     }
 
-    loanCache = { data: null, householdId: null }
+    clearCache()
     fetchLoans()
     emit('fixed_expenses:changed')
   }, [loans, fetchLoans])
@@ -183,7 +188,7 @@ export default function useLoans() {
 
     const { error: err } = await supabase.from('loans').delete().eq('id', id)
     if (!err) {
-      loanCache = { data: null, householdId: null }
+      clearCache()
       fetchLoans()
       emit('fixed_expenses:changed')
     }
