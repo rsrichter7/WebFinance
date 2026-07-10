@@ -8,6 +8,7 @@ import FixedStats, { FixedUitgavenDonut } from '../components/fixed/FixedStats'
 import FixedCategoryGroup from '../components/fixed/FixedCategoryGroup'
 import FixedForm from '../components/fixed/FixedForm'
 import FixedLoanSection from '../components/fixed/FixedLoanSection'
+import FixedSuggesties from '../components/fixed/FixedSuggesties'
 import { Card } from '../components/ui/Card'
 import { ICONS } from '../components/ui/Icons'
 import { useTheme } from '../hooks/useTheme'
@@ -31,6 +32,8 @@ export default function FixedPage() {
     <>
       <FixedTopBar onAdd={() => setFormOpen(true)} />
       <div style={{ flex: 1, overflow: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        <FixedSuggesties />
 
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: T.ink3, fontSize: 14 }}>
