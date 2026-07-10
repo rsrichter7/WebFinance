@@ -83,7 +83,7 @@ export default function AccountSwitcher({ collapsed }) {
         {!collapsed && (
           <>
             <span style={{
-              flex: 1, minWidth: 0, textAlign: 'left', fontSize: 13, fontWeight: 500,
+              flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 500,
               color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {activeAccount?.naam || 'Rekening'}
