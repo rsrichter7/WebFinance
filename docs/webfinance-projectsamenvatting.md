@@ -1,6 +1,6 @@
-# Webfinance — Projectsamenvatting v13
+# Webfinance — Projectsamenvatting v14
 
-Plak dit samen met de stijlgids aan het begin van elke nieuwe chat.
+Bijgewerkt: 10 juli 2026. Plak dit samen met de stijlgids aan het begin van elke nieuwe chat.
 
 ---
 
@@ -53,7 +53,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 **Alle pagina's werkend:**
 - **Dashboard** — begroeting, maandselector, 3 StatCards, kostenverdeling, staafdiagram, spaardoelen, recente tx, donut, 50/30/20 score
 - **Transacties** — zoeken, filteren, sorteren, toevoegen, bewerken, verwijderen, auto-badge, import
-- **Vaste Lasten** — twee tabs (Uitgaven / Inkomsten), CRUD voor beide types, auto-transacties (alleen vandaag en toekomst), donut chart, gegroepeerde tabellen per categorie
+- **Vaste Lasten** — twee tabs (Uitgaven / Inkomsten), CRUD voor beide types, puur overzicht/referentie (maakt geen automatische transacties meer aan), donut chart, gegroepeerde tabellen per categorie, suggestie-motor herkent terugkerende vaste lasten uit transacties, leningen-sectie met gekoppelde aflossing-vaste-last
 - **Budgetten** — 50/30/20 + handmatige modus, categorie-tabel, spaardoelen met storten
 - **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters, premium sectie
 - **Instellingen** — profiel, huishouden (met ledenlijst + uitnodigingen), saldo, voorkeuren (incl. thema), categorieën, data beheer, notificaties, admin (incl. feedback-overzicht)
@@ -142,9 +142,48 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Centrale invoervalidatie (`src/utils/validation.js`) — 7 functies
 - Content Security Policy + security headers in `vercel.json`
 - Privacy policy pagina (`/privacy`) toegankelijk zonder login
-- Account verwijderen (AVG) via `delete_my_account()`
+- Account verwijderen (AVG) via serverless functie `/api/delete-account.js` (zie "Account verwijderen + Stripe" hieronder)
 - Data-export als Excel (.xlsx) via Instellingen → Data beheer (SheetJS, 6 tabbladen)
 - "Alle transacties verwijderen" functie met bevestigingsmodal
+
+**Geen automatische transacties meer (kernwijziging):**
+- Vaste lasten én vaste inkomsten maken geen auto-transacties meer aan. `verwerkAutoTransacties` en `berekenVerwachteDatums` zijn uit `useFixedExpenses.js` verwijderd.
+- De pagina's Vaste Lasten en Inkomsten zijn nu puur overzicht/referentie van vaste maandbedragen. Transacties komen uitsluitend uit CSV-import en handmatige invoer.
+- Spaardoel-stortingen blijven `bron: 'auto'` (echte gebruikersactie) — het `'auto'`-label bestaat dus nog, maar wordt niet meer door vaste lasten/inkomsten gebruikt.
+- Reden: dit loste een structurele saldo-afwijking op (twee bronnen registreerden dezelfde werkelijkheid → dubbelingen).
+
+**Kalender — tolerante match verwacht vs. werkelijk:**
+- Nieuwe util `src/utils/kalenderMatch.js` met `MATCH_CONFIG` (dagenGekoppeld 10, dagenHeuristiek 5, dagenWekelijks 3, bedragProcent 0.05, bedragMinimum 1), `maakActualsIndex` en `isVerwachtGedekt`
+- `buildDayMap` matcht nu met speling op datum (± dagen) en bedrag (± %) i.p.v. exact; `getOccurrencesInMonth` projecteert ook Kwartaal-items
+
+**Saldo-controle (Instellingen → Saldo):**
+- Nieuw component `components/settings/SettingsSaldoCheck.jsx` + functie `berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)` in `utils/dashboardCalculations.js`
+- Vergelijkt echt banksaldo met berekend saldo op een datum; "Corrigeer startsaldo" verlegt het startsaldo (ankert op dag+1 om dubbeltellen te voorkomen) — geen nieuwe DB-kolom, hergebruikt het bestaande startsaldo
+
+**Suggestie-motor — vaste lasten herkennen uit transacties:**
+- Nieuwe util `src/utils/vasteLastenDetectie.js` (`detecteerVasteLasten`) + component `components/fixed/FixedSuggesties.jsx` bovenaan de Vaste Lasten-pagina
+- Herkent terugkerende Uitgave-patronen (min. 3 transacties over 3 maanden, bedragstabiliteit 70% binnen ±15%, ritme wekelijks/maandelijks/kwartaal/jaarlijks). Suggestief: gebruiker voegt toe of negeert; genegeerde suggesties in localStorage-key `webfinance_genegeerde_suggesties`
+
+**Account verwijderen + Stripe:**
+- Nieuwe serverless functie `/api/delete-account.js`, aangeroepen vanuit `SettingsDeleteAccount.jsx` (Bearer-token) i.p.v. direct `delete_my_account()`
+- Solo-huishouden: Stripe-abonnement direct opzeggen + heel huishouden wissen + auth-user verwijderen. Gedeeld huishouden: alleen de vertrekkende gebruiker verwijderen, eigenaarschap wordt overgedragen, gedeelde data + abonnement blijven behouden
+- Nieuwe SQL-functies `delete_household_cascade(p_household_id)` en `depart_shared_household(p_user_id)` — SECURITY DEFINER, alleen `service_role`
+
+**Design — winkel/bron vooraan:**
+- Winkel/Bron staat nu vóór Omschrijving en is dikgedrukt; Omschrijving erachter en licht. Toegepast in `TransactionTable`, `IncomeCategoryGroup`, `FixedCategoryGroup`; `DashboardRecentTx` toont winkel als hoofdregel; `CalendarDayDetail`-label toont winkel (valt terug op naam)
+- In de slide-in formulieren (`TransactionForm`, `FixedForm`) staat het Winkel-veld vóór het Omschrijving-veld
+
+**Leningen — nu live (was "geparkeerd"):**
+- Nieuwe Supabase-tabel `loans` (RLS via `get_my_household_id()` + grants). `loans.id` is een volgnummer (bigint), maar `loans.vaste_last_id` is een uuid (verwijst naar `fixed_expenses.id`)
+- Hook `useLoans.js` (CRUD + berekeningen), util `loanCalculations.js`. Bij toevoegen wordt automatisch een gekoppelde vaste last "Aflossing [naam]" aangemaakt in `fixed_expenses` (categorie Financieel, subcategorie 'Aflossing lening', soort Noodzaak, type Uitgave, frequentie Maandelijks); bij verwijderen verdwijnt die vaste last mee
+- Componenten: `FixedLoanSection`, `LoanCard`, `LoanForm`, `DashboardLeningen`. De vaste-lasten-lijst ververst live via `emit('fixed_expenses:changed')` (cacheManager pub/sub)
+
+**Bevestigingsmodal:**
+- Nieuw herbruikbaar component `components/ui/ConfirmDialog.jsx` (`createPortal`, huisstijl)
+- Vervangt de browser-confirm bij het verwijderen van transacties, vaste inkomsten, vaste lasten (uitgaven) en leningen (bedraad in `TransactionsPage`, `IncomePage`, `FixedPage`, `FixedLoanSection`)
+
+**Supabase overzicht-views (alleen dashboard):**
+- `household_overview` en `user_overview` koppelen ID's aan naam/e-mail voor handmatig beheer in het Supabase-dashboard. Rechten ingetrokken voor `anon`/`authenticated` (nooit via de app-API bereikbaar)
 
 ### 🔮 Volgende stap (to-do)
 
@@ -168,12 +207,14 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - `user_id` op Ronald's profiel fixen (`profiles` tabel, nog NULL)
 - Derde account opruimen (rs.richter7@gmail.com in auth.users)
 
+**Bug uitzoeken:**
+- Bij het aanmaken van een lening probeert de app een notificatie weg te schrijven die faalt met een 400 (vermoedelijk ontbrekende kolom `ref_key` in de `notifications`-tabel) — nog te onderzoeken
+
 ### 🔮 Later (niet nu)
 
 - GoCardless bankkoppeling (premium) — directe import zonder CSV
 - Automatische AI-categorisering via Anthropic API (premium)
 - Meerdere bankrekeningen (premium)
-- Leningen sectie (geparkeerd)
 - Paginering in tabellen (bij 2000+ transacties)
 - Stripe integratie voor premium-betalingen
 - Cookie-banner (bij analytics)
@@ -222,6 +263,7 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   │   ├── ui/Icons.jsx            → Alle iconen (Lucide-stijl, ICONS object)
 │   │   ├── ui/DatePicker.jsx       → Custom datumkiezer (kalenderweergave)
 │   │   ├── ui/NotificationPanel.jsx → Dropdown met laatste 3 notificaties + bel-icoon badge
+│   │   ├── ui/ConfirmDialog.jsx    → Herbruikbare bevestigingsmodal (createPortal, huisstijl)
 │   │   ├── auth/
 │   │   │   ├── LoginPage.jsx       → Login + registratie + Google OAuth + email-verificatie flow (dark mode)
 │   │   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
@@ -231,7 +273,8 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   │   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
 │   │   │                             ImportFlow, ImportPreviewTable, ImportAiModal, BankInstructies
 │   │   ├── fixed/                  → FixedTopBar, FixedStats, FixedCategoryGroup, FixedForm,
-│   │   │                             FixedInkomstSection, FixedLoanSection (geparkeerd)
+│   │   │                             FixedInkomstSection, FixedSuggesties, FixedLoanSection,
+│   │   │                             LoanCard, LoanForm
 │   │   ├── budgets/                → BudgetTopBar, BudgetStats, BudgetRuleSection, BudgetCategoryTable,
 │   │   │                             BudgetSavingsGoals, BudgetForm
 │   │   ├── analytics/              → AnalyticsTopBar, AnalyticsPeriodFilter, AnalyticsChartCard,
@@ -241,12 +284,14 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   │   │                             CalendarWeekView, CalendarDayDetail, CalendarStats, CalendarLegend
 │   │   ├── dashboard/              → DashboardTopBar, DashboardStatCards, DashboardCategoryDonut,
 │   │   │                             DashboardYearChart, DashboardSavingsGoals, DashboardRecentTx,
-│   │   │                             DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore
+│   │   │                             DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore,
+│   │   │                             DashboardLeningen
 │   │   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold,
 │   │                                 SettingsHouseholdInvitations, SettingsProfile, SettingsSaldo,
-│   │                                 SettingsPreferences, SettingsCategories, SettingsDataManagement,
-│   │                                 SettingsDeleteAccount, SettingsNotifications, SettingsAbout,
-│   │                                 SettingsAdmin, SettingsFeedback, VerwijderLidModal
+│   │                                 SettingsSaldoCheck, SettingsPreferences, SettingsCategories,
+│   │                                 SettingsDataManagement, SettingsDeleteAccount,
+│   │                                 SettingsNotifications, SettingsAbout, SettingsAdmin,
+│   │                                 SettingsFeedback, VerwijderLidModal
 │   │
 │   ├── pages/                      → Eén bestand per pagina (max 100 regels)
 │   │   ├── DashboardPage.jsx
@@ -261,12 +306,13 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   │
 │   ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 │   ├── hooks/
-│   │   ├── cacheManager.js         → In-memory cache utilities voor alle data-hooks
+│   │   ├── cacheManager.js         → In-memory cache utilities voor alle data-hooks + pub/sub (subscribe/emit)
 │   │   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, Google OAuth, refreshUser)
 │   │   ├── useHousehold.js         → Household_id ophalen van ingelogde user
 │   │   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
 │   │   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
-│   │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase, incl. type Inkomst/Uitgave)
+│   │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase, incl. type Inkomst/Uitgave, geen auto-transacties)
+│   │   ├── useLoans.js             → Leningen CRUD + gekoppelde aflossing-vaste-last (Supabase loans tabel)
 │   │   ├── useBudgets.js           → Alle budget state & logica (Supabase)
 │   │   ├── usePremium.js           → Centrale premium-status app-breed (via useSettings)
 │   │   ├── useProfiles.js          → Centrale profielen app-breed (Supabase profiles tabel)
@@ -285,6 +331,10 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   ├── utils/
 │   │   ├── csvParser.js            → Bankdetectie (detectBank) + parseCSV + markDuplicates + matchFixedExpenses
 │   │   ├── validation.js           → Centrale invoervalidatie: validateBedrag/Datum/Tekst/Categorie/Soort/Type/Wie
+│   │   ├── kalenderMatch.js        → MATCH_CONFIG + maakActualsIndex + isVerwachtGedekt (tolerante kalender-match)
+│   │   ├── vasteLastenDetectie.js  → detecteerVasteLasten (suggestie-motor vaste lasten uit transacties)
+│   │   ├── dashboardCalculations.js → o.a. berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)
+│   │   ├── loanCalculations.js     → huidigeMaandlast, berekenEinddatum, resterendeMaanden
 │   │   └── parsers/                → Per bank een eigen parser + helpers.js
 │   │       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx, stripIBANs
 │   │       ├── parseRabobank.js
@@ -302,6 +352,7 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   └── App.jsx                     → Routing (ProtectedRoute; /privacy en /uitnodiging/:token buiten ProtectedRoute)
 
 vercel.json          ← In de root van de repo (naast webfinance/)
+api/delete-account.js ← Serverless functie (root van de repo), Stripe opzeggen + huishouden/gebruiker verwijderen
 ```
 
 ---
@@ -347,7 +398,8 @@ Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
 - `useHousehold.js` — household_id van ingelogde user; gebruikt door alle data-hooks
 - `useSettings.js` — centrale user settings per user (Supabase `user_settings`)
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
-- `useFixedExpenses.js` — vaste lasten en vaste inkomsten (CRUD, auto-transacties aanmaken)
+- `useFixedExpenses.js` — vaste lasten en vaste inkomsten (CRUD, puur overzicht — maakt geen auto-transacties meer aan)
+- `useLoans.js` — leningen (CRUD + berekeningen, aflossing-vaste-last aanmaken/bijwerken/verwijderen in `fixed_expenses`)
 - `useBudgets.js` — budgetten en spaardoelen (berekeningen, CRUD, maand/jaar filter)
 - `usePremium.js` — centrale premium-status app-breed (leest van `useSettings`)
 - `useProfiles.js` — centrale profielen app-breed (Supabase `profiles` tabel)
@@ -376,12 +428,14 @@ Alle data-hooks gebruiken hetzelfde patroon:
 
 Elke transactie heeft een `bron` veld:
 - `'handmatig'` — door de gebruiker ingevoerd of bewerkt
-- `'auto'` — automatisch aangemaakt (vaste lasten, spaardoel-stortingen)
+- `'auto'` — automatisch aangemaakt (alleen nog spaardoel-stortingen; vaste lasten/inkomsten maken géén auto-transacties meer aan)
 - `'import'` — geïmporteerd via CSV-import
 
 `updateTransaction()` zet `bron` altijd naar `'handmatig'`, ook als origineel `'auto'` of `'import'` was.
 
-**Auto-transacties** worden alleen aangemaakt voor vandaag en de toekomst — nooit retroactief. Dit voorkomt dubbele transacties bij CSV-import.
+### Cachemanager — pub/sub
+
+`cacheManager.js` heeft naast `registerCache`/`clearAllCaches` ook `subscribe(event, fn)` en `emit(event)`. Event `'fixed_expenses:changed'`: `useFixedExpenses` abonneert zich en ververst zichzelf; `useLoans` emit't dit na wijzigingen aan de gekoppelde aflossing-vaste-last (add/update/delete) zodat de Vaste Lasten-lijst live meeverandert.
 
 ### Spaardoelen
 
@@ -463,11 +517,36 @@ Bij gelijke datum worden nieuwste transacties (hoogste `created_at`) eerst getoo
 ### Vaste Lasten — twee tabs
 
 `FixedPage.jsx` heeft twee tabs: **Uitgaven** en **Inkomsten**.
-- Uitgaven: bestaande werking (FixedCategoryGroup, FixedStats)
+- Uitgaven: bestaande werking (FixedCategoryGroup, FixedStats), plus `FixedSuggesties` (suggestie-motor) en `FixedLoanSection` (leningen) bovenaan
 - Inkomsten: `FixedInkomstSection` — donut per persoon + categoriegroepen
 - `FixedForm` ondersteunt `initialType` prop (`'Inkomst'`/`'Uitgave'`)
 - `fixed_expenses.type` kolom: `'Inkomst'` of `'Uitgave'` (default `'Uitgave'`)
 - StatCards: groen = inkomsten, rood = uitgaven, blauw = restant
+- **Geen auto-transacties meer** — beide tabs zijn puur overzicht/referentie; transacties komen uitsluitend uit CSV-import en handmatige invoer
+
+### Suggestie-motor vaste lasten
+
+`utils/vasteLastenDetectie.js` (`detecteerVasteLasten`) herkent terugkerende Uitgave-patronen in transacties (minimaal 3 transacties over 3 maanden, bedragstabiliteit 70% binnen ±15%, ritme wekelijks/maandelijks/kwartaal/jaarlijks). `components/fixed/FixedSuggesties.jsx` toont dit bovenaan de Vaste Lasten-pagina; gebruiker voegt toe of negeert. Genegeerde suggesties staan in localStorage-key `webfinance_genegeerde_suggesties`.
+
+### Leningen architectuur
+
+`useLoans.js` beheert de Supabase-tabel `loans`. `loans.id` is een bigint-volgnummer, `loans.vaste_last_id` is een uuid die verwijst naar `fixed_expenses.id`. Bij `addLoan` wordt automatisch een gekoppelde vaste last "Aflossing [naam]" aangemaakt (categorie Financieel, subcategorie 'Aflossing lening', soort Noodzaak, type Uitgave, frequentie Maandelijks); `updateLoan` werkt die vaste last bij, `deleteLoan` verwijdert hem mee. Elke van deze drie functies emit't `'fixed_expenses:changed'` zodat de Vaste Lasten-lijst live ververst. Componenten: `FixedLoanSection`, `LoanCard`, `LoanForm`, `DashboardLeningen`.
+
+### Bevestigingsmodal
+
+`components/ui/ConfirmDialog.jsx` is de herbruikbare bevestigingsmodal (via `createPortal`, huisstijl — donkere overlay + gecentreerde kaart, rode primaire knop). Vervangt `window.confirm` bij het verwijderen van transacties, vaste inkomsten, vaste lasten (uitgaven) en leningen.
+
+### Saldo-controle (Instellingen → Saldo)
+
+`SettingsSaldoCheck.jsx` vergelijkt het echte banksaldo met het berekende saldo op een gekozen peildatum via `berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)` in `utils/dashboardCalculations.js`. Bij een verschil kan de gebruiker het startsaldo corrigeren (verlegt naar peildatum + 1 dag, om dubbeltellen te voorkomen) — geen nieuwe DB-kolom, hergebruikt het bestaande `settings.startsaldo`.
+
+### Account verwijderen + Stripe
+
+`SettingsDeleteAccount.jsx` roept de serverless functie `/api/delete-account.js` aan (Bearer-token) i.p.v. rechtstreeks de RPC `delete_my_account()`. Solo-huishouden: Stripe-abonnement opzeggen + heel huishouden wissen + auth-user verwijderen (via SQL-functie `delete_household_cascade(p_household_id)`). Gedeeld huishouden: alleen de vertrekkende gebruiker verwijderen, eigenaarschap wordt overgedragen, gedeelde data + abonnement blijven behouden (via SQL-functie `depart_shared_household(p_user_id)`). Beide SQL-functies zijn SECURITY DEFINER en alleen aanroepbaar door `service_role`.
+
+### Design — winkel/bron vooraan
+
+Winkel/Bron staat vóór Omschrijving en is dikgedrukt; Omschrijving erachter en licht. Toegepast in `TransactionTable`, `IncomeCategoryGroup`, `FixedCategoryGroup`; `DashboardRecentTx` toont winkel als hoofdregel; `CalendarDayDetail`-label toont winkel (valt terug op naam). In de slide-in formulieren (`TransactionForm`, `FixedForm`) staat het Winkel-veld vóór het Omschrijving-veld.
 
 ### TransactionForm — bewerk-modus
 
@@ -480,7 +559,8 @@ Bij gelijke datum worden nieuwste transacties (hoogste `created_at`) eerst getoo
 
 Premium-only. Combineert `useTransactions` en `useFixedExpenses` voor verwacht vs. werkelijk.
 - `buildDayMap` en `getMondayOfWeek` zijn named exports die in `CalendarPage` hergebruikt worden
-- Verwachte uitgaven verdwijnen automatisch bij werkelijke match (±1 dag, zelfde bedrag)
+- Matching is tolerant (niet exact): `src/utils/kalenderMatch.js` met `MATCH_CONFIG` (dagenGekoppeld 10, dagenHeuristiek 5, dagenWekelijks 3, bedragProcent 0.05, bedragMinimum 1) bepaalt via `isVerwachtGedekt` of een verwachte post al gedekt is door een echte transactie
+- `getOccurrencesInMonth` projecteert ook Kwartaal-items
 - Handmatig verwijderen via kruisje — opgeslagen in `localStorage` (`webfinance_dismissed_expected`)
 - Inkomsten zichtbaar in kalendercellen (groene pijl omhoog)
 - Verwachte inkomsten (vaste inkomsten) getoond in kalender
@@ -523,6 +603,7 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 | `profiles` | `get_my_household_id()` | Wie-profielen per huishouden (`user_id` kolom koppelt aan auth user) |
 | `transactions` | `get_my_household_id()` | Alle transacties |
 | `fixed_expenses` | `get_my_household_id()` | Vaste lasten én vaste inkomsten |
+| `loans` | `get_my_household_id()` | Leningen (id bigint; `vaste_last_id` uuid → `fixed_expenses.id`) |
 | `budgets` | `get_my_household_id()` | Categorie-budgetten |
 | `savings_goals` | `get_my_household_id()` | Spaardoelen |
 | `user_settings` | `user_id = auth.uid()` | Persoonlijke instellingen |
@@ -537,6 +618,7 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 | `transactions` | `soort` | `'Noodzaak'`, `'Wens'`, `'Sparen'` |
 | `transactions` | `bron` | `'handmatig'`, `'auto'`, `'import'` |
 | `fixed_expenses` | `type` | `'Inkomst'`, `'Uitgave'` (default `'Uitgave'`) |
+| `fixed_expenses` | `subcategorie` | o.a. `'Aflossing lening'` onder Financieel (voor gekoppelde leningen) |
 | `fixed_expenses` | `soort` | `'Noodzaak'`, `'Wens'`, `'Sparen'` |
 | `fixed_expenses` | `frequentie` | `'Maandelijks'`, `'Jaarlijks'`, `'Kwartaal'`, `'Wekelijks'` |
 | `user_settings` | `datumformaat` | `'long'`, `'dmy'`, `'iso'` |
@@ -567,9 +649,16 @@ AFTER INSERT op `auth.users`:
 4. Maakt persoonlijk profiel aan met naam uit auth metadata (`user_id` ingevuld)
 5. Maakt `user_settings` rij aan met defaults
 
-**RPC: `delete_my_account()`**
-Verwijdert alle gebruikersdata in volgorde van foreign key-afhankelijkheden:
+**RPC: `delete_my_account()` — vervangen, niet meer gebruikt vanuit de frontend**
+Verwijderde alle gebruikersdata in volgorde van foreign key-afhankelijkheden:
 transactions → fixed_expenses → budgets → savings_goals → profiles → user_settings → household_members → households → auth.users
+`SettingsDeleteAccount.jsx` roept nu de serverless functie `/api/delete-account.js` aan, die via `service_role` de onderstaande twee functies gebruikt.
+
+**RPC: `delete_household_cascade(p_household_id)`**
+Verwijdert een heel huishouden inclusief alle data (solo-huishouden bij account verwijderen). SECURITY DEFINER, alleen `service_role`.
+
+**RPC: `depart_shared_household(p_user_id)`**
+Verwijdert alleen de vertrekkende gebruiker uit een gedeeld huishouden (household_members + user_settings + auth-user); eigenaarschap wordt overgedragen, gedeelde data + abonnement blijven behouden. SECURITY DEFINER, alleen `service_role`.
 
 **RPC: `accept_household_invitation(invite_token)`**
 Voegt accepterende user toe aan huishouden, verstuurt notificaties naar beide partijen.
@@ -591,6 +680,10 @@ Admin-only: retourneert alle feedback van alle huishoudens.
 
 **RPC: `update_feedback_status(feedback_id, new_status, notitie)`**
 Admin-only: wijzigt status en admin-notitie van een feedback-item.
+
+### Overzicht-views (alleen Supabase-dashboard)
+
+`household_overview` en `user_overview` koppelen ID's aan naam/e-mail voor handmatig beheer. Rechten ingetrokken voor `anon`/`authenticated` — nooit bereikbaar via de app-API.
 
 ---
 
@@ -623,8 +716,9 @@ Admin-only: wijzigt status en admin-notitie van een feedback-item.
 
 1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
-3. **Account verwijderen bij gedeeld huishouden** — `delete_my_account()` verwijdert het hele huishouden; bij meerdere gebruikers in één huishouden moet de logica aangepast worden (eigenaarschap overdragen of alleen eigen data verwijderen)
+3. ~~**Account verwijderen bij gedeeld huishouden**~~ — **OPGELOST**: `/api/delete-account.js` + `depart_shared_household()` handelen gedeelde huishoudens nu correct af (alleen de vertrekkende gebruiker wordt verwijderd, eigenaarschap overgedragen)
 4. **`user_id` op Ronald's profiel is NULL** — `profiles` tabel, handmatig te fixen via Supabase dashboard
+5. **Notificatie-fout bij lening aanmaken** — bij het aanmaken van een lening probeert de app een notificatie weg te schrijven die faalt met een 400 (vermoedelijk ontbrekende kolom `ref_key` in de `notifications`-tabel) — nog te onderzoeken
 
 ---
 
@@ -633,7 +727,7 @@ Admin-only: wijzigt status en admin-notitie van een feedback-item.
 Wonen, Vervoer, Dagelijks leven, Abonnementen & Telecom, Vrije tijd, Financieel, Overig
 (zie `src/data/categories.js` voor subcategorieën)
 
-**Subcategorie onder Financieel: 'Sparen / Beleggen'**
+**Subcategorieën onder Financieel: 'Sparen / Beleggen', 'Aflossing lening'**
 
 Kleuren per categorie (zie `src/data/categoryConfig.js`):
 - Wonen: blue/blueSoft, icoon: home
