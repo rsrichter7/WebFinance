@@ -111,7 +111,7 @@ function ProfielModal({ modal, onSave, onClose }) {
         <div style={{ marginBottom: 16 }}>
           <label style={L}>Naam {!isGZ && '*'}</label>
           <input value={naam} onChange={e => !isGZ && setNaam(e.target.value)}
-            placeholder="Bijv. Anne de Reus"
+            placeholder="Bijv. jan jansen"
             disabled={isGZ}
             autoFocus={!isGZ}
             style={{ ...I, background: isGZ ? T.bg : T.card, color: isGZ ? T.ink3 : T.ink, cursor: isGZ ? 'not-allowed' : 'text' }} />
