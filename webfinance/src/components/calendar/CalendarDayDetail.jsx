@@ -71,7 +71,7 @@ export default function CalendarDayDetail({ day, month, year, dayData, onAdd, on
         <div style={{ marginBottom: hasActual ? 16 : 0 }}>
           <div style={{ fontSize: 11, fontWeight: 500, color: T.ink4, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 4 }}>Verwacht</div>
           {allExpected.map((e, i) => (
-            <ItemRow key={e.id || i} label={e.name} icon={e.income ? ICONS.arrUp : ICONS.clock}
+            <ItemRow key={e.id || i} label={e.winkel || e.name} icon={e.income ? ICONS.arrUp : ICONS.clock}
               iconColor={e.income ? T.green : T.blue}
               amount={`${e.income ? '+' : '−'} ${fmt(e.amount)}`}
               amountColor={e.income ? T.greenText : T.blueText}
@@ -86,7 +86,7 @@ export default function CalendarDayDetail({ day, month, year, dayData, onAdd, on
         <div>
           <div style={{ fontSize: 11, fontWeight: 500, color: T.ink4, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 4 }}>Werkelijk</div>
           {allActual.map((a, i) => (
-            <ItemRow key={i} label={a.name} icon={a.income ? ICONS.arrUp : ICONS.arrDown}
+            <ItemRow key={i} label={a.winkel || a.name} icon={a.income ? ICONS.arrUp : ICONS.arrDown}
               iconColor={a.income ? T.green : T.ink4}
               amount={`${a.income ? '+' : '−'} ${fmt(a.amount)}`}
               amountColor={a.income ? T.greenText : T.ink}

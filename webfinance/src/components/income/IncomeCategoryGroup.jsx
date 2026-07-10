@@ -94,8 +94,8 @@ export default function IncomeCategoryGroup({ icon, title, color, colorSoft, ite
               <th style={{ ...TH, width: 36 }} />
               <th style={TH}>Volgende inkomst</th>
               <th style={TH}>Bedrag</th>
-              <th style={TH}>Omschrijving</th>
               <th style={TH}>Winkel / Bron</th>
+              <th style={TH}>Omschrijving</th>
               <th style={TH}>Categorie</th>
               <th style={TH}>Soort</th>
               <th style={TH}>Wie</th>
@@ -133,8 +133,8 @@ export default function IncomeCategoryGroup({ icon, title, color, colorSoft, ite
                     {FREQ_LABEL[item.herhaling] || ''}
                   </span>
                 </td>
-                <td style={{ ...TD, fontWeight: 500, color: T.ink }}>{item.omschrijving}</td>
-                <td style={{ ...TD, color: T.ink3 }}>{item.winkel || '—'}</td>
+                <td style={{ ...TD, fontWeight: 600, color: T.ink }}>{item.winkel || '—'}</td>
+                <td style={{ ...TD, fontWeight: 400, color: T.ink3 }}>{item.omschrijving}</td>
                 <td style={TD}>
                   <div style={{ color: T.ink2 }}>{item.categorie}</div>
                   <div style={{ color: T.ink4, fontSize: 11.5 }}>{item.sub}</div>

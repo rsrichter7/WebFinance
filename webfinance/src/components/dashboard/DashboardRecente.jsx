@@ -31,10 +31,10 @@ function TxRow({ tx, T, isLast }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
           <span style={{
-            fontSize: 12, fontWeight: 500, color: T.ink,
+            fontSize: 12, fontWeight: 600, color: T.ink,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
           }}>
-            {tx.beschrijving}
+            {tx.winkel || tx.beschrijving}
           </span>
           {isAuto && (
             <span style={{
@@ -46,6 +46,11 @@ function TxRow({ tx, T, isLast }) {
             </span>
           )}
         </div>
+        {tx.winkel && (
+          <div style={{ fontSize: 11, color: T.ink3, marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {tx.beschrijving}
+          </div>
+        )}
         <div style={{ fontSize: 10.5, color: T.ink4 }}>
           {relatiefTijdstip(tx.createdAt)}
         </div>

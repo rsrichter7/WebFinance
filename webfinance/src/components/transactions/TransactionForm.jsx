@@ -167,15 +167,15 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
           </div>
 
           <div>
-            <label style={labelStyle}>Omschrijving *</label>
-            <input type="text" placeholder="Bijv. Boodschappen Albert Heijn" value={form.beschrijving}
-              onChange={e => update('beschrijving', e.target.value)} style={inputStyle} />
-          </div>
-
-          <div>
             <label style={labelStyle}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
             <input type="text" placeholder="bijv. Albert Heijn" value={form.winkel}
               onChange={e => update('winkel', e.target.value)} style={inputStyle} />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Omschrijving *</label>
+            <input type="text" placeholder="Bijv. Boodschappen Albert Heijn" value={form.beschrijving}
+              onChange={e => update('beschrijving', e.target.value)} style={inputStyle} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

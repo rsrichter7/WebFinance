@@ -125,15 +125,15 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
           {form.type === 'Inkomst' && <WeekendHint T={T} />}
 
           <div>
-            <label style={L}>Omschrijving *</label>
-            <input type="text" placeholder="Bijv. Hypotheek" value={form.omschrijving}
-              onChange={e => update('omschrijving', e.target.value)} style={I} />
-          </div>
-
-          <div>
             <label style={L}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
             <input type="text" placeholder="Bijv. Essent" value={form.winkel}
               onChange={e => update('winkel', e.target.value)} style={I} />
+          </div>
+
+          <div>
+            <label style={L}>Omschrijving *</label>
+            <input type="text" placeholder="Bijv. Hypotheek" value={form.omschrijving}
+              onChange={e => update('omschrijving', e.target.value)} style={I} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
