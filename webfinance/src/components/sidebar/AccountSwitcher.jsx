@@ -101,6 +101,7 @@ export default function AccountSwitcher({ collapsed }) {
           background: T.card, border: `1px solid ${T.border}`,
           borderRadius: 12, boxShadow: T.shadow,
           padding: 6, zIndex: 1000,
+          fontFamily: "'Inter', system-ui, sans-serif",
         }}>
           {[['Persoonlijk', persoonlijk], ['Gedeeld', gedeeld]].map(([label, lijst]) => lijst.length > 0 && (
             <div key={label}>
