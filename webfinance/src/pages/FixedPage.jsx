@@ -1,7 +1,7 @@
 // ─── FixedPage ───
 // Overzichtspagina voor vaste lasten (alleen uitgaven) en leningen.
 
-import React from 'react'
+import React, { useState } from 'react'
 import useFixedExpenses from '../hooks/useFixedExpenses'
 import FixedTopBar from '../components/fixed/FixedTopBar'
 import FixedStats, { FixedUitgavenDonut } from '../components/fixed/FixedStats'
@@ -11,6 +11,7 @@ import FixedLoanSection from '../components/fixed/FixedLoanSection'
 import FixedSuggesties from '../components/fixed/FixedSuggesties'
 import { Card } from '../components/ui/Card'
 import { ICONS } from '../components/ui/Icons'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { useTheme } from '../hooks/useTheme'
 
 export default function FixedPage() {
@@ -22,6 +23,8 @@ export default function FixedPage() {
     editingItem, openEdit, closeForm,
     loading,
   } = useFixedExpenses()
+
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   function handleSave(data, isEdit) {
     if (isEdit && editingItem) updateItem(editingItem.id, data)
@@ -82,7 +85,7 @@ export default function FixedPage() {
                 items={group.items}
                 subtotal={group.subtotal}
                 onEdit={openEdit}
-                onRemove={removeItem}
+                onRemove={(id) => setPendingDelete(id)}
               />
             ))}
           </>
@@ -95,6 +98,14 @@ export default function FixedPage() {
         onClose={closeForm}
         onSave={handleSave}
         initialType="Uitgave"
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Vaste last verwijderen?"
+        message="Weet je zeker dat je deze vaste last wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+        onConfirm={() => { removeItem(pendingDelete); setPendingDelete(null) }}
+        onClose={() => setPendingDelete(null)}
       />
     </>
   )

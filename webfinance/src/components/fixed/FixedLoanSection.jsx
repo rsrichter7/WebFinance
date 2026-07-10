@@ -9,6 +9,7 @@ import { ICONS } from '../ui/Icons'
 import useLoans from '../../hooks/useLoans'
 import LoanCard from './LoanCard'
 import LoanForm from './LoanForm'
+import ConfirmDialog from '../ui/ConfirmDialog'
 
 const TYPEN = ['Hypotheek', 'Autolening', 'Studieschuld', 'Persoonlijke lening']
 
@@ -17,6 +18,7 @@ export default function FixedLoanSection() {
   const { loans, loading, addLoan, updateLoan, deleteLoan } = useLoans()
   const [formOpen, setFormOpen]         = useState(false)
   const [editingLoan, setEditingLoan]   = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   function openEdit(loan) {
     setEditingLoan(loan)
@@ -39,7 +41,7 @@ export default function FixedLoanSection() {
   }
 
   function handleDelete(id) {
-    deleteLoan(id)
+    setPendingDelete(id)
   }
 
   const heeftLeningen = loans.length > 0
@@ -136,6 +138,14 @@ export default function FixedLoanSection() {
         editingLoan={editingLoan}
         onClose={handleClose}
         onSave={handleSave}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Lening verwijderen?"
+        message="Weet je zeker dat je deze lening wilt verwijderen? De bijbehorende aflossing (vaste last) wordt ook verwijderd. Dit kan niet ongedaan worden gemaakt."
+        onConfirm={() => { deleteLoan(pendingDelete); setPendingDelete(null) }}
+        onClose={() => setPendingDelete(null)}
       />
     </>
   )

@@ -11,6 +11,7 @@ import TransactionTable from '../components/transactions/TransactionTable'
 import TransactionForm from '../components/transactions/TransactionForm'
 import ImportFlow from '../components/transactions/ImportFlow'
 import { StatCard } from '../components/ui/Card'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 
 export default function TransactionsPage() {
   const { T } = useTheme()
@@ -45,6 +46,7 @@ export default function TransactionsPage() {
 
   const [editingTx, setEditingTx]   = useState(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   if (loading) {
     return (
@@ -69,7 +71,7 @@ export default function TransactionsPage() {
 
         <div style={{ padding: '0 28px' }}>
           <TransactionTable transactions={transactions} sort={sort} onSort={updateSort}
-            onDelete={removeTransaction} onEdit={(tx) => setEditingTx(tx)} count={transactionCount} />
+            onDelete={(id) => setPendingDelete(id)} onEdit={(tx) => setEditingTx(tx)} count={transactionCount} />
         </div>
       </div>
 
@@ -83,6 +85,14 @@ export default function TransactionsPage() {
       />
 
       <ImportFlow open={importOpen} onClose={() => setImportOpen(false)} onImportComplete={fetchTransactions} />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Transactie verwijderen?"
+        message="Weet je zeker dat je deze transactie wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+        onConfirm={() => { removeTransaction(pendingDelete); setPendingDelete(null) }}
+        onClose={() => setPendingDelete(null)}
+      />
     </>
   )
 }

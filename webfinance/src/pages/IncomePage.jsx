@@ -1,7 +1,7 @@
 // ─── IncomePage ───
 // Overzichtspagina voor vaste inkomsten.
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useTheme } from '../hooks/useTheme'
 import useFixedExpenses from '../hooks/useFixedExpenses'
 import useTransactions from '../hooks/useTransactions'
@@ -12,6 +12,7 @@ import IncomeCostSplit from '../components/income/IncomeCostSplit'
 import IncomeDonutCard from '../components/income/IncomeDonutCard'
 import IncomeSection from '../components/income/IncomeSection'
 import FixedForm from '../components/fixed/FixedForm'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 
 export default function IncomePage() {
   const { T } = useTheme()
@@ -26,6 +27,7 @@ export default function IncomePage() {
 
   const { allTransactions } = useTransactions()
   const { persons } = useProfiles()
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   const allItems = useMemo(
     () => groupedInkomsten.flatMap(g => g.items),
@@ -55,13 +57,21 @@ export default function IncomePage() {
               </div>
             )}
             <IncomeSection
-              groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={removeItem}
+              groupedInkomsten={groupedInkomsten} onEdit={openEdit} onRemove={(id) => setPendingDelete(id)}
               hoofdinkomstId={hoofdinkomst?.id} setHoofdinkomst={setHoofdinkomst}
             />
           </>
         )}
       </div>
       <FixedForm open={formOpen} editingItem={editingItem} onClose={closeForm} onSave={handleSave} initialType="Inkomst" />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Inkomst verwijderen?"
+        message="Weet je zeker dat je deze vaste inkomst wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+        onConfirm={() => { removeItem(pendingDelete); setPendingDelete(null) }}
+        onClose={() => setPendingDelete(null)}
+      />
     </>
   )
 }
