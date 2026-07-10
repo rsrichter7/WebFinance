@@ -109,7 +109,7 @@ Bouwen: als laatste
 - Recente transacties (laatste 5)
 - Kostenverdeling Ronald / Anne
 - 50/30/20 indicator: hoe scoor je deze maand vs de regel
-- (Later) Rekeningkiezer als meerdere rekeningen gekoppeld zijn
+- ✅ Rekeningkiezer (rekening-switcher in sidebar) — afgerond, meerdere rekeningen (persoonlijk/gedeeld) live
 - (Later) Notificaties/meldingen
 
 ---
@@ -361,7 +361,7 @@ Onderaan sidebar:
 - Aanpasbare Analytics widgets
 - Kalender
 - Bankimport / CSV-Excel import
-- Meerdere rekeningen
+- ✅ Meerdere rekeningen — afgerond, live
 - Leningen-tracker
 - Data export
 - Geen advertenties

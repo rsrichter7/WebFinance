@@ -30,7 +30,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ## Huidige status
 
-### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment
+### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment + meerdere rekeningen
 
 **Supabase backend volledig werkend:**
 - Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
@@ -105,7 +105,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 **Saldo-controle (Instellingen → Saldo):**
 - Nieuw component `components/settings/SettingsSaldoCheck.jsx` + functie `berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)` in `utils/dashboardCalculations.js`
-- Vergelijkt echt banksaldo met berekend saldo op een datum; "Corrigeer startsaldo" verlegt het startsaldo (ankert op dag+1 om dubbeltellen te voorkomen) — geen nieuwe DB-kolom, hergebruikt het bestaande startsaldo
+- Vergelijkt echt banksaldo met berekend saldo op een datum; "Corrigeer startsaldo" verlegt het startsaldo van de actieve rekening (ankert op dag+1 om dubbeltellen te voorkomen) via `updateAccount(activeAccountId, { startsaldoBedrag, startsaldoDatum })`
 
 **Suggestie-motor — vaste lasten herkennen uit transacties:**
 - Nieuwe util `src/utils/vasteLastenDetectie.js` (`detecteerVasteLasten`) + component `components/fixed/FixedSuggesties.jsx` bovenaan de Vaste Lasten-pagina
@@ -129,38 +129,32 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Nieuw herbruikbaar component `components/ui/ConfirmDialog.jsx` (`createPortal`, huisstijl)
 - Vervangt de browser-confirm bij het verwijderen van transacties, vaste inkomsten, vaste lasten (uitgaven) en leningen (bedraad in `TransactionsPage`, `IncomePage`, `FixedPage`, `FixedLoanSection`)
 
+**Meerdere rekeningen per account:**
+- Nieuwe tabel `rekeningen` (persoonlijk of gedeeld, eigenaar via `user_id`, eigen startsaldo, velden voor latere GoCardless-koppeling alvast gereserveerd). `account_id` toegevoegd aan `transactions`, `fixed_expenses`, `budgets`, `savings_goals`, `loans` (ON DELETE CASCADE)
+- Precies één ACTIEVE rekening tegelijk — transacties, vaste lasten/inkomsten, budgetten, spaardoelen, leningen en saldo tonen alleen data van die rekening; wisselen via `AccountSwitcher` in de sidebar
+- Nieuwe hooks `useAccounts.js` (CRUD) en `useActiveAccount.jsx` (context: `activeAccount`, `activeAccountId`, `activeStartsaldo`, `setActiveAccount`)
+- Instellingen → Rekeningen (`SettingsAccounts.jsx`): rekeningen aanmaken/hernoemen/verwijderen, persoonlijk/gedeeld kiezen; laatste rekening niet verwijderbaar
+- Startsaldo staat nu per rekening (`rekeningen.startsaldo_bedrag`/`startsaldo_datum`), niet meer huishouden-breed in `user_settings`
+- Op een persoonlijke rekening ligt `wie` vast op de eigenaar (keuzerij verborgen in `TransactionForm`/`FixedForm`, veiligheidsklep bij onherleidbaar profiel); dashboard verbergt "Jullie verdeling" op persoonlijke rekeningen
+- Budget-uniekheid nu per `(household_id, account_id, categorie)` i.p.v. `(household_id, categorie)`
+- RLS: nieuwe helper `can_access_account()` ("persoonlijk-van-mij OF gedeeld-in-mijn-huishouden"), vervangt de oude household-brede policies op alle vijf rekening-gebonden tabellen
+
 **Supabase overzicht-views (alleen dashboard):**
 - `household_overview` en `user_overview` koppelen ID's aan naam/e-mail voor handmatig beheer in het Supabase-dashboard. Rechten ingetrokken voor `anon`/`authenticated` (nooit via de app-API bereikbaar)
 
-### 🔮 Volgende stap (to-do)
+### 🔮 Roadmap
 
-**UI/UX verbeteringen:**
-- Sidebar: Instellingen-knop verplaatsen naar tussen feedback en uitloggen
-- Dark mode: uitgave/inkomsten knoppen en scorecards dashboard donkerdere kleur
-- Uitloggen-icoon uitlijning fixen in sidebar
-- Vraagteken-icoon per pagina in topbar met korte uitleg van functies
+**Afgerond:** Meerdere rekeningen per account (zie hierboven).
 
-**Notificaties verbeteren:**
-- Gelezen notificaties niet automatisch verwijderen — handmatig via popup of instellingen
-- Automatisch opruimen na 14 dagen
-
-**Deployment & testen:**
-- SMTP sender updaten naar eigen domein (weg van onboarding@resend.dev)
-- Testen met Anne (inloggen, transacties, huishouden-perspectief)
-- CSV parsers testen met echte bankbestanden (ING, ABN AMRO, etc.)
-
-**Data opruimen:**
-- `user_id` op Ronald's profiel fixen (`profiles` tabel, nog NULL)
-- Derde account opruimen (rs.richter7@gmail.com in auth.users)
-
-**Bug uitzoeken:**
-- Bij het aanmaken van een lening probeert de app een notificatie weg te schrijven die faalt met een 400 (vermoedelijk ontbrekende kolom `ref_key` in de `notifications`-tabel) — nog te onderzoeken
+**Nog te doen, in deze volgorde:**
+1. GoCardless bankkoppeling (premium) — directe import zonder CSV. Bouwt voort op de rekeningen-architectuur: na koppelen geeft GoCardless een lijst rekeningen terug die de gebruiker selecteert; per geselecteerde rekening wordt automatisch een rij in `rekeningen` aangemaakt (bron `'gocardless'`, `gocardless_id` gevuld) en worden transacties opgehaald. Banken staan vaak ~4 verzoeken/dag/rekening toe (geen realtime sync); toegang verloopt na max 90 dagen — dan een melding via `koppeling_vervalt` en opnieuw koppelen.
+2. Zelf analyses opzetten — eigen analyses samenstellen, filteren en opslaan op de Analyse-pagina.
+3. Meertaligheid (vlak vóór live) — automatische vertaling via i18next/react-i18next (Nederlands standaard; taalkeuze uit selectielijst bij eerste aanmelding). Nieuwe npm-package, eerst overleggen. Vertaalsysteem trekt teksten uit de UI; vertalingen zelf moeten worden aangeleverd/nagekeken (financiële termen).
+4. Uitleg per pagina (vlak vóór live, als allerlaatste) — per pagina een volledige uitleg van de functies + eenvoudig uitgelegde formules, zichtbaar bij eerste aanmelding en opnieuw op te roepen via een knop. Pas bouwen na meertaligheid, zodat de uitlegteksten mee vertaald kunnen worden.
 
 ### 🔮 Later (niet nu)
 
-- GoCardless bankkoppeling (premium) — directe import zonder CSV
 - Automatische AI-categorisering via Anthropic API (premium)
-- Meerdere bankrekeningen (premium)
 - Paginering in tabellen (bij 2000+ transacties)
 - Stripe integratie voor premium-betalingen
 - Cookie-banner (bij analytics)
@@ -182,7 +176,8 @@ src/
 │   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
 │   ├── feedback/
 │   │   └── FeedbackForm.jsx    → Slide-in panel: onderwerp, bericht, optioneel afbeelding
-│   ├── sidebar/Sidebar.jsx     → Navigatie sidebar (inklapbaar, premium-bewust, feedback-knop, bel-icoon)
+│   ├── sidebar/                → Sidebar.jsx (navigatie, inklapbaar, premium-bewust, feedback-knop, bel-icoon),
+│   │                             AccountSwitcher.jsx (rekening-switcher dropdown onder logo, createPortal)
 │   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
 │   │                             ImportFlow, ImportPreviewTable, ImportAiModal, BankInstructies
 │   ├── fixed/                  → FixedTopBar, FixedStats, FixedCategoryGroup, FixedForm,
@@ -200,8 +195,8 @@ src/
 │   │                             DashboardCostSplit, DashboardIncomeModal, DashboardRuleScore,
 │   │                             DashboardLeningen
 │   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold,
-│                                 SettingsHouseholdInvitations, SettingsProfile, SettingsSaldo,
-│                                 SettingsSaldoCheck, SettingsPreferences, SettingsCategories,
+│                                 SettingsHouseholdInvitations, SettingsProfile, SettingsAccounts,
+│                                 SettingsSaldo, SettingsSaldoCheck, SettingsPreferences, SettingsCategories,
 │                                 SettingsDataManagement, SettingsDeleteAccount,
 │                                 SettingsNotifications, SettingsAbout, SettingsAdmin,
 │                                 SettingsFeedback, VerwijderLidModal
@@ -222,6 +217,8 @@ src/
 │   ├── cacheManager.js         → In-memory cache utilities voor alle data-hooks + pub/sub (subscribe/emit)
 │   ├── useAuth.js              → Supabase authenticatie (login, logout, sessie, Google OAuth, refreshUser)
 │   ├── useHousehold.js         → Household_id ophalen van ingelogde user
+│   ├── useAccounts.js          → CRUD op rekeningen (Supabase rekeningen tabel)
+│   ├── useActiveAccount.jsx    → AccountProvider + useActiveAccount(): actieve rekening, activeStartsaldo
 │   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
 │   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
 │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase, incl. type Inkomst/Uitgave, geen auto-transacties)
@@ -309,6 +306,8 @@ api/delete-account.js ← Serverless functie (root van de repo), Stripe opzeggen
 Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
 - `useAuth.js` — authenticatie (login, logout, sessie, Google OAuth via `signInWithGoogle`, `refreshUser()`)
 - `useHousehold.js` — household_id van ingelogde user; gebruikt door alle data-hooks
+- `useAccounts.js` — CRUD op rekeningen (Supabase `rekeningen` tabel); persoonlijke rekening krijgt automatisch de ingelogde user als eigenaar
+- `useActiveAccount.jsx` — `AccountProvider` + `useActiveAccount()`: `accounts`, `activeAccount`, `activeAccountId`, `activeStartsaldo`, `setActiveAccount`; actieve rekening onthouden in localStorage
 - `useSettings.js` — centrale user settings per user (Supabase `user_settings`)
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
 - `useFixedExpenses.js` — vaste lasten en vaste inkomsten (CRUD, puur overzicht — maakt geen auto-transacties meer aan)
@@ -335,6 +334,7 @@ Alle data-hooks gebruiken hetzelfde patroon:
 - Exporteren altijd `loading` en `error` states
 - `fetchX` via `useCallback` met householdId als dependency
 - DB-mapping: `dbNaarFrontend(row)` + `frontendNaarDb(data)` functies
+- Rekening-gebonden hooks (`useTransactions`, `useFixedExpenses`, `useLoans`, `useBudgets`) filteren daarnaast op `activeAccountId` uit `useActiveAccount()` — cache-sleutel is household + account samen
 
 ### Bron-veld op transacties
 
@@ -390,6 +390,14 @@ Schrijft `datumformaat`, `custom_categories` en `premium` ook naar localStorage 
 
 **GZ-splitsing:** Transacties met `wie === 'GZ'` worden gelijk verdeeld over alle `persons`.
 
+### Rekeningen architectuur
+
+Er is altijd precies één ACTIEVE rekening. `useActiveAccount()` levert `activeAccount`/`activeAccountId`/`activeStartsaldo`; alle rekening-gebonden hooks filteren en stempelen daarop. Rekeningen zijn PERSOONLIJK (`gedeeld: false`, `user_id` = eigenaar) of GEDEELD (`gedeeld: true`, `user_id: null`). `addAccount` in `useAccounts.js` bepaalt de eigenaar expliciet op basis van `gedeeld` — niet overschrijfbaar via de meegegeven data.
+
+Op een persoonlijke rekening is `wie` altijd de eigenaar: `TransactionForm` en `FixedForm` zoeken het profiel met `profiles.userId === activeAccount.userId`, forceren `wie` daarop en verbergen de wie-keuzerij. Zonder herleidbaar profiel valt het terug op de normale keuzerij (veiligheidsklep). Dashboard verbergt `DashboardVerdeling` ("Jullie verdeling") op persoonlijke rekeningen — rij 2 valt dan terug van 3 naar 2 kolommen.
+
+`AccountSwitcher.jsx` (sidebar, onder het logo) wisselt de actieve rekening; `SettingsAccounts.jsx` (Instellingen → Rekeningen) beheert CRUD. Verwijderen van een rekening cascadeert naar alle gekoppelde data; bij verwijderen van de actieve rekening springt de app naar een andere.
+
 ### Sidebar premium-logica
 
 - PREMIUM badge bij Kalender verborgen als `isPremium === true`
@@ -413,7 +421,7 @@ Bij gelijke datum worden nieuwste transacties (hoogste `created_at`) eerst getoo
 - Rij 2: `DashboardSavingsGoals` | `DashboardRecentTx`
 - Rij 3: `DashboardCategoryDonut` | `DashboardRuleScore`
 
-**Huidig saldo:** `settings.startsaldo` (`{ bedrag, datum }`) → saldo = startsaldo + inkomsten − uitgaven vanaf peildatum. Maand-onafhankelijk.
+**Huidig saldo:** `activeStartsaldo` uit `useActiveAccount()` (`{ bedrag, datum }`, per actieve rekening) → saldo = startsaldo + inkomsten − uitgaven vanaf peildatum. Maand-onafhankelijk.
 
 **DashboardCostSplit** leest `settings.kosten_inkomen` en `settings.verdeel_methode` via `useSettings`.
 
@@ -430,7 +438,7 @@ Premium-only. Combineert `useTransactions` en `useFixedExpenses` voor verwacht v
 
 ### Saldo-controle (Instellingen → Saldo)
 
-`SettingsSaldoCheck.jsx` vergelijkt het echte banksaldo met het berekende saldo op een gekozen peildatum via `berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)` in `utils/dashboardCalculations.js`. Bij een verschil kan de gebruiker het startsaldo corrigeren (verlegt naar peildatum + 1 dag, om dubbeltellen te voorkomen) — geen nieuwe DB-kolom, hergebruikt het bestaande `settings.startsaldo`.
+`SettingsSaldoCheck.jsx` vergelijkt het echte banksaldo met het berekende saldo op een gekozen peildatum via `berekendSaldoOpDatum(allTransactions, activeStartsaldo, peildatum)` in `utils/dashboardCalculations.js`. Bij een verschil kan de gebruiker het startsaldo corrigeren via `updateAccount(activeAccountId, { startsaldoBedrag, startsaldoDatum })` (verlegt naar peildatum + 1 dag, om dubbeltellen te voorkomen). Startsaldo staat per rekening (`rekeningen.startsaldo_bedrag`/`startsaldo_datum`), niet meer in `user_settings`.
 
 ### Suggestie-motor vaste lasten
 
@@ -471,12 +479,15 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 | `households` | `get_my_household_id()` | Huishouden |
 | `household_members` | `user_id = auth.uid()` | User ↔ huishouden koppeling |
 | `profiles` | `get_my_household_id()` | Wie-profielen per huishouden |
-| `transactions` | `get_my_household_id()` | Alle transacties |
-| `fixed_expenses` | `get_my_household_id()` | Vaste lasten (én vaste inkomsten) |
-| `loans` | `get_my_household_id()` | Leningen (id bigint; `vaste_last_id` uuid → `fixed_expenses.id`) |
-| `budgets` | `get_my_household_id()` | Categorie-budgetten |
-| `savings_goals` | `get_my_household_id()` | Spaardoelen |
+| `rekeningen` | persoonlijk-van-mij OF gedeeld-in-mijn-huishouden | Bankrekeningen (persoonlijk/gedeeld), eigen startsaldo |
+| `transactions` | `can_access_account(account_id)` | Alle transacties |
+| `fixed_expenses` | `can_access_account(account_id)` | Vaste lasten (én vaste inkomsten) |
+| `loans` | `can_access_account(account_id)` | Leningen (id bigint; `vaste_last_id` uuid → `fixed_expenses.id`) |
+| `budgets` | `can_access_account(account_id)` | Categorie-budgetten (uniek per household_id + account_id + categorie) |
+| `savings_goals` | `can_access_account(account_id)` | Spaardoelen |
 | `user_settings` | `user_id = auth.uid()` | Persoonlijke instellingen |
+
+`can_access_account(p_account_id)` (STABLE) is de RLS-helper voor rekening-gebonden tabellen: toegestaan als de rekening persoonlijk van de aanroeper is, óf gedeeld binnen het eigen huishouden. Vervangt de oude household-brede policies op `transactions`, `fixed_expenses`, `budgets`, `savings_goals` en `loans`.
 
 ### Check constraints (hoofdlettergevoelig!)
 
@@ -503,6 +514,9 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 - `household_members.role` — TEXT: `'eigenaar'` of `'lid'`, default `'eigenaar'`
 - `feedback.status` — TEXT: `'open'`, `'behandeld'`, `'afgewezen'`
 - `profiles.user_id` — UUID, koppelt profiel aan auth user (aangemaakt via `handle_new_user()`)
+- `rekeningen.user_id` — UUID, nullable; eigenaar bij persoonlijke rekening, `null` bij gedeelde rekening
+- `rekeningen.gocardless_id` / `rekeningen.koppeling_vervalt` — gereserveerd voor de latere GoCardless-koppeling (`koppeling_vervalt` voor de 90-dagen-vervalmelding)
+- `transactions.account_id`, `fixed_expenses.account_id`, `budgets.account_id`, `savings_goals.account_id`, `loans.account_id` — FK naar `rekeningen.id`, ON DELETE CASCADE
 - `notifications.ref_key` — TEXT UNIQUE, voorkomt dubbele in-memory notificaties in database
 
 ### Trigger: on_auth_user_created
@@ -552,8 +566,6 @@ Beide zijn SECURITY DEFINER en alleen aanroepbaar met `service_role` (vanuit `/a
 1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
 3. ~~**Account verwijderen bij gedeeld huishouden**~~ — **OPGELOST**: `/api/delete-account.js` + `depart_shared_household()` handelen gedeelde huishoudens nu correct af (alleen de vertrekkende gebruiker wordt verwijderd, eigenaarschap overgedragen)
-4. **`user_id` op Ronald's profiel is NULL** — `profiles` tabel, handmatig te fixen via Supabase dashboard
-5. **Notificatie-fout bij lening aanmaken** — bij het aanmaken van een lening probeert de app een notificatie weg te schrijven die faalt met een 400 (vermoedelijk ontbrekende kolom `ref_key` in de `notifications`-tabel) — nog te onderzoeken
 
 ---
 
