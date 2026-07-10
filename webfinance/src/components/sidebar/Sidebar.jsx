@@ -15,6 +15,7 @@ import useSettings from '../../hooks/useSettings'
 import useNotifications from '../../hooks/useNotifications'
 import NotificationPanel from '../ui/NotificationPanel'
 import useSubscription from '../../hooks/useSubscription'
+import AccountSwitcher from './AccountSwitcher'
 
 const NAV_ITEMS = [
   { to: '/dashboard',    label: 'Dashboard',    icon: ICONS.dashboard },
@@ -65,6 +66,8 @@ export default function Sidebar() {
         <div style={{ width: 32, height: 32, borderRadius: 8, background: T.ink, color: T.bg, display: 'grid', placeItems: 'center', fontSize: 16, fontWeight: 600, flexShrink: 0 }}>€</div>
         {!collapsed && <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>Webfinance</div>}
       </div>
+
+      <AccountSwitcher collapsed={collapsed} />
 
       {!collapsed && (
         <div style={{ fontSize: 11, fontWeight: 500, color: T.ink4, padding: '4px 10px', letterSpacing: 0.4, textTransform: 'uppercase' }}>Menu</div>

@@ -5,6 +5,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { ThemeProvider } from './hooks/useTheme'
+import { AccountProvider } from './hooks/useActiveAccount'
 import { useAuth } from './hooks/useAuth'
 import MainLayout from './layouts/MainLayout'
 import DashboardPage from './pages/DashboardPage'
@@ -41,36 +42,38 @@ function SmartRoot() {
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<SmartRoot />} />
-          <Route path="/welkom" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/uitnodiging/:token" element={<InvitationPage />} />
-          <Route element={
-            <ProtectedRoute>
-              <RequireSubscription>
-                <MainLayout />
-              </RequireSubscription>
-            </ProtectedRoute>
-          }>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/transacties" element={<TransactionsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/budgetten" element={<BudgetsPage />} />
-            <Route path="/inkomsten" element={<IncomePage />} />
-            <Route path="/vaste-lasten" element={<FixedPage />} />
-            <Route path="/kalender" element={<CalendarPage />} />
-            <Route path="/instellingen" element={<SettingsPage />} />
-          </Route>
-          {/* Ingelogd vereist, maar buiten de subscription-afscherming — betaalterugkeer-routes */}
-          <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
-            <Route path="/abonnement/geslaagd"    element={<CheckoutSuccessPage />} />
-            <Route path="/abonnement/geannuleerd" element={<CheckoutCancelPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AccountProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<SmartRoot />} />
+            <Route path="/welkom" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/uitnodiging/:token" element={<InvitationPage />} />
+            <Route element={
+              <ProtectedRoute>
+                <RequireSubscription>
+                  <MainLayout />
+                </RequireSubscription>
+              </ProtectedRoute>
+            }>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/transacties" element={<TransactionsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/budgetten" element={<BudgetsPage />} />
+              <Route path="/inkomsten" element={<IncomePage />} />
+              <Route path="/vaste-lasten" element={<FixedPage />} />
+              <Route path="/kalender" element={<CalendarPage />} />
+              <Route path="/instellingen" element={<SettingsPage />} />
+            </Route>
+            {/* Ingelogd vereist, maar buiten de subscription-afscherming — betaalterugkeer-routes */}
+            <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+              <Route path="/abonnement/geslaagd"    element={<CheckoutSuccessPage />} />
+              <Route path="/abonnement/geannuleerd" element={<CheckoutCancelPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AccountProvider>
     </ThemeProvider>
   )
 }
