@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
+import { useAuth } from './useAuth'
 import { registerCache } from './cacheManager'
 
 const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, gocardless_id, koppeling_vervalt, startsaldo_bedrag, startsaldo_datum, created_at'
@@ -50,6 +51,7 @@ registerCache(clearCache)
 
 export default function useAccounts() {
   const { householdId, loading: householdLoading } = useHousehold()
+  const { user } = useAuth()
 
   const cacheHit = accCache.data !== null && accCache.householdId === householdId && householdId !== null
 
@@ -105,13 +107,14 @@ export default function useAccounts() {
       volgorde:     hoogsteVolgorde + 1,
       bron:         'handmatig',
       ...frontendNaarDb(data),
+      user_id:      data.gedeeld ? null : (user?.id ?? null),
     })
 
     if (err) { setError(err.message); return }
 
     accCache = { data: null, householdId: null }
     fetchAccounts()
-  }, [householdId, accounts, fetchAccounts])
+  }, [householdId, accounts, user, fetchAccounts])
 
   // ─── Rekening bijwerken — cache wissen ───
   const updateAccount = useCallback(async (id, data) => {
