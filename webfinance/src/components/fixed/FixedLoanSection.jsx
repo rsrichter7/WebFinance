@@ -39,7 +39,6 @@ export default function FixedLoanSection() {
   }
 
   function handleDelete(id) {
-    if (!window.confirm('Lening verwijderen? De bijbehorende vaste last wordt ook verwijderd.')) return
     deleteLoan(id)
   }
 

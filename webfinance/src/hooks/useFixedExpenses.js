@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
-import { registerCache } from './cacheManager'
+import { registerCache, subscribe } from './cacheManager'
 import { CATEGORIES } from '../data/categories'
 import { CATEGORY_CONFIG } from '../data/categoryConfig'
 import { T } from '../tokens'
@@ -146,6 +146,14 @@ export default function useFixedExpenses() {
   useEffect(() => {
     if (!householdLoading) fetchItems()
   }, [fetchItems, householdLoading])
+
+  useEffect(() => {
+    const unsub = subscribe('fixed_expenses:changed', () => {
+      clearCache()
+      fetchItems()
+    })
+    return unsub
+  }, [fetchItems])
 
   // ─── Vaste last toevoegen — cache wissen zodat auto-transacties opnieuw lopen ───
   const addItem = useCallback(async (item) => {

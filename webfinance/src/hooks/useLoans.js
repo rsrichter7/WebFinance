@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useHousehold } from './useHousehold'
-import { registerCache } from './cacheManager'
+import { registerCache, emit } from './cacheManager'
 import { huidigeMaandlast, berekenEinddatum, resterendeMaanden } from '../utils/loanCalculations'
 
 const KOLOMMEN = 'id, naam, type, aflossingsvorm, oorspronkelijk_bedrag, huidig_saldo, rente_percentage, looptijd_maanden, resterende_maanden, startdatum, einddatum, wie, rekening, notitie, vaste_last_id, created_at'
@@ -141,6 +141,7 @@ export default function useLoans() {
 
     loanCache = { data: null, householdId: null }
     fetchLoans()
+    emit('fixed_expenses:changed')
   }, [householdId, fetchLoans])
 
   // ─── Lening bijwerken — herbereken maandlast bij financiële wijzigingen ───
@@ -169,6 +170,7 @@ export default function useLoans() {
 
     loanCache = { data: null, householdId: null }
     fetchLoans()
+    emit('fixed_expenses:changed')
   }, [loans, fetchLoans])
 
   // ─── Lening verwijderen + gekoppelde vaste last meeverwijderen ───
@@ -183,6 +185,7 @@ export default function useLoans() {
     if (!err) {
       loanCache = { data: null, householdId: null }
       fetchLoans()
+      emit('fixed_expenses:changed')
     }
   }, [loans, fetchLoans])
 
