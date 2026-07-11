@@ -1,5 +1,4 @@
-// TIJDELIJKE testfunctie (Fase 1) om de Enable Banking-koppeling te verifiëren.
-// Haalt de lijst NL-banken op. Wordt verwijderd zodra dit getest is.
+// Geeft de lijst NL-banken (aspsps) terug voor de Enable Banking-koppelflow. Geen auth nodig.
 
 const { ebFetch } = require('../_lib/enableBanking');
 

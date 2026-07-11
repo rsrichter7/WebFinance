@@ -10,6 +10,7 @@ import { ICONS } from '../ui/Icons'
 import { Card, Badge } from '../ui/Card'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import AccountModal from './AccountModal'
+import BankKoppelModal from './BankKoppelModal'
 
 export default function SettingsAccounts() {
   const { T } = useTheme()
@@ -17,6 +18,7 @@ export default function SettingsAccounts() {
   const { activeAccountId, setActiveAccount } = useActiveAccount()
   const [modal, setModal] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [koppelOpen, setKoppelOpen] = useState(false)
 
   function handleSave(data) {
     if (modal.type === 'edit') updateAccount(modal.account.id, data)
@@ -61,15 +63,23 @@ export default function SettingsAccounts() {
         </div>
       </Card>
 
-      <button onClick={() => setModal({ type: 'add' })} style={addBtn}>
-        <span style={{ display: 'inline-flex' }}>{ICONS.plus}</span>
-        Rekening toevoegen
-      </button>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={() => setModal({ type: 'add' })} style={addBtn}>
+          <span style={{ display: 'inline-flex' }}>{ICONS.plus}</span>
+          Rekening toevoegen
+        </button>
+        <button onClick={() => setKoppelOpen(true)} style={addBtn}>
+          <span style={{ display: 'inline-flex' }}>{ICONS.link}</span>
+          Koppel bank
+        </button>
+      </div>
 
       {modal && createPortal(
         <AccountModal modal={modal} onSave={handleSave} onClose={() => setModal(null)} />,
         document.body
       )}
+
+      {koppelOpen && <BankKoppelModal onClose={() => setKoppelOpen(false)} />}
 
       <ConfirmDialog
         open={!!deleteTarget}
