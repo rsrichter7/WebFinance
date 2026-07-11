@@ -36,19 +36,19 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { data: member, error: memberError } = await supabase
+    const { data: members, error: memberError } = await supabase
       .from('household_members')
       .select('household_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      .eq('user_id', user.id);
 
     if (memberError) {
       console.error('[bank/start] memberError:', memberError);
+      return res.status(500).json({ error: 'Interne serverfout', detail: memberError.message });
     }
-
-    if (!member) {
-      return res.status(400).json({ error: 'Geen huishouden gevonden' });
+    if (!members || members.length === 0) {
+      return res.status(400).json({ error: 'Geen huishouden gevonden voor deze gebruiker' });
     }
+    const householdId = members[0].household_id;
 
     const { ok: aspspsOk, status: aspspsStatus, data: aspspsData } = await ebFetch('/aspsps?country=NL');
     if (!aspspsOk) {
@@ -80,7 +80,7 @@ module.exports = async (req, res) => {
     }
 
     const { error: insertError } = await supabase.from('bank_koppeling_sessies').insert({
-      household_id: member.household_id,
+      household_id: householdId,
       user_id: user.id,
       state,
       aspsp_naam,
