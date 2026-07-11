@@ -8,7 +8,7 @@ import { useHousehold } from './useHousehold'
 import { useAuth } from './useAuth'
 import { registerCache } from './cacheManager'
 
-const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, gocardless_id, koppeling_vervalt, startsaldo_bedrag, startsaldo_datum, created_at'
+const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, extern_account_id, provider, laatst_gesynct, sessie_id, koppeling_vervalt, startsaldo_bedrag, startsaldo_datum, created_at'
 
 // DB (snake_case) → frontend rekening object
 function dbNaarFrontend(row) {
@@ -21,7 +21,10 @@ function dbNaarFrontend(row) {
     iban:              row.iban,
     volgorde:          row.volgorde,
     bron:              row.bron,
-    gocardlessId:      row.gocardless_id,
+    externAccountId:   row.extern_account_id,
+    provider:          row.provider,
+    laatstGesynct:     row.laatst_gesynct,
+    sessieId:          row.sessie_id,
     koppelingVervalt:  row.koppeling_vervalt,
     startsaldoBedrag:  row.startsaldo_bedrag ?? null,
     startsaldoDatum:   row.startsaldo_datum ?? null,
@@ -37,7 +40,10 @@ function frontendNaarDb(acc) {
   if (acc.iban             !== undefined) updates.iban               = acc.iban
   if (acc.volgorde         !== undefined) updates.volgorde           = acc.volgorde
   if (acc.bron             !== undefined) updates.bron               = acc.bron
-  if (acc.gocardlessId     !== undefined) updates.gocardless_id      = acc.gocardlessId
+  if (acc.externAccountId  !== undefined) updates.extern_account_id  = acc.externAccountId
+  if (acc.provider         !== undefined) updates.provider           = acc.provider
+  if (acc.laatstGesynct    !== undefined) updates.laatst_gesynct     = acc.laatstGesynct
+  if (acc.sessieId         !== undefined) updates.sessie_id          = acc.sessieId
   if (acc.koppelingVervalt !== undefined) updates.koppeling_vervalt  = acc.koppelingVervalt
   if (acc.userId           !== undefined) updates.user_id            = acc.userId
   if (acc.startsaldoBedrag !== undefined) updates.startsaldo_bedrag  = acc.startsaldoBedrag
