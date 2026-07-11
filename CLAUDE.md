@@ -130,7 +130,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Vervangt de browser-confirm bij het verwijderen van transacties, vaste inkomsten, vaste lasten (uitgaven) en leningen (bedraad in `TransactionsPage`, `IncomePage`, `FixedPage`, `FixedLoanSection`)
 
 **Meerdere rekeningen per account:**
-- Nieuwe tabel `rekeningen` (persoonlijk of gedeeld, eigenaar via `user_id`, eigen startsaldo, velden voor latere GoCardless-koppeling alvast gereserveerd). `account_id` toegevoegd aan `transactions`, `fixed_expenses`, `budgets`, `savings_goals`, `loans` (ON DELETE CASCADE)
+- Nieuwe tabel `rekeningen` (persoonlijk of gedeeld, eigenaar via `user_id`, eigen startsaldo, velden voor latere Enable Banking-koppeling alvast gereserveerd). `account_id` toegevoegd aan `transactions`, `fixed_expenses`, `budgets`, `savings_goals`, `loans` (ON DELETE CASCADE)
 - Precies één ACTIEVE rekening tegelijk — transacties, vaste lasten/inkomsten, budgetten, spaardoelen, leningen en saldo tonen alleen data van die rekening; wisselen via `AccountSwitcher` in de sidebar
 - Nieuwe hooks `useAccounts.js` (CRUD) en `useActiveAccount.jsx` (context: `activeAccount`, `activeAccountId`, `activeStartsaldo`, `setActiveAccount`)
 - Instellingen → Rekeningen (`SettingsAccounts.jsx`): rekeningen aanmaken/hernoemen/verwijderen, persoonlijk/gedeeld kiezen; laatste rekening niet verwijderbaar
@@ -147,7 +147,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 **Afgerond:** Meerdere rekeningen per account (zie hierboven).
 
 **Nog te doen, in deze volgorde:**
-1. GoCardless bankkoppeling (premium) — directe import zonder CSV. Bouwt voort op de rekeningen-architectuur: na koppelen geeft GoCardless een lijst rekeningen terug die de gebruiker selecteert; per geselecteerde rekening wordt automatisch een rij in `rekeningen` aangemaakt (bron `'gocardless'`, `gocardless_id` gevuld) en worden transacties opgehaald. Banken staan vaak ~4 verzoeken/dag/rekening toe (geen realtime sync); toegang verloopt na max 90 dagen — dan een melding via `koppeling_vervalt` en opnieuw koppelen.
+1. Enable Banking bankkoppeling (premium) — directe import zonder CSV. Bouwt voort op de rekeningen-architectuur: na koppelen geeft Enable Banking een lijst rekeningen terug die de gebruiker selecteert; per geselecteerde rekening wordt automatisch een rij in `rekeningen` aangemaakt (bron `'bank'`, `provider` `'enablebanking'`, `extern_account_id` gevuld) en worden transacties opgehaald (ontdubbeling via `extern_transactie_id`). Banken staan vaak ~4 verzoeken/dag/rekening toe (geen realtime sync); toegang (consent) verloopt na max 180 dagen — dan een melding via `koppeling_vervalt` en opnieuw koppelen.
 2. Zelf analyses opzetten — eigen analyses samenstellen, filteren en opslaan op de Analyse-pagina.
 3. Meertaligheid (vlak vóór live) — automatische vertaling via i18next/react-i18next (Nederlands standaard; taalkeuze uit selectielijst bij eerste aanmelding). Nieuwe npm-package, eerst overleggen. Vertaalsysteem trekt teksten uit de UI; vertalingen zelf moeten worden aangeleverd/nagekeken (financiële termen).
 4. Uitleg per pagina (vlak vóór live, als allerlaatste) — per pagina een volledige uitleg van de functies + eenvoudig uitgelegde formules, zichtbaar bij eerste aanmelding en opnieuw op te roepen via een knop. Pas bouwen na meertaligheid, zodat de uitlegteksten mee vertaald kunnen worden.
@@ -515,7 +515,7 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 - `feedback.status` — TEXT: `'open'`, `'behandeld'`, `'afgewezen'`
 - `profiles.user_id` — UUID, koppelt profiel aan auth user (aangemaakt via `handle_new_user()`)
 - `rekeningen.user_id` — UUID, nullable; eigenaar bij persoonlijke rekening, `null` bij gedeelde rekening
-- `rekeningen.gocardless_id` / `rekeningen.koppeling_vervalt` — gereserveerd voor de latere GoCardless-koppeling (`koppeling_vervalt` voor de 90-dagen-vervalmelding)
+- `rekeningen.extern_account_id` / `rekeningen.provider` / `rekeningen.sessie_id` / `rekeningen.laatst_gesynct` / `rekeningen.koppeling_vervalt` — gereserveerd voor de Enable Banking-koppeling (`provider` waarde `'enablebanking'`, `koppeling_vervalt` voor de 180-dagen-vervalmelding); `transactions.extern_transactie_id` voor ontdubbeling; tabel `bank_koppeling_sessies` koppelt de auth-state aan huishouden+gebruiker
 - `transactions.account_id`, `fixed_expenses.account_id`, `budgets.account_id`, `savings_goals.account_id`, `loans.account_id` — FK naar `rekeningen.id`, ON DELETE CASCADE
 - `notifications.ref_key` — TEXT UNIQUE, voorkomt dubbele in-memory notificaties in database
 
@@ -590,7 +590,7 @@ Kleuren per categorie (zie `src/data/categoryConfig.js`):
 ## Verdienmodel (voor later, niet nu)
 
 - Gratis: basisfuncties
-- Premium (€3–5/mnd): ongelimiteerd, kalender, bankimport, GoCardless koppeling, AI-categorisering, meerdere bankrekeningen, aanpasbare analytics
+- Premium (€3–5/mnd): ongelimiteerd, kalender, bankimport, bankkoppeling, AI-categorisering, meerdere bankrekeningen, aanpasbare analytics
 
 ---
 
