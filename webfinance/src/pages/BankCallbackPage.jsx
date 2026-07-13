@@ -1,12 +1,43 @@
 // ─── BankCallbackPage ───
 // Terugkeerpagina na de bank-login bij Enable Banking. Rondt de koppelsessie af via
-// /api/bank/callback en toont de gevonden bankrekeningen (kale versie, nog geen keuze-UI).
+// /api/bank/callback, laat de gebruiker per bankrekening kiezen (nieuw of aan bestaande
+// koppelen) en maakt de koppeling daadwerkelijk via /api/bank/koppel.
 
 import React, { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
 import { supabase } from '../supabaseClient'
+import { clearAllCaches } from '../hooks/cacheManager'
 import { T as LT } from '../tokens'
+
+// ─── Eén rij: bankrekening + keuze-select ───
+function BankRekeningRij({ T, rekening, waarde, opGewijzigd, bestaandeRekeningen }) {
+  return (
+    <div style={{
+      padding: '12px 14px', borderRadius: 10,
+      border: `1px solid ${T.border}`, background: T.bg,
+    }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{rekening.naam}</div>
+      {rekening.iban && (
+        <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>{rekening.iban}</div>
+      )}
+      <select
+        value={waarde}
+        onChange={(e) => opGewijzigd(rekening.uid, e.target.value)}
+        style={{
+          marginTop: 8, width: '100%', padding: '8px 10px', borderRadius: 8,
+          border: `1px solid ${T.border}`, background: T.card, color: T.ink,
+          fontSize: 13, fontFamily: 'inherit',
+        }}
+      >
+        <option value="nieuw">Nieuwe rekening aanmaken</option>
+        {bestaandeRekeningen.map((r) => (
+          <option key={r.id} value={r.id}>Koppel aan: {r.naam}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
 
 function RondIcoon({ achtergrond, kleur, children }) {
   return (
@@ -27,9 +58,11 @@ export default function BankCallbackPage() {
   const { T } = useTheme()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [staat, setStaat] = useState('laden') // 'laden' | 'klaar' | 'fout'
+  const [staat, setStaat] = useState('laden') // 'laden' | 'klaar' | 'gekoppeld' | 'fout'
   const [foutmelding, setFoutmelding] = useState('')
   const [resultaat, setResultaat] = useState(null)
+  const [keuzes, setKeuzes] = useState({})
+  const [koppelen, setKoppelen] = useState(false)
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -61,6 +94,11 @@ export default function BankCallbackPage() {
       }
 
       setResultaat(data)
+      const initieleKeuzes = {}
+      data.bankRekeningen.forEach((r) => {
+        initieleKeuzes[r.uid] = r.suggestie_rekening_id || 'nieuw'
+      })
+      setKeuzes(initieleKeuzes)
       setStaat('klaar')
     }
 
@@ -69,6 +107,40 @@ export default function BankCallbackPage() {
 
   function terugNaarRekeningen() {
     navigate('/instellingen?sectie=rekeningen')
+  }
+
+  function keuzeGewijzigd(uid, doel) {
+    setKeuzes((prev) => ({ ...prev, [uid]: doel }))
+  }
+
+  async function bevestigKoppeling() {
+    setKoppelen(true)
+    setFoutmelding('')
+
+    const state = searchParams.get('state')
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/bank/koppel', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        state,
+        keuzes: resultaat.bankRekeningen.map((r) => ({ uid: r.uid, doel: keuzes[r.uid] })),
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+    setKoppelen(false)
+
+    if (!response.ok) {
+      setFoutmelding(data.error || 'Koppelen mislukt')
+      return
+    }
+
+    clearAllCaches()
+    setStaat('gekoppeld')
   }
 
   const knopStijl = {
@@ -137,28 +209,47 @@ export default function BankCallbackPage() {
               Bank gekoppeld
             </h1>
             <p style={{ fontSize: 14, color: T.ink3, lineHeight: 1.6, marginBottom: 20 }}>
-              We hebben {resultaat.bankRekeningen.length === 1 ? 'deze rekening' : 'deze rekeningen'} gevonden bij je bank:
+              We hebben {resultaat.bankRekeningen.length === 1 ? 'deze rekening' : 'deze rekeningen'} gevonden bij je bank. Kies per rekening wat je wilt doen:
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
               {resultaat.bankRekeningen.map((r) => (
-                <div key={r.uid} style={{
-                  padding: '12px 14px', borderRadius: 10,
-                  border: `1px solid ${T.border}`, background: T.bg,
-                }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{r.naam}</div>
-                  {r.iban && (
-                    <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>{r.iban}</div>
-                  )}
-                  <div style={{ fontSize: 12, color: r.suggestie_rekening_id ? T.blue : T.ink3, marginTop: 6 }}>
-                    {r.suggestie_rekening_id
-                      ? 'Wordt voorgesteld te koppelen aan een bestaande rekening'
-                      : 'Wordt een nieuwe rekening'}
-                  </div>
-                </div>
+                <BankRekeningRij
+                  key={r.uid}
+                  T={T}
+                  rekening={r}
+                  waarde={keuzes[r.uid] || 'nieuw'}
+                  opGewijzigd={keuzeGewijzigd}
+                  bestaandeRekeningen={resultaat.bestaandeRekeningen}
+                />
               ))}
             </div>
 
+            {foutmelding && (
+              <p style={{ fontSize: 13, color: T.amber, marginTop: 14, lineHeight: 1.5 }}>{foutmelding}</p>
+            )}
+
+            <button
+              onClick={bevestigKoppeling}
+              disabled={koppelen}
+              style={{ ...knopStijl, opacity: koppelen ? 0.6 : 1, cursor: koppelen ? 'default' : 'pointer' }}
+            >
+              {koppelen ? 'Bezig met koppelen…' : 'Koppelen'}
+            </button>
+          </>
+        )}
+
+        {staat === 'gekoppeld' && (
+          <>
+            <RondIcoon achtergrond={T.greenSoft} kleur={T.green}>
+              <path d="M20 6 9 17l-5-5"/>
+            </RondIcoon>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: T.ink, letterSpacing: -0.5, marginBottom: 10 }}>
+              Je rekening(en) zijn gekoppeld
+            </h1>
+            <p style={{ fontSize: 14, color: T.ink3, lineHeight: 1.6 }}>
+              Je bankrekening(en) staan nu klaar in Webfinance.
+            </p>
             <button onClick={terugNaarRekeningen} style={knopStijl}>Terug naar rekeningen</button>
           </>
         )}
