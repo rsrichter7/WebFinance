@@ -141,7 +141,7 @@ module.exports = async (req, res) => {
         type,
         categorie: '',
         subcategorie: '',
-        soort: null,
+        soort: 'Noodzaak',
         wie: 'GZ',
         winkel,
         bron: 'bank',
