@@ -10,6 +10,7 @@ import TransactionFilters from '../components/transactions/TransactionFilters'
 import TransactionTable from '../components/transactions/TransactionTable'
 import TransactionForm from '../components/transactions/TransactionForm'
 import ImportFlow from '../components/transactions/ImportFlow'
+import BankImportFlow from '../components/transactions/BankImportFlow'
 import { StatCard } from '../components/ui/Card'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 
@@ -21,7 +22,7 @@ export default function TransactionsPage() {
     filters, updateFilter, sort, updateSort, formOpen, setFormOpen,
   } = useTransactions()
 
-  const { activeStartsaldo } = useActiveAccount()
+  const { activeAccount, activeStartsaldo } = useActiveAccount()
 
   // Doorlopend saldo per transactie-id (zelfde logica als Dashboard-saldoberekening)
   const saldoMap = useMemo(() => {
@@ -44,8 +45,9 @@ export default function TransactionsPage() {
     return map
   }, [allTransactions, activeStartsaldo])
 
-  const [editingTx, setEditingTx]   = useState(null)
-  const [importOpen, setImportOpen] = useState(false)
+  const [editingTx, setEditingTx]     = useState(null)
+  const [importOpen, setImportOpen]   = useState(false)
+  const [bankSyncOpen, setBankSyncOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
 
   if (loading) {
@@ -58,7 +60,12 @@ export default function TransactionsPage() {
 
   return (
     <>
-      <TransactionTopBar onNewClick={() => setFormOpen(true)} onImportClick={() => setImportOpen(true)} />
+      <TransactionTopBar
+        onNewClick={() => setFormOpen(true)}
+        onImportClick={() => setImportOpen(true)}
+        activeAccount={activeAccount}
+        onBankSyncClick={() => setBankSyncOpen(true)}
+      />
 
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, padding: '0 28px' }}>
@@ -85,6 +92,12 @@ export default function TransactionsPage() {
       />
 
       <ImportFlow open={importOpen} onClose={() => setImportOpen(false)} onImportComplete={fetchTransactions} />
+
+      <BankImportFlow
+        rekening={activeAccount}
+        open={bankSyncOpen}
+        onClose={() => { setBankSyncOpen(false); fetchTransactions() }}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

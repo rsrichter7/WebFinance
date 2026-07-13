@@ -2,13 +2,16 @@
 // Bovenste balk van de transactiepagina met titel en actieknoppen.
 
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
+import { fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 
 import PageInfoPopover from '../ui/PageInfoPopover'
 
-export default function TransactionTopBar({ onNewClick, onImportClick }) {
+export default function TransactionTopBar({ onNewClick, onImportClick, activeAccount, onBankSyncClick }) {
   const { T } = useTheme()
+  const gekoppeld = !!activeAccount?.externAccountId
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -29,7 +32,31 @@ export default function TransactionTopBar({ onNewClick, onImportClick }) {
           ]}
         />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        {gekoppeld ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <button onClick={onBankSyncClick} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8,
+              border: `1px solid ${T.border}`, background: T.card,
+              fontSize: 13, fontWeight: 500, color: T.ink2, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}>
+              <span style={{ display: 'inline-flex' }}>{ICONS.refresh}</span>
+              Uit bank ophalen
+            </button>
+            <span style={{ fontSize: 12, color: T.ink3 }}>
+              {activeAccount.laatstGesynct ? `Laatst gesynct: ${fmtDate(activeAccount.laatstGesynct)}` : 'Nog niet gesynct'}
+            </span>
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: T.ink3 }}>
+            Automatisch transacties uit je bank halen?{' '}
+            <Link to="/instellingen?sectie=rekeningen" style={{ color: T.blue, textDecoration: 'underline' }}>
+              Koppel deze rekening
+            </Link>
+          </span>
+        )}
         <button onClick={onImportClick} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '8px 14px', borderRadius: 8,
