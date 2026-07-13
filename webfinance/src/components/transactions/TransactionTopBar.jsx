@@ -15,7 +15,7 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '18px 28px',
+      padding: '18px 28px 32px',
       borderBottom: `1px solid ${T.border}`,
       background: T.card,
     }}>
@@ -34,7 +34,7 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         {gekoppeld ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+          <div style={{ position: 'relative' }}>
             <button onClick={onBankSyncClick} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 8,
@@ -45,7 +45,10 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
               <span style={{ display: 'inline-flex' }}>{ICONS.refresh}</span>
               Uit bank ophalen
             </button>
-            <span style={{ fontSize: 12, color: T.ink3 }}>
+            <span style={{
+              position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+              marginTop: 4, fontSize: 11, color: T.ink3, whiteSpace: 'nowrap',
+            }}>
               {activeAccount.laatstGesynct ? `Laatst gesynct: ${fmtDate(activeAccount.laatstGesynct)}` : 'Nog niet gesynct'}
             </span>
           </div>
