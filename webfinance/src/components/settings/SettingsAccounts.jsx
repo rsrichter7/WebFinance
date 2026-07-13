@@ -61,6 +61,23 @@ export default function SettingsAccounts() {
     setSyncTarget(acc)
   }
 
+  async function handleHerkoppelen(acc) {
+    // Oude koppelingen zonder aspsp_naam: laat de gebruiker de bank opnieuw kiezen.
+    if (!acc.aspspNaam) { setKoppelOpen(true); return }
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/bank/start', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ aspsp_naam: acc.aspspNaam, gedeeld: acc.gedeeld }),
+    })
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok || !result.url) return
+    window.location.href = result.url
+  }
+
   const addBtn = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
 
   return (
@@ -84,6 +101,7 @@ export default function SettingsAccounts() {
               onDelete={() => setDeleteTarget(acc)}
               onOntkoppel={() => setOntkoppelTarget(acc)}
               onSync={() => handleSync(acc)}
+              onHerkoppelen={() => handleHerkoppelen(acc)}
             />
           ))}
           {accounts.length === 0 && (

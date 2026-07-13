@@ -94,6 +94,14 @@ export default function BankCallbackPage() {
       }
 
       setResultaat(data)
+
+      if (!data.bankRekeningen.length) {
+        // Uitsluitend herkoppelingen: geen keuzescherm nodig, meteen klaar.
+        clearAllCaches()
+        setStaat('gekoppeld')
+        return
+      }
+
       const initieleKeuzes = {}
       data.bankRekeningen.forEach((r) => {
         initieleKeuzes[r.uid] = r.suggestie_rekening_id || 'nieuw'
@@ -208,6 +216,17 @@ export default function BankCallbackPage() {
             <h1 style={{ fontSize: 22, fontWeight: 800, color: T.ink, letterSpacing: -0.5, marginBottom: 10 }}>
               Bank gekoppeld
             </h1>
+            {resultaat.herkoppeld?.length > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+                padding: '10px 14px', borderRadius: 8, background: T.greenSoft, color: T.greenText,
+                fontSize: 13, fontWeight: 500, border: `1px solid ${T.green}22`, textAlign: 'left',
+              }}>
+                <span>✓</span>
+                {resultaat.herkoppeld.length} {resultaat.herkoppeld.length === 1 ? 'rekening' : 'rekeningen'} automatisch opnieuw gekoppeld
+              </div>
+            )}
+
             <p style={{ fontSize: 14, color: T.ink3, lineHeight: 1.6, marginBottom: 20 }}>
               We hebben {resultaat.bankRekeningen.length === 1 ? 'deze rekening' : 'deze rekeningen'} gevonden bij je bank. Kies per rekening wat je wilt doen:
             </p>

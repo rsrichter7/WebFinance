@@ -80,6 +80,7 @@ module.exports = async (req, res) => {
         identificatie_hash: bankRekening.identification_hash,
         sessie_id: sessie.sessie_id,
         koppeling_vervalt: sessie.valid_until,
+        aspsp_naam: sessie.aspsp_naam,
       };
 
       if (doel === 'nieuw') {

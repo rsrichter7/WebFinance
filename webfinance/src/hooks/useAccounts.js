@@ -8,7 +8,7 @@ import { useHousehold } from './useHousehold'
 import { useAuth } from './useAuth'
 import { registerCache } from './cacheManager'
 
-const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, extern_account_id, provider, laatst_gesynct, sessie_id, koppeling_vervalt, startsaldo_bedrag, startsaldo_datum, created_at'
+const KOLOMMEN = 'id, household_id, user_id, naam, gedeeld, iban, volgorde, bron, extern_account_id, provider, aspsp_naam, laatst_gesynct, sessie_id, koppeling_vervalt, startsaldo_bedrag, startsaldo_datum, created_at'
 
 // DB (snake_case) → frontend rekening object
 function dbNaarFrontend(row) {
@@ -23,6 +23,7 @@ function dbNaarFrontend(row) {
     bron:              row.bron,
     externAccountId:   row.extern_account_id,
     provider:          row.provider,
+    aspspNaam:         row.aspsp_naam,
     laatstGesynct:     row.laatst_gesynct,
     sessieId:          row.sessie_id,
     koppelingVervalt:  row.koppeling_vervalt,
@@ -42,6 +43,7 @@ function frontendNaarDb(acc) {
   if (acc.bron             !== undefined) updates.bron               = acc.bron
   if (acc.externAccountId  !== undefined) updates.extern_account_id  = acc.externAccountId
   if (acc.provider         !== undefined) updates.provider           = acc.provider
+  if (acc.aspspNaam        !== undefined) updates.aspsp_naam         = acc.aspspNaam
   if (acc.laatstGesynct    !== undefined) updates.laatst_gesynct     = acc.laatstGesynct
   if (acc.sessieId         !== undefined) updates.sessie_id          = acc.sessieId
   if (acc.koppelingVervalt !== undefined) updates.koppeling_vervalt  = acc.koppelingVervalt

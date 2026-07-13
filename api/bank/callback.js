@@ -87,9 +87,9 @@ module.exports = async (req, res) => {
       }
     }
 
-    const { data: bestaande, error: bestaandeError } = await supabase
+    const { data: alleRekeningen, error: bestaandeError } = await supabase
       .from('rekeningen')
-      .select('id, naam, iban, gedeeld, extern_account_id')
+      .select('id, naam, iban, gedeeld, extern_account_id, identificatie_hash')
       .eq('household_id', sessie.household_id);
 
     if (bestaandeError) {
@@ -97,25 +97,57 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'Interne serverfout' });
     }
 
-    const ongekoppeld = (bestaande || []).filter((r) => !r.extern_account_id);
+    const ongekoppeld = (alleRekeningen || []).filter((r) => !r.extern_account_id);
     const normIban = (iban) => (iban || '').replace(/\s/g, '');
 
-    const bankRekeningen = (accounts || []).map((a) => {
+    const herkoppeld = [];
+    const bankRekeningen = [];
+
+    for (const a of accounts || []) {
       const iban = a.account_id?.iban || null;
+
+      // Al eerder gekoppelde rekening met dezelfde bank-identificatie: automatisch herkoppelen,
+      // geen keuzescherm nodig.
+      const bestaandeGekoppeld = (alleRekeningen || []).find(
+        (r) => r.extern_account_id && r.identificatie_hash === a.identification_hash
+      );
+
+      if (bestaandeGekoppeld) {
+        const { error: herkoppelError } = await supabase
+          .from('rekeningen')
+          .update({
+            extern_account_id: a.uid,
+            sessie_id: sessie.sessie_id,
+            koppeling_vervalt: sessie.valid_until,
+            provider: 'enablebanking',
+            aspsp_naam: sessie.aspsp_naam,
+          })
+          .eq('id', bestaandeGekoppeld.id);
+
+        if (herkoppelError) {
+          console.error('[bank/callback] herkoppelError:', herkoppelError);
+        } else {
+          herkoppeld.push({ naam: bestaandeGekoppeld.naam, iban: bestaandeGekoppeld.iban });
+        }
+        continue;
+      }
+
       const suggestie = iban
         ? ongekoppeld.find((r) => normIban(r.iban) === normIban(iban)) || null
         : null;
-      return {
+
+      bankRekeningen.push({
         uid: a.uid,
         iban,
         naam: a.name,
         identificatie_hash: a.identification_hash,
         suggestie_rekening_id: suggestie ? suggestie.id : null,
-      };
-    });
+      });
+    }
 
     return res.status(200).json({
       gedeeld: sessie.gedeeld,
+      herkoppeld,
       bankRekeningen,
       bestaandeRekeningen: ongekoppeld.map((r) => ({ id: r.id, naam: r.naam, iban: r.iban })),
     });
