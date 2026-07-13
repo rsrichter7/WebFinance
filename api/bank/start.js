@@ -87,6 +87,7 @@ module.exports = async (req, res) => {
       aspsp_land: 'NL',
       gedeeld: !!gedeeld,
       status: 'gestart',
+      valid_until: validUntil,
     });
 
     if (insertError) {

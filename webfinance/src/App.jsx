@@ -24,6 +24,7 @@ import LandingPage from './pages/LandingPage'
 import RequireSubscription from './components/paywall/RequireSubscription'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import CheckoutCancelPage from './pages/CheckoutCancelPage'
+import BankCallbackPage from './pages/BankCallbackPage'
 import { T } from './tokens'
 
 // Laat ingelogde gebruikers naar dashboard, bezoekers naar landingspagina
@@ -70,6 +71,7 @@ export default function App() {
             <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
               <Route path="/abonnement/geslaagd"    element={<CheckoutSuccessPage />} />
               <Route path="/abonnement/geannuleerd" element={<CheckoutCancelPage />} />
+              <Route path="/bank/callback"          element={<BankCallbackPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
