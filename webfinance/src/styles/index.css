@@ -46,6 +46,14 @@ input, select, button { font-family: inherit; }
   animation-delay: 200ms;
 }
 
+@keyframes wf-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.wf-spin {
+  animation: wf-spin 900ms linear infinite;
+}
+
 .wf-card-hover {
   transition: box-shadow 200ms ease, transform 200ms ease;
 }
