@@ -1,5 +1,6 @@
 // Haalt nieuwe banktransacties op via Enable Banking voor een gekoppelde rekening,
-// ontdubbelt op extern_transactie_id en zet ze in de transactions-tabel.
+// filtert al eerder geïmporteerde transacties eruit (op extern_transactie_id) en
+// levert ze aan als preview — inserten gebeurt pas na bevestiging vanuit de frontend.
 
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
@@ -111,8 +112,7 @@ module.exports = async (req, res) => {
 
     const bestaandeIds = new Set((bestaandeRijen || []).map((r) => r.extern_transactie_id));
     const batchIds = new Set();
-    const nieuweRijen = [];
-    let overgeslagen = 0;
+    const nieuweTransacties = [];
 
     for (const t of geboekt) {
       const indicator = t.credit_debit_indicator;
@@ -128,13 +128,10 @@ module.exports = async (req, res) => {
         .update([datum, bedrag, indicator, remittance].join('|'))
         .digest('hex').slice(0, 40);
 
-      if (bestaandeIds.has(extern) || batchIds.has(extern)) {
-        overgeslagen++;
-        continue;
-      }
+      if (bestaandeIds.has(extern) || batchIds.has(extern)) continue;
       batchIds.add(extern);
 
-      nieuweRijen.push({
+      nieuweTransacties.push({
         datum,
         beschrijving: remittance,
         bedrag,
@@ -145,36 +142,15 @@ module.exports = async (req, res) => {
         wie: 'GZ',
         winkel,
         bron: 'bank',
-        vaste_last_id: null,
-        spaardoel_id: null,
-        household_id: rekening.household_id,
-        account_id: rekening.id,
         extern_transactie_id: extern,
       });
     }
 
-    if (nieuweRijen.length > 0) {
-      const { error: insertError } = await supabase.from('transactions').insert(nieuweRijen);
-      if (insertError) {
-        console.error('[bank/sync] insertError:', insertError);
-        return res.status(500).json({ error: 'Interne serverfout' });
-      }
-    }
-
-    const { error: updateError } = await supabase
-      .from('rekeningen')
-      .update({ laatst_gesynct: new Date().toISOString() })
-      .eq('id', rekening.id);
-
-    if (updateError) {
-      console.error('[bank/sync] updateError:', updateError);
-    }
-
     return res.status(200).json({
       ok: true,
-      nieuw: nieuweRijen.length,
-      overgeslagen,
+      transacties: nieuweTransacties,
       opgehaald: geboekt.length,
+      nieuw: nieuweTransacties.length,
     });
   } catch (err) {
     console.error('[bank/sync] Fout:', err);

@@ -6,7 +6,7 @@ import { fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import { Badge } from '../ui/Card'
 
-export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, onOntkoppel, onSync, syncBezig, syncMelding }) {
+export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, onOntkoppel, onSync }) {
   const gekoppeld = !!acc.externAccountId
   const iconBtn = { width: 30, height: 30, borderRadius: 6, border: `1px solid ${T.border}`, background: T.card, color: T.ink3, cursor: 'pointer', display: 'grid', placeItems: 'center' }
   return (
@@ -30,14 +30,11 @@ export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, o
             {acc.laatstGesynct ? `Laatst gesynct: ${fmtDate(acc.laatstGesynct)}` : 'Nog niet gesynct'}
           </div>
         )}
-        {syncMelding && (
-          <div style={{ fontSize: 12, color: T.blueText, marginTop: 2 }}>{syncMelding}</div>
-        )}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         {gekoppeld && (
-          <button onClick={onSync} disabled={syncBezig} style={{ ...iconBtn, opacity: syncBezig ? 0.5 : 1, cursor: syncBezig ? 'default' : 'pointer' }} title="Nu synchroniseren">
-            <span className={syncBezig ? 'wf-spin' : ''} style={{ display: 'grid', placeItems: 'center' }}>{ICONS.refresh}</span>
+          <button onClick={onSync} style={iconBtn} title="Nu synchroniseren">
+            {ICONS.refresh}
           </button>
         )}
         {gekoppeld && (

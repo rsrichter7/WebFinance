@@ -14,6 +14,7 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import AccountModal from './AccountModal'
 import BankKoppelModal from './BankKoppelModal'
 import AccountRow from './AccountRow'
+import BankImportFlow from '../transactions/BankImportFlow'
 
 export default function SettingsAccounts() {
   const { T } = useTheme()
@@ -23,8 +24,7 @@ export default function SettingsAccounts() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [ontkoppelTarget, setOntkoppelTarget] = useState(null)
   const [koppelOpen, setKoppelOpen] = useState(false)
-  const [syncBezigId, setSyncBezigId] = useState(null)
-  const [syncMelding, setSyncMelding] = useState(null)
+  const [syncTarget, setSyncTarget] = useState(null)
 
   function handleSave(data) {
     if (modal.type === 'edit') updateAccount(modal.account.id, data)
@@ -56,33 +56,9 @@ export default function SettingsAccounts() {
     setOntkoppelTarget(null)
   }
 
-  async function handleSync(acc) {
-    setSyncBezigId(acc.id)
-    setSyncMelding(null)
-    const { data: { session } } = await supabase.auth.getSession()
-    const response = await fetch('/api/bank/sync', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ rekening_id: acc.id }),
-    })
-    const result = await response.json().catch(() => ({}))
-
-    if (!response.ok) {
-      const tekst = result?.herkoppelen
-        ? 'Koppeling verlopen — ontkoppel en koppel opnieuw'
-        : 'Synchroniseren mislukt'
-      setSyncMelding({ id: acc.id, tekst })
-      setSyncBezigId(null)
-      return
-    }
-
-    clearAllCaches()
-    refresh()
-    setSyncMelding({ id: acc.id, tekst: result.nieuw > 0 ? `${result.nieuw} nieuwe transactie(s)` : 'Geen nieuwe transacties' })
-    setSyncBezigId(null)
+  function handleSync(acc) {
+    setActiveAccount(acc.id)
+    setSyncTarget(acc)
   }
 
   const addBtn = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
@@ -108,8 +84,6 @@ export default function SettingsAccounts() {
               onDelete={() => setDeleteTarget(acc)}
               onOntkoppel={() => setOntkoppelTarget(acc)}
               onSync={() => handleSync(acc)}
-              syncBezig={syncBezigId === acc.id}
-              syncMelding={syncMelding?.id === acc.id ? syncMelding.tekst : null}
             />
           ))}
           {accounts.length === 0 && (
@@ -135,6 +109,8 @@ export default function SettingsAccounts() {
       )}
 
       {koppelOpen && <BankKoppelModal onClose={() => setKoppelOpen(false)} />}
+
+      <BankImportFlow rekening={syncTarget} open={!!syncTarget} onClose={() => setSyncTarget(null)} />
 
       <ConfirmDialog
         open={!!deleteTarget}
