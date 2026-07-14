@@ -21,11 +21,12 @@ const DEFAULTS = {
   import_max_regels:  1000,
   notif_budget:        true,
   notif_vaste_lasten:  true,
+  notif_bank_koppeling: true,
   dashboard_periode:  'loon',
   loon_dag:           25,
 }
 
-const SELECT_COLS = 'datumformaat, taal, thema, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten, dashboard_periode, loon_dag'
+const SELECT_COLS = 'datumformaat, taal, thema, custom_categories, kosten_inkomen, verdeel_methode, startsaldo, profiel_naam, profiel_email, analytics_order, import_max_regels, notif_budget, notif_vaste_lasten, notif_bank_koppeling, dashboard_periode, loon_dag'
 
 let sCache = { settings: null, userId: null }
 function clearCache() { sCache = { settings: null, userId: null } }

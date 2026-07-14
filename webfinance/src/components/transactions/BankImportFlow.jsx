@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { ICONS } from '../ui/Icons'
 import { supabase } from '../../supabaseClient'
@@ -19,6 +20,7 @@ import ImportAiModal from './ImportAiModal'
 
 export default function BankImportFlow({ rekening, open, onClose }) {
   const { T } = useTheme()
+  const navigate = useNavigate()
   const { householdId } = useHousehold()
   const { activeAccountId } = useActiveAccount()
   const { updateAccount } = useAccounts()
@@ -29,6 +31,7 @@ export default function BankImportFlow({ rekening, open, onClose }) {
   const [rows, setRows]                       = useState([])
   const [error, setError]                     = useState('')
   const [herkoppelen, setHerkoppelen]         = useState(false)
+  const [herkoppelBezig, setHerkoppelBezig]   = useState(false)
   const [importing, setImporting]             = useState(false)
   const [importedCount, setImportedCount]     = useState(0)
   const [validationError, setValidationError] = useState('')
@@ -46,9 +49,26 @@ export default function BankImportFlow({ rekening, open, onClose }) {
   function reset() {
     setLoading(false); setRows([]); setError(''); setHerkoppelen(false)
     setImporting(false); setImportedCount(0); setValidationError(''); setAiModalOpen(false)
+    setHerkoppelBezig(false)
   }
 
   function handleClose() { reset(); onClose() }
+
+  // Herkoppelen vanuit de syncfout — zelfde flow als SettingsAccounts.handleHerkoppelen
+  async function handleHerkoppelen() {
+    if (!rekening?.aspspNaam) { navigate('/instellingen?sectie=rekeningen'); return }
+    setHerkoppelBezig(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/bank/start', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aspsp_naam: rekening.aspspNaam, gedeeld: rekening.gedeeld }),
+    })
+    const result = await response.json().catch(() => ({}))
+    setHerkoppelBezig(false)
+    if (!response.ok || !result.url) return
+    window.location.href = result.url
+  }
 
   async function fetchAndPrepare() {
     setLoading(true); setError(''); setHerkoppelen(false); setRows([])
@@ -171,9 +191,15 @@ export default function BankImportFlow({ rekening, open, onClose }) {
               <span style={{ color: T.red, display: 'inline-flex' }}>{ICONS.warn}</span>
               <div style={{ fontSize: 13.5, color: T.ink2, textAlign: 'center', maxWidth: 380 }}>{error}</div>
               {herkoppelen && (
-                <div style={{ fontSize: 12.5, color: T.ink3, textAlign: 'center' }}>
-                  Ga naar Instellingen → Rekeningen om opnieuw te koppelen.
-                </div>
+                rekening?.aspspNaam ? (
+                  <button onClick={handleHerkoppelen} disabled={herkoppelBezig} style={{ ...priBtn, opacity: herkoppelBezig ? 0.6 : 1 }}>
+                    {herkoppelBezig ? 'Bezig…' : 'Opnieuw koppelen'}
+                  </button>
+                ) : (
+                  <button onClick={() => navigate('/instellingen?sectie=rekeningen')} style={secBtn}>
+                    Ga naar Instellingen → Rekeningen
+                  </button>
+                )
               )}
             </div>
           )}

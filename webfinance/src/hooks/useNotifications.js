@@ -8,8 +8,11 @@ import { useAuth } from './useAuth'
 import useFeedback from './useFeedback'
 import useBudgets from './useBudgets'
 import useFixedExpenses from './useFixedExpenses'
+import useAccounts from './useAccounts'
 import useSettings from './useSettings'
 import { fmt, fmtDate } from '../tokens'
+
+const VEERTIEN_DAGEN_MS = 14 * 24 * 60 * 60 * 1000
 
 // Admin-notificatie voor openstaande feedback-items
 function getFeedbackNotifications(allFeedback, isAdmin) {
@@ -78,6 +81,7 @@ export default function useNotifications() {
   const { allFeedback, isAdmin, loading: feedbackLoading } = useFeedback()
   const { categorieOverzicht, geselecteerdeMaand, loading: budgetLoading } = useBudgets()
   const { items: fixedItems, loading: fixedLoading } = useFixedExpenses()
+  const { accounts, loading: accountsLoading } = useAccounts()
   const { settings } = useSettings()
 
   const [dbNotifications, setDbNotifications] = useState([])
@@ -145,16 +149,38 @@ export default function useNotifications() {
       }
     }
 
+    if (settings.notif_bank_koppeling !== false) {
+      const nu = Date.now()
+      for (const rekening of accounts) {
+        if (!rekening.externAccountId || !rekening.koppelingVervalt) continue
+        const vervalTijd = new Date(rekening.koppelingVervalt).getTime()
+        if (vervalTijd - nu > VEERTIEN_DAGEN_MS) continue
+        const verlopen = vervalTijd < nu
+        const dagen    = Math.max(0, Math.ceil((vervalTijd - nu) / (24 * 60 * 60 * 1000)))
+        toInsert.push({
+          user_id: user.id,
+          type:    'bank_koppeling',
+          titel:   verlopen ? 'Bankkoppeling verlopen' : 'Bankkoppeling verloopt binnenkort',
+          bericht: verlopen
+            ? `${rekening.naam}: de koppeling is verlopen. Koppel opnieuw om te blijven synchroniseren.`
+            : `${rekening.naam}: de koppeling verloopt over ${dagen} dag${dagen === 1 ? '' : 'en'}.`,
+          link:    '/instellingen?sectie=rekeningen',
+          ref_key: `bank_verval:${rekening.id}:${rekening.koppelingVervalt}`,
+          gelezen: false,
+        })
+      }
+    }
+
     if (toInsert.length === 0) return
     await supabase
       .from('notifications')
       .upsert(toInsert, { onConflict: 'ref_key', ignoreDuplicates: true })
     await fetchDbNotifications()
-  }, [user, settings, categorieOverzicht, geselecteerdeMaand, fixedItems, fetchDbNotifications])
+  }, [user, settings, categorieOverzicht, geselecteerdeMaand, fixedItems, accounts, fetchDbNotifications])
 
   useEffect(() => {
-    if (!budgetLoading && !fixedLoading) syncNotifications()
-  }, [syncNotifications, budgetLoading, fixedLoading])
+    if (!budgetLoading && !fixedLoading && !accountsLoading) syncNotifications()
+  }, [syncNotifications, budgetLoading, fixedLoading, accountsLoading])
 
   const notifications = useMemo(() => {
     const feedback = getFeedbackNotifications(allFeedback, isAdmin)
@@ -162,7 +188,7 @@ export default function useNotifications() {
   }, [dbNotifications, allFeedback, isAdmin])
 
   const unreadCount = notifications.filter(n => !n.gelezen).length
-  const loading     = feedbackLoading || dbLoading || budgetLoading || fixedLoading
+  const loading     = feedbackLoading || dbLoading || budgetLoading || fixedLoading || accountsLoading
 
   async function markAsRead(id) {
     const notif = notifications.find(n => n.id === id)

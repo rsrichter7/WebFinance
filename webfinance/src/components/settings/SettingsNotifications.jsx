@@ -22,8 +22,9 @@ export default function SettingsNotifications() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, loading } = useNotifications()
   const { settings, updateSetting } = useSettings()
 
-  const notifBudget      = settings.notif_budget       !== false
-  const notifVasteLasten = settings.notif_vaste_lasten !== false
+  const notifBudget         = settings.notif_budget          !== false
+  const notifVasteLasten    = settings.notif_vaste_lasten    !== false
+  const notifBankKoppeling  = settings.notif_bank_koppeling  !== false
 
   const PER_PAGINA    = 3
   const [pagina, setPagina]       = useState(1)
@@ -144,12 +145,19 @@ export default function SettingsNotifications() {
           </div>
           <Toggle on={notifBudget} onChange={() => updateSetting('notif_budget', !notifBudget)} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.rule}` }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Aankomende vaste lasten</div>
             <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>3 dagen voor afschrijving</div>
           </div>
           <Toggle on={notifVasteLasten} onChange={() => updateSetting('notif_vaste_lasten', !notifVasteLasten)} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Bankkoppeling verloopt</div>
+            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>14 dagen voor het verlopen van de koppeling</div>
+          </div>
+          <Toggle on={notifBankKoppeling} onChange={() => updateSetting('notif_bank_koppeling', !notifBankKoppeling)} />
         </div>
       </div>
 
