@@ -8,6 +8,7 @@ import useProfiles from '../../hooks/useProfiles'
 import { useActiveAccount } from '../../hooks/useActiveAccount'
 import DatePicker from '../ui/DatePicker'
 import WieKeuze from '../ui/WieKeuze'
+import { validateVerplichteTekst } from '../../utils/validation'
 
 const HERHALINGEN = ['Wekelijks', 'Maandelijks', 'Jaarlijks']
 const CATS = getMergedCategories()
@@ -31,6 +32,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
   const { profiles, persons } = useProfiles()
   const { activeAccount } = useActiveAccount()
   const [form, setForm] = useState(EMPTY_FORM)
+  const [pogingOpslaan, setPogingOpslaan] = useState(false)
 
   const defaultWie = persons.length > 1 ? 'GZ' : (persons[0]?.initialen ?? '')
 
@@ -44,6 +46,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
 
   useEffect(() => {
     if (!open) return
+    setPogingOpslaan(false)
     if (editingItem) {
       setForm({
         type: editingItem.type, bedrag: String(editingItem.bedrag),
@@ -84,9 +87,11 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
     })
   }
 
+  const winkelValidatie = validateVerplichteTekst(form.winkel, 'Winkel/Bron')
+
   function handleSave(keepOpen) {
     const bedrag = parseFloat(form.bedrag)
-    if (!bedrag || !form.omschrijving.trim()) return
+    if (!bedrag || !winkelValidatie.valid) { setPogingOpslaan(true); return }
     onSave({
       type: form.type, bedrag, startdatum: form.startdatum,
       omschrijving: form.omschrijving.trim(), categorie: form.categorie,
@@ -97,6 +102,7 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
       ...EMPTY_FORM, startdatum: new Date().toISOString().split('T')[0],
       wie: (isPersoonlijk && eigenaarInitialen) ? eigenaarInitialen : defaultWie,
     })
+    setPogingOpslaan(false)
     if (!keepOpen) onClose()
   }
 
@@ -150,14 +156,18 @@ export default function FixedForm({ open, editingItem, onClose, onSave, initialT
           {form.type === 'Inkomst' && <WeekendHint T={T} />}
 
           <div>
-            <label style={L}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
-            <input type="text" placeholder="Bijv. Essent" value={form.winkel}
-              onChange={e => update('winkel', e.target.value)} style={I} />
+            <label style={L}>Winkel / Bron *</label>
+            <input type="text" placeholder="bijv. Essent" value={form.winkel}
+              onChange={e => update('winkel', e.target.value)}
+              style={{ ...I, borderColor: pogingOpslaan && !winkelValidatie.valid ? T.red : T.border }} />
+            {pogingOpslaan && !winkelValidatie.valid && (
+              <div style={{ fontSize: 11.5, color: T.red, marginTop: 4 }}>{winkelValidatie.error}</div>
+            )}
           </div>
 
           <div>
-            <label style={L}>Omschrijving *</label>
-            <input type="text" placeholder="Bijv. Hypotheek" value={form.omschrijving}
+            <label style={L}>Omschrijving <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
+            <input type="text" placeholder="bijv. Hypotheek" value={form.omschrijving}
               onChange={e => update('omschrijving', e.target.value)} style={I} />
           </div>
 

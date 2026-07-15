@@ -11,6 +11,7 @@ import { useActiveAccount } from '../../hooks/useActiveAccount'
 import DatePicker from '../ui/DatePicker'
 import WieKeuze from '../ui/WieKeuze'
 import { fmt, TAB } from '../../tokens'
+import { validateVerplichteTekst } from '../../utils/validation'
 
 const FORM_BASE = {
   type: 'Uitgave',
@@ -59,9 +60,11 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
   }
 
   const [form, setForm] = useState(emptyForm)
+  const [pogingOpslaan, setPogingOpslaan] = useState(false)
 
   useEffect(() => {
     if (!open) return
+    setPogingOpslaan(false)
     if (editingTransaction) {
       setForm({
         type: editingTransaction.type || 'Uitgave',
@@ -102,9 +105,11 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
     })
   }
 
+  const winkelValidatie = validateVerplichteTekst(form.winkel, 'Winkel/Bron')
+
   async function handleSave(keepOpen) {
     const bedrag = parseFloat(form.bedrag)
-    if (!bedrag || !form.beschrijving.trim()) return
+    if (!bedrag || !winkelValidatie.valid) { setPogingOpslaan(true); return }
     const velden = {
       datum: form.datum, bedrag, beschrijving: form.beschrijving.trim(),
       winkel: form.winkel.trim(), type: form.type, categorie: form.categorie,
@@ -117,6 +122,7 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
     } else {
       await onSave(velden)
       setForm({ ...emptyForm(), datum: new Date().toISOString().split('T')[0] })
+      setPogingOpslaan(false)
       if (!keepOpen) onClose()
     }
   }
@@ -186,14 +192,18 @@ export default function TransactionForm({ open, onClose, onSave, onUpdate, initi
           </div>
 
           <div>
-            <label style={labelStyle}>Winkel / Bron <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
+            <label style={labelStyle}>Winkel / Bron *</label>
             <input type="text" placeholder="bijv. Albert Heijn" value={form.winkel}
-              onChange={e => update('winkel', e.target.value)} style={inputStyle} />
+              onChange={e => update('winkel', e.target.value)}
+              style={{ ...inputStyle, borderColor: pogingOpslaan && !winkelValidatie.valid ? T.red : T.border }} />
+            {pogingOpslaan && !winkelValidatie.valid && (
+              <div style={{ fontSize: 11.5, color: T.red, marginTop: 4 }}>{winkelValidatie.error}</div>
+            )}
           </div>
 
           <div>
-            <label style={labelStyle}>Omschrijving *</label>
-            <input type="text" placeholder="Bijv. Boodschappen Albert Heijn" value={form.beschrijving}
+            <label style={labelStyle}>Omschrijving <span style={{ fontWeight: 400, color: T.ink4 }}>optioneel</span></label>
+            <input type="text" placeholder="bijv. Boodschappen" value={form.beschrijving}
               onChange={e => update('beschrijving', e.target.value)} style={inputStyle} />
           </div>
 

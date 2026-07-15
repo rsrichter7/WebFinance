@@ -33,6 +33,15 @@ export function validateTekst(value, maxLength = 500) {
   return { valid: true, error: null }
 }
 
+export function validateVerplichteTekst(value, veldnaam, maxLength = 500) {
+  const t = (value ?? '').trim()
+  if (!t)
+    return { valid: false, error: `${veldnaam} is verplicht` }
+  if (t.length > maxLength)
+    return { valid: false, error: `${veldnaam} mag maximaal ${maxLength} tekens bevatten` }
+  return { valid: true, error: null }
+}
+
 export function validateCategorie(value, allowedList) {
   if (!value)
     return { valid: false, error: 'Categorie is verplicht' }

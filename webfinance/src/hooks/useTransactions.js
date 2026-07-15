@@ -8,7 +8,7 @@ import { useHousehold } from './useHousehold'
 import { useActiveAccount } from './useActiveAccount'
 import { registerCache, subscribe } from './cacheManager'
 
-const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, bron, vaste_last_id, spaardoel_id, account_id, created_at'
+const KOLOMMEN = 'id, datum, beschrijving, bedrag, type, categorie, subcategorie, soort, wie, winkel, notitie, bron, vaste_last_id, spaardoel_id, account_id, created_at'
 
 let txCache = { data: null, householdId: null, accountId: null }
 function clearCache() { txCache = { data: null, householdId: null, accountId: null } }
@@ -27,6 +27,7 @@ function dbNaarFrontend(row) {
     soort:        row.soort ?? '',
     wie:          row.wie ?? '',
     winkel:       row.winkel ?? '',
+    notitie:      row.notitie ?? '',
     bron:         row.bron ?? 'handmatig',
     vasteLast:    row.vaste_last_id ?? null,
     spaardoelId:  row.spaardoel_id ?? null,
@@ -47,6 +48,7 @@ function frontendNaarDb(tx) {
     soort:         tx.soort ?? '',
     wie:           tx.wie ?? '',
     winkel:        tx.winkel ?? '',
+    notitie:       tx.notitie ?? '',
     bron:          tx.bron ?? 'handmatig',
     vaste_last_id: tx.vasteLast ?? null,
     spaardoel_id:  tx.spaardoelId ?? null,
