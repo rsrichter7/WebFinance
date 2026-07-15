@@ -1,5 +1,5 @@
 // ─── LandingPricing ───
-// Prijskaarten: maandelijks, kwartaal, jaar + add-on bankkoppeling.
+// Prijskaarten: maandelijks, kwartaal, jaar.
 
 import React from 'react'
 import { Link } from 'react-router-dom'
@@ -97,20 +97,6 @@ export default function LandingPricing() {
         <p className="wf-reveal" style={{ textAlign: 'center', fontSize: 13, color: T.ink3, marginBottom: 36 }}>
           Betaal veilig met iDEAL of creditcard. Eerste maand gratis, stop wanneer je wil.
         </p>
-
-        {/* Add-on bankkoppeling */}
-        <div className="wf-reveal" style={{
-          border: `1px solid ${T.border}`,
-          borderRadius: 12, padding: '22px 26px',
-          background: T.bg,
-        }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
-            Wil je nóg minder werk? Koppel je bank.
-          </div>
-          <p style={{ fontSize: 14, color: T.ink3, lineHeight: 1.6, margin: 0 }}>
-            Met de bankkoppeling stromen je transacties automatisch binnen, geen CSV meer importeren. Beschikbaar als los abonnement bovenop je Webfinance-plan.
-          </p>
-        </div>
       </div>
     </section>
   )

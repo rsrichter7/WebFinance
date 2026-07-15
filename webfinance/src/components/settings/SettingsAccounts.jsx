@@ -10,6 +10,7 @@ import useSubscription from '../../hooks/useSubscription'
 import { supabase } from '../../supabaseClient'
 import { clearAllCaches } from '../../hooks/cacheManager'
 import { startCheckout } from '../../utils/checkout'
+import { bankKoppelingZichtbaar } from '../../config/features'
 import { ICONS } from '../ui/Icons'
 import { Card } from '../ui/Card'
 import ConfirmDialog from '../ui/ConfirmDialog'
@@ -119,21 +120,25 @@ export default function SettingsAccounts() {
           <span style={{ display: 'inline-flex' }}>{ICONS.plus}</span>
           Rekening toevoegen
         </button>
-        <button
-          onClick={() => hasAccess && setKoppelOpen(true)}
-          disabled={!hasAccess}
-          style={{ ...addBtn, opacity: hasAccess ? 1 : 0.5, cursor: hasAccess ? 'pointer' : 'not-allowed' }}
-        >
-          <span style={{ display: 'inline-flex' }}>{ICONS.link}</span>
-          Koppel bank
-        </button>
-        {!hasAccess && (
-          <span style={{ fontSize: 12, color: T.ink3 }}>
-            Vereist een actief abonnement of proefperiode —{' '}
-            <button onClick={() => startCheckout('monthly').catch(() => {})} style={linkBtn}>
-              bekijk abonnementen
+        {bankKoppelingZichtbaar() && (
+          <>
+            <button
+              onClick={() => hasAccess && setKoppelOpen(true)}
+              disabled={!hasAccess}
+              style={{ ...addBtn, opacity: hasAccess ? 1 : 0.5, cursor: hasAccess ? 'pointer' : 'not-allowed' }}
+            >
+              <span style={{ display: 'inline-flex' }}>{ICONS.link}</span>
+              Koppel bank
             </button>
-          </span>
+            {!hasAccess && (
+              <span style={{ fontSize: 12, color: T.ink3 }}>
+                Vereist een actief abonnement of proefperiode —{' '}
+                <button onClick={() => startCheckout('monthly').catch(() => {})} style={linkBtn}>
+                  bekijk abonnementen
+                </button>
+              </span>
+            )}
+          </>
         )}
       </div>
 

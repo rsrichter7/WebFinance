@@ -9,6 +9,7 @@ import { Toggle } from '../ui/Card'
 import useNotifications from '../../hooks/useNotifications'
 import useSettings from '../../hooks/useSettings'
 import { fmtDate } from '../../tokens'
+import { bankKoppelingZichtbaar } from '../../config/features'
 
 // Alleen de twee nog-niet-gebouwde meldingen blijven hier staan
 const TOEKOMSTIG = [
@@ -145,20 +146,22 @@ export default function SettingsNotifications() {
           </div>
           <Toggle on={notifBudget} onChange={() => updateSetting('notif_budget', !notifBudget)} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.rule}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: bankKoppelingZichtbaar() ? `1px solid ${T.rule}` : 'none' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Aankomende vaste lasten</div>
             <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>3 dagen voor afschrijving</div>
           </div>
           <Toggle on={notifVasteLasten} onChange={() => updateSetting('notif_vaste_lasten', !notifVasteLasten)} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Bankkoppeling verloopt</div>
-            <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>14 dagen voor het verlopen van de koppeling</div>
+        {bankKoppelingZichtbaar() && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink }}>Bankkoppeling verloopt</div>
+              <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>14 dagen voor het verlopen van de koppeling</div>
+            </div>
+            <Toggle on={notifBankKoppeling} onChange={() => updateSetting('notif_bank_koppeling', !notifBankKoppeling)} />
           </div>
-          <Toggle on={notifBankKoppeling} onChange={() => updateSetting('notif_bank_koppeling', !notifBankKoppeling)} />
-        </div>
+        )}
       </div>
 
       {/* Komende functies — toggles niet-functioneel */}

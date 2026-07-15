@@ -8,6 +8,7 @@ import { fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import useSubscription from '../../hooks/useSubscription'
 import { startCheckout } from '../../utils/checkout'
+import { bankKoppelingZichtbaar } from '../../config/features'
 
 import PageInfoPopover from '../ui/PageInfoPopover'
 
@@ -70,14 +71,14 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
                 )}
             </span>
           </div>
-        ) : (
+        ) : bankKoppelingZichtbaar() ? (
           <span style={{ fontSize: 12, color: T.ink3 }}>
             Automatisch transacties uit je bank halen?{' '}
             <Link to="/instellingen?sectie=rekeningen" style={{ color: T.blue, textDecoration: 'underline' }}>
               Koppel deze rekening
             </Link>
           </span>
-        )}
+        ) : null}
         <button onClick={onImportClick} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '8px 14px', borderRadius: 8,

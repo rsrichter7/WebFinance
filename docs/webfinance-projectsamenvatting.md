@@ -34,6 +34,13 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment + meerdere rekeningen + landingspagina + Stripe-abonnementen + Enable Banking bankkoppeling + retentie-cron
 
+**⚠️ Bankkoppeling tijdelijk volledig uit beeld (feature-vlag):**
+- Enable Banking-bankkoppeling is verborgen via `BANK_KOPPELING_ACTIEF = false` in het nieuwe bestand `src/config/features.js`. Reden: productiegebruik vereist een betaald contract met Enable Banking met een maandelijks minimumbedrag, en dat is pas rendabel bij voldoende betalende gebruikers.
+- Alle code, endpoints (`api/bank/*`), database-kolommen en -tabellen (`rekeningen`, `bank_koppeling_sessies`, `transactions.extern_transactie_id`) en de retentie-cron blijven onveranderd en werkend — alleen de UI-ingangen zijn verborgen.
+- Verborgen achter de vlag: de "Koppel bank"-knop (`SettingsAccounts.jsx`), de vervalbadges ("Verlopen"/"Verloopt binnenkort") en de "Opnieuw koppelen"-knop (`AccountRow.jsx`), de bank-ingang op de Transacties-pagina (`TransactionTopBar.jsx`), de "Bankkoppeling verloopt"-notificatietoggle (`SettingsNotifications.jsx`) en het aanmaken van nieuwe `bank_koppeling`-notificaties (`useNotifications.js`). Ook het add-on-blok op de landingspagina (`LandingPricing.jsx`) en de sectie over de bankkoppeling in `TermsPage.jsx` zijn verwijderd (zie Known issues).
+- Bestaande, al gekoppelde rekeningen blijven gewoon synchroniseren, ontkoppelen werkt nog — dit zijn geen "ingangen" naar een nieuwe koppeling en een lopende koppeling mag niet breken. Route `/bank/callback` en `api/bank/*` blijven bestaan en checken zelf `heeftToegang()`.
+- Uitzondering: met admin ontgrendeld (`bankKoppelingZichtbaar()`, dezelfde `webfinance_admin_unlocked` localStorage-check als elders) blijft alles gewoon zichtbaar, zodat Ronald kan blijven testen zonder de vlag om te zetten.
+
 **Supabase backend volledig werkend:**
 - Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
 - Email-verificatie verplicht bij registratie (via Resend SMTP)
@@ -223,7 +230,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - **Ontkoppelen:** `api/bank/ontkoppel.js` wist de bank-kolommen op de rekening (transacties blijven staan) en sluit de EB-sessie als geen andere rekening er nog naar verwijst
 - **Vervalmelding + herkoppelen bij fout:** `useNotifications.js` maakt een `bank_koppeling`-notificatie (14 dagen vóór `koppeling_vervalt`, ref_key-gededuplice­erd) die linkt naar Instellingen → Rekeningen; `AccountRow.jsx` toont "Verlopen"/"Verloopt binnenkort"-badges + "Opnieuw koppelen"-knop; `BankImportFlow.jsx` toont dezelfde knop bij een syncfout door verlopen koppeling
 - **Achter abonnement/proefperiode:** `api/bank/start.js`, `callback.js`, `koppel.js` en `sync.js` gebruiken allemaal `heeftToegang()` en geven `402` (`abonnementVereist: true`) zonder geldig abonnement/proefperiode
-- **Voorwaardenpagina:** `TermsPage.jsx` (`/voorwaarden`, gelinkt vanuit `LandingNav`, `LandingFooter` en `LoginPage`) — 9 secties (aanbieder, dienstomschrijving, abonnement/proefperiode, Stripe-betalingen, Enable Banking-bankkoppeling, aansprakelijkheid, opzegging/gegevens, wijzigingen, toepasselijk recht); bevat nog `[Placeholder: ...]`-tekst die juridisch nagekeken moet worden vóór live
+- **Voorwaardenpagina:** `TermsPage.jsx` (`/voorwaarden`, gelinkt vanuit `LandingNav`, `LandingFooter` en `LoginPage`) — 8 secties (aanbieder, dienstomschrijving, abonnement/proefperiode, Stripe-betalingen, aansprakelijkheid, opzegging/gegevens, wijzigingen, toepasselijk recht); de sectie over de Enable Banking-bankkoppeling is verwijderd zolang die feature uit beeld is (zie Known issues). Bevat nog `[Placeholder: ...]`-tekst die juridisch nagekeken moet worden vóór live
 
 **Retentie-cron voor verlopen abonnementen:**
 - `vercel.json` → dagelijkse cron `0 3 * * *` op `/api/cron/retentie`, beveiligd met `Authorization: Bearer ${CRON_SECRET}`
@@ -234,7 +241,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ### 🔮 Roadmap
 
-**Afgerond:** Meerdere rekeningen per account, publieke landingspagina, Stripe-abonnementen, Enable Banking bankkoppeling, retentie-cron (zie hierboven).
+**Afgerond:** Meerdere rekeningen per account, publieke landingspagina, Stripe-abonnementen, retentie-cron (zie hierboven). Enable Banking bankkoppeling is technisch ook afgerond, maar staat uit beeld (zie "Bankkoppeling tijdelijk volledig uit beeld" hierboven en de "Later"-lijst hieronder).
 
 **Nog te doen, in deze volgorde:**
 1. Zelf analyses opzetten: eigen analyses samenstellen, filteren en opslaan op de Analyse-pagina.
@@ -245,6 +252,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ### 🔮 Later (niet nu)
 
+- Enable Banking bankkoppeling terugzetten als apart betaald plan — code/database staan klaar (`BANK_KOPPELING_ACTIEF` in `src/config/features.js` op `true` zetten), pas rendabel bij voldoende betalende gebruikers vanwege het maandelijks minimum bij Enable Banking
 - Automatische AI-categorisering via Anthropic API (premium)
 - Paginering in tabellen (bij 2000+ transacties)
 - Cookie-banner (bij analytics)
@@ -276,7 +284,6 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Data export (Excel)
 - Kalender
 - Meerdere bankrekeningen
-- Enable Banking bankkoppeling
 - AI-categorisering
 
 **Premium toekennen:** normaal via Stripe-abonnement/proefperiode (`subscriptions` tabel, zie "Stripe-abonnementen en checkout" hierboven). Voor test/support kan een admin ook direct `premium: true` zetten in `user_settings` via het Supabase dashboard.
@@ -367,6 +374,10 @@ webfinance/          ← React-app submap (zit in root van de repo)
 │   │   ├── useFeedback.js          → Feedback CRUD (Supabase feedback tabel)
 │   │   ├── useInvitations.js       → Huishouden uitnodigingen (aanmaken, accepteren, afwijzen, annuleren)
 │   │   └── useNotifications.js     → Combineert database- en in-memory notificaties (persistent via ref_key)
+│   │
+│   ├── config/
+│   │   └── features.js             → Feature-vlaggen: BANK_KOPPELING_ACTIEF + bankKoppelingZichtbaar()
+│   │                                 (admin-uitzondering via webfinance_admin_unlocked)
 │   │
 │   ├── data/
 │   │   ├── categories.js           → CATEGORIES + getMergedCategories(customCategories?) + SOORTEN
@@ -831,7 +842,8 @@ Wist alle data van een huishouden na 365 dagen zonder abonnement (retentie-cron)
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
 3. ~~**Account verwijderen bij gedeeld huishouden**~~ — **OPGELOST**: `/api/delete-account.js` + `depart_shared_household()` handelen gedeelde huishoudens nu correct af (alleen de vertrekkende gebruiker wordt verwijderd, eigenaarschap overgedragen)
 4. **Proefperiode-toekenning onduidelijk** — geen frontend- of `api/`-code zet `subscriptions.trial_ends_at`/`status: 'trialing'` bij het aanmaken van een huishouden; vermoedelijk een Supabase-default/trigger die nog niet gedocumenteerd is. Controleren voordat hierop wordt vertrouwd (bijv. bij het testen van nieuwe registraties)
-5. **Voorwaardenpagina bevat placeholders** — `TermsPage.jsx` (`/voorwaarden`) heeft nog `[Placeholder: ...]`-teksten in alle 9 secties; juridisch laten nakijken vóór live
+5. **Voorwaardenpagina bevat placeholders** — `TermsPage.jsx` (`/voorwaarden`) heeft nog `[Placeholder: ...]`-teksten in alle 8 resterende secties; juridisch laten nakijken vóór live
+6. **Bankkoppeling-sectie uit voorwaarden verwijderd** — de sectie over Enable Banking-bankkoppeling is uit `TermsPage.jsx` gehaald zolang de feature via `BANK_KOPPELING_ACTIEF` uit beeld staat; moet terugkomen zodra de feature terugkomt
 
 **Noot (bewuste keuze):** het verweesde lege huishouden is opgeruimd; het account `rs.richter7@gmail.com` blijft voorlopig bewust als lid in het huishouden staan — geen actie vereist.
 

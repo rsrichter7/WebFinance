@@ -11,6 +11,7 @@ import useFixedExpenses from './useFixedExpenses'
 import useAccounts from './useAccounts'
 import useSettings from './useSettings'
 import { fmt, fmtDate } from '../tokens'
+import { bankKoppelingZichtbaar } from '../config/features'
 
 const VEERTIEN_DAGEN_MS = 14 * 24 * 60 * 60 * 1000
 
@@ -149,15 +150,11 @@ export default function useNotifications() {
       }
     }
 
-    if (settings.notif_bank_koppeling !== false) {
+    if (bankKoppelingZichtbaar() && settings.notif_bank_koppeling !== false) {
       const nu = Date.now()
-      console.error('[bank_koppeling debug] notif_bank_koppeling =', settings.notif_bank_koppeling, '— accounts.length =', accounts.length)
       for (const rekening of accounts) {
-        console.error('[bank_koppeling debug] rekening', rekening.id, rekening.naam, '— externAccountId =', rekening.externAccountId, '— koppelingVervalt =', rekening.koppelingVervalt)
         if (!rekening.externAccountId || !rekening.koppelingVervalt) continue
         const vervalTijd = new Date(rekening.koppelingVervalt).getTime()
-        const dagenTotVerval = (vervalTijd - nu) / (24 * 60 * 60 * 1000)
-        console.error('[bank_koppeling debug] vervalTijd =', new Date(vervalTijd).toISOString(), '— nu =', new Date(nu).toISOString(), '— dagenTotVerval =', dagenTotVerval)
         if (vervalTijd - nu > VEERTIEN_DAGEN_MS) continue
         const verlopen = vervalTijd < nu
         const dagen    = Math.max(0, Math.ceil((vervalTijd - nu) / (24 * 60 * 60 * 1000)))

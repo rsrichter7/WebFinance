@@ -5,14 +5,17 @@ import React from 'react'
 import { fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
 import { Badge } from '../ui/Card'
+import { bankKoppelingZichtbaar } from '../../config/features'
 
 const VEERTIEN_DAGEN_MS = 14 * 24 * 60 * 60 * 1000
 
 export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, onOntkoppel, onSync, onHerkoppelen }) {
   const gekoppeld = !!acc.externAccountId
 
+  // Vervalbadge en herkoppel-knop leiden naar een nieuwe koppeling — uit beeld
+  // zolang de bankkoppeling-feature uit staat (bestaande koppeling blijft gewoon werken).
   let vervalStatus = null
-  if (gekoppeld && acc.koppelingVervalt) {
+  if (bankKoppelingZichtbaar() && gekoppeld && acc.koppelingVervalt) {
     const vervalTijd = new Date(acc.koppelingVervalt).getTime()
     if (vervalTijd < Date.now()) vervalStatus = 'verlopen'
     else if (vervalTijd < Date.now() + VEERTIEN_DAGEN_MS) vervalStatus = 'binnenkort'
