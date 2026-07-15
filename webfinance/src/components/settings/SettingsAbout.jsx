@@ -68,9 +68,12 @@ export default function SettingsAbout({ onAdminUnlock }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 22 }}>
+      <div style={{ marginBottom: 22, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Link to="/privacy" style={{ fontSize: 13, color: T.blue, textDecoration: 'none', fontWeight: 500 }}>
           Lees ons privacybeleid →
+        </Link>
+        <Link to="/voorwaarden" style={{ fontSize: 13, color: T.blue, textDecoration: 'none', fontWeight: 500 }}>
+          Lees onze algemene voorwaarden →
         </Link>
       </div>
 

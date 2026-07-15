@@ -53,6 +53,9 @@ export default function LandingNav() {
           <Link to="/privacy" style={{ fontSize: 14, padding: '6px 10px', color: linkClr, textDecoration: 'none', borderRadius: 6 }}>
             Privacy
           </Link>
+          <Link to="/voorwaarden" style={{ fontSize: 14, padding: '6px 10px', color: linkClr, textDecoration: 'none', borderRadius: 6 }}>
+            Voorwaarden
+          </Link>
         </span>
         <Link to="/login" style={{
           fontSize: 14, padding: '7px 14px', borderRadius: 8, fontWeight: 500,

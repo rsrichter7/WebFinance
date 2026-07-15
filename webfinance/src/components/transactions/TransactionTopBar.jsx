@@ -6,11 +6,14 @@ import { Link } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { fmtDate } from '../../tokens'
 import { ICONS } from '../ui/Icons'
+import useSubscription from '../../hooks/useSubscription'
+import { startCheckout } from '../../utils/checkout'
 
 import PageInfoPopover from '../ui/PageInfoPopover'
 
 export default function TransactionTopBar({ onNewClick, onImportClick, activeAccount, onBankSyncClick }) {
   const { T } = useTheme()
+  const { hasAccess } = useSubscription()
   const gekoppeld = !!activeAccount?.externAccountId
   return (
     <div style={{
@@ -35,13 +38,16 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         {gekoppeld ? (
           <div style={{ position: 'relative' }}>
-            <button onClick={onBankSyncClick} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 8,
-              border: `1px solid ${T.border}`, background: T.card,
-              fontSize: 13, fontWeight: 500, color: T.ink2, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}>
+            <button
+              onClick={hasAccess ? onBankSyncClick : undefined}
+              disabled={!hasAccess}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8,
+                border: `1px solid ${T.border}`, background: T.card,
+                fontSize: 13, fontWeight: 500, color: T.ink2, cursor: hasAccess ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit', opacity: hasAccess ? 1 : 0.5,
+              }}>
               <span style={{ display: 'inline-flex' }}>{ICONS.refresh}</span>
               Uit bank ophalen
             </button>
@@ -49,7 +55,19 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
               position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
               marginTop: 4, fontSize: 11, color: T.ink3, whiteSpace: 'nowrap',
             }}>
-              {activeAccount.laatstGesynct ? `Laatst gesynct: ${fmtDate(activeAccount.laatstGesynct)}` : 'Nog niet gesynct'}
+              {hasAccess
+                ? (activeAccount.laatstGesynct ? `Laatst gesynct: ${fmtDate(activeAccount.laatstGesynct)}` : 'Nog niet gesynct')
+                : (
+                  <>
+                    Vereist een abonnement —{' '}
+                    <button
+                      onClick={() => startCheckout('monthly').catch(() => {})}
+                      style={{ background: 'none', border: 'none', padding: 0, color: T.blue, textDecoration: 'underline', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
+                    >
+                      bekijk abonnementen
+                    </button>
+                  </>
+                )}
             </span>
           </div>
         ) : (

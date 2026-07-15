@@ -176,6 +176,8 @@ export default function LoginPage() {
             <p style={{ textAlign: 'center', fontSize: 13, color: T.ink4, marginTop: 14, marginBottom: 0 }}>
               Door in te loggen ga je akkoord met ons{' '}
               <Link to="/privacy" style={{ color: T.blue, textDecoration: 'none', fontWeight: 500 }}>privacybeleid</Link>
+              {' '}en onze{' '}
+              <Link to="/voorwaarden" style={{ color: T.blue, textDecoration: 'none', fontWeight: 500 }}>algemene voorwaarden</Link>
             </p>
           </>
         )}

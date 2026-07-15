@@ -19,6 +19,7 @@ import SettingsPage from './pages/SettingsPage'
 import LoginPage from './components/auth/LoginPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
 import InvitationPage from './pages/InvitationPage'
 import LandingPage from './pages/LandingPage'
 import RequireSubscription from './components/paywall/RequireSubscription'
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/welkom" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/voorwaarden" element={<TermsPage />} />
             <Route path="/uitnodiging/:token" element={<InvitationPage />} />
             <Route element={
               <ProtectedRoute>

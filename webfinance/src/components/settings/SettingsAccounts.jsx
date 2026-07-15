@@ -6,8 +6,10 @@ import { createPortal } from 'react-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { useActiveAccount } from '../../hooks/useActiveAccount'
 import useAccounts from '../../hooks/useAccounts'
+import useSubscription from '../../hooks/useSubscription'
 import { supabase } from '../../supabaseClient'
 import { clearAllCaches } from '../../hooks/cacheManager'
+import { startCheckout } from '../../utils/checkout'
 import { ICONS } from '../ui/Icons'
 import { Card } from '../ui/Card'
 import ConfirmDialog from '../ui/ConfirmDialog'
@@ -20,6 +22,7 @@ export default function SettingsAccounts() {
   const { T } = useTheme()
   const { accounts, addAccount, updateAccount, removeAccount, refresh } = useAccounts()
   const { activeAccountId, setActiveAccount } = useActiveAccount()
+  const { hasAccess } = useSubscription()
   const [modal, setModal] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [ontkoppelTarget, setOntkoppelTarget] = useState(null)
@@ -79,6 +82,7 @@ export default function SettingsAccounts() {
   }
 
   const addBtn = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
+  const linkBtn = { background: 'none', border: 'none', padding: 0, color: T.blue, textDecoration: 'underline', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }
 
   return (
     <div>
@@ -110,15 +114,27 @@ export default function SettingsAccounts() {
         </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <button onClick={() => setModal({ type: 'add' })} style={addBtn}>
           <span style={{ display: 'inline-flex' }}>{ICONS.plus}</span>
           Rekening toevoegen
         </button>
-        <button onClick={() => setKoppelOpen(true)} style={addBtn}>
+        <button
+          onClick={() => hasAccess && setKoppelOpen(true)}
+          disabled={!hasAccess}
+          style={{ ...addBtn, opacity: hasAccess ? 1 : 0.5, cursor: hasAccess ? 'pointer' : 'not-allowed' }}
+        >
           <span style={{ display: 'inline-flex' }}>{ICONS.link}</span>
           Koppel bank
         </button>
+        {!hasAccess && (
+          <span style={{ fontSize: 12, color: T.ink3 }}>
+            Vereist een actief abonnement of proefperiode —{' '}
+            <button onClick={() => startCheckout('monthly').catch(() => {})} style={linkBtn}>
+              bekijk abonnementen
+            </button>
+          </span>
+        )}
       </div>
 
       {modal && createPortal(

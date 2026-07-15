@@ -5,6 +5,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { ebFetch } = require('../_lib/enableBanking');
+const { heeftToegang } = require('../_lib/toegang');
 
 const MAX_PAGINAS = 20;
 
@@ -64,6 +65,9 @@ module.exports = async (req, res) => {
     const hoortErbij = (members || []).some((m) => m.household_id === rekening.household_id);
     if (!hoortErbij) {
       return res.status(403).json({ error: 'Geen toegang tot deze rekening' });
+    }
+    if (!(await heeftToegang(supabase, rekening.household_id))) {
+      return res.status(402).json({ error: 'Actief abonnement vereist', abonnementVereist: true });
     }
 
     if (rekening.koppeling_vervalt && new Date(rekening.koppeling_vervalt) < new Date()) {

@@ -4,6 +4,7 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { ebFetch } = require('../_lib/enableBanking');
+const { heeftToegang } = require('../_lib/toegang');
 
 // Moet EXACT overeenkomen met de redirect-URL die bij Enable Banking geregistreerd staat.
 const REDIRECT_URL = 'https://webfinance-nl.vercel.app/bank/callback';
@@ -49,6 +50,10 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Geen huishouden gevonden voor deze gebruiker' });
     }
     const householdId = members[0].household_id;
+
+    if (!(await heeftToegang(supabase, householdId))) {
+      return res.status(402).json({ error: 'Actief abonnement vereist', abonnementVereist: true });
+    }
 
     const { ok: aspspsOk, status: aspspsStatus, data: aspspsData } = await ebFetch('/aspsps?country=NL');
     if (!aspspsOk) {

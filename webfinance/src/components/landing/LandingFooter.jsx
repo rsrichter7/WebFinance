@@ -37,6 +37,9 @@ export default function LandingFooter() {
         <Link to="/privacy" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
           Privacy
         </Link>
+        <Link to="/voorwaarden" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
+          Voorwaarden
+        </Link>
         <Link to="/login" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
           Inloggen
         </Link>

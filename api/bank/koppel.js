@@ -2,6 +2,7 @@
 // aanmaken, ofwel een bestaande rekening voorzien van de Enable Banking-koppelvelden.
 
 const { createClient } = require('@supabase/supabase-js');
+const { heeftToegang } = require('../_lib/toegang');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -48,6 +49,9 @@ module.exports = async (req, res) => {
     }
     if (sessie.status !== 'voltooid' || !sessie.accounts_json) {
       return res.status(400).json({ error: 'Sessie nog niet afgerond' });
+    }
+    if (!(await heeftToegang(supabase, sessie.household_id))) {
+      return res.status(402).json({ error: 'Actief abonnement vereist', abonnementVereist: true });
     }
 
     const { data: rekeningen, error: rekeningenError } = await supabase

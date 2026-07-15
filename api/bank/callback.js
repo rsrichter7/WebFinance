@@ -3,6 +3,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { ebFetch } = require('../_lib/enableBanking');
+const { heeftToegang } = require('../_lib/toegang');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -46,6 +47,9 @@ module.exports = async (req, res) => {
     }
     if (sessie.user_id !== user.id) {
       return res.status(403).json({ error: 'Geen toegang tot deze koppelsessie' });
+    }
+    if (!(await heeftToegang(supabase, sessie.household_id))) {
+      return res.status(402).json({ error: 'Actief abonnement vereist', abonnementVereist: true });
     }
 
     let accounts;
