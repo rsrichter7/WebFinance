@@ -30,7 +30,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ## Huidige status
 
-### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment + meerdere rekeningen
+### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment + meerdere rekeningen + landingspagina + Stripe-abonnementen + Enable Banking bankkoppeling + retentie-cron
 
 **Supabase backend volledig werkend:**
 - Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
@@ -142,21 +142,51 @@ React-code zit in de `webfinance/` submap binnen de repo.
 **Supabase overzicht-views (alleen dashboard):**
 - `household_overview` en `user_overview` koppelen ID's aan naam/e-mail voor handmatig beheer in het Supabase-dashboard. Rechten ingetrokken voor `anon`/`authenticated` (nooit via de app-API bereikbaar)
 
+**Publieke landingspagina:**
+- `LandingPage.jsx` — gemonteerd op `/` (via `SmartRoot`: toont de landingspagina aan uitgelogde bezoekers, stuurt ingelogde gebruikers door naar `/dashboard`) en expliciet op `/welkom`. Volledig buiten `ProtectedRoute`
+- Opbouw: `LandingNav` → `LandingHero` → `LandingPainSection` → vier `LandingQuestionSection`-blokken (elk met een mockup: `DonutMockup`, `StackedBarMockup`, `ProgressMockup`, `UpcomingMockup`) → `LandingUSP` → `LandingPricing` → `LandingCTA` → `LandingFooter`
+- `LandingPricing`: drie statische planskaarten (Maandelijks €3,99 / Per kwartaal €9,99 / Per jaar €29,99), roept zelf geen Stripe-checkout aan — elke CTA linkt naar `/login?modus=registreren`; checkout start pas na inloggen vanuit `Paywall.jsx`
+
+**Stripe-abonnementen en checkout:**
+- Nieuwe Supabase-tabel `subscriptions` (per huishouden): `household_id`, `stripe_customer_id`, `stripe_subscription_id`, `status` (`trialing`/`active`/`past_due`/`canceled`), `plan`, `trial_ends_at`, `current_period_end`
+- `api/create-checkout.js` maakt de Stripe Checkout Session aan (iDEAL + kaart, NL-locale, prijzen uit env vars `STRIPE_PRICE_MONTHLY`/`QUARTERLY`/`YEARLY`); `webfinance/src/utils/checkout.js` (`startCheckout(plan)`) roept dit aan vanuit `Paywall.jsx` en `SettingsAccounts.jsx`
+- Terugkeerpagina's: `CheckoutSuccessPage.jsx` (`/abonnement/geslaagd`, pollt `subscriptions.status` tot `active`) en `CheckoutCancelPage.jsx` (`/abonnement/geannuleerd`)
+- `api/stripe-webhook.js` verwerkt `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` en `invoice.payment_failed` en is de enige plek die `subscriptions` bijwerkt
+- `RequireSubscription.jsx` (wrapt `MainLayout`) toont `Paywall.jsx` zodra `useSubscription().hasAccess` false is; server-side gebeurt dezelfde check via `api/_lib/toegang.js` (`heeftToegang()`, fail-open zonder bestaande `subscriptions`-rij)
+- **Openstaand:** geen code in frontend of `api/` zet `trial_ends_at`/`status: 'trialing'` bij het aanmaken van een huishouden — vermoedelijk een Supabase-default/trigger die nog niet gedocumenteerd is; navragen/controleren
+
+**Enable Banking bankkoppeling (nu live, was roadmap-item):**
+- Flow: "Koppel bank" in `SettingsAccounts.jsx` → `BankKoppelModal.jsx` → `api/bank/start.js` (checkt `heeftToegang`, redirect naar eigen bank via Enable Banking `/auth`) → `/bank/callback` → `BankCallbackPage.jsx`/`api/bank/callback.js` (matcht rekeningen op `identificatie_hash`/IBAN) → gebruiker kiest per rekening "nieuw" of koppelen → `api/bank/koppel.js` verwerkt in `rekeningen`
+- **Automatisch herkoppelen:** al gekoppelde rekeningen die terugkomen (matched op `identificatie_hash`) worden stil bijgewerkt, geen keuzescherm nodig
+- Nieuwe kolommen op `rekeningen`: `extern_account_id`, `provider` (`'enablebanking'`), `identificatie_hash`, `sessie_id`, `koppeling_vervalt` (max 180 dagen), `aspsp_naam`, `laatst_gesynct`
+- **Sync is een preview:** `api/bank/sync.js` haalt en dedupliceert transacties (op `transactions.extern_transactie_id`); `BankImportFlow.jsx` (Transacties-pagina) doet de daadwerkelijke insert ná gebruikersreview, net als bij CSV-import
+- **Ontkoppelen** (`api/bank/ontkoppel.js`): wist alleen de bank-kolommen, sluit de EB-sessie als geen andere rekening ernaar verwijst
+- **Vervalmelding:** 14 dagen vóór `koppeling_vervalt` via `useNotifications.js`; `AccountRow.jsx` toont badge + "Opnieuw koppelen"-knop, ook bij syncfout
+- **Achter abonnement/proefperiode:** `start`, `callback`, `koppel` en `sync` checken allemaal `heeftToegang()` server-side (402 zonder geldig abonnement)
+- **Voorwaardenpagina:** `TermsPage.jsx` (`/voorwaarden`) — 9 secties, bevat nog `[Placeholder: ...]`-tekst die juridisch nagekeken moet worden vóór live
+
+**Retentie-cron voor verlopen abonnementen:**
+- `vercel.json` → dagelijkse cron `0 3 * * *` op `/api/cron/retentie`, beveiligd met `Authorization: Bearer ${CRON_SECRET}`
+- Nieuwe tabel `household_retentie` (`household_id`, `verlopen_sinds`, `koppelingen_opgezegd`, `waarschuwing_30d_verzonden`, `waarschuwing_7d_verzonden`, `data_gewist_op`)
+- `api/cron/retentie.js`: geen toegang + nog geen retentie-rij → koppelingen opzeggen + retentie-rij aanmaken + `mailVerlopen`. Bestaande rij: bij 335/358 dagen waarschuwingsmail (30/7 dagen), bij 365 dagen `wis_household_data(household_id)` (RPC) + `mailDataGewist`. Weer toegang vóór het wissen → retentie-rij wordt verwijderd
+- `api/_lib/mail.js` (nodemailer, Resend-SMTP, eigen `RESEND_API_KEY`) + `api/_lib/retentieMails.js` (vier e-mailteksten)
+- SQL-migratie (`sql/retentie_migration.sql`) is uitgevoerd en na afloop weer uit de repo verwijderd
+
 ### 🔮 Roadmap
 
-**Afgerond:** Meerdere rekeningen per account (zie hierboven).
+**Afgerond:** Meerdere rekeningen per account, publieke landingspagina, Stripe-abonnementen, Enable Banking bankkoppeling, retentie-cron (zie hierboven).
 
 **Nog te doen, in deze volgorde:**
-1. Enable Banking bankkoppeling (premium) — directe import zonder CSV. Bouwt voort op de rekeningen-architectuur: na koppelen geeft Enable Banking een lijst rekeningen terug die de gebruiker selecteert; per geselecteerde rekening wordt automatisch een rij in `rekeningen` aangemaakt (bron `'bank'`, `provider` `'enablebanking'`, `extern_account_id` gevuld) en worden transacties opgehaald (ontdubbeling via `extern_transactie_id`). Banken staan vaak ~4 verzoeken/dag/rekening toe (geen realtime sync); toegang (consent) verloopt na max 180 dagen — dan een melding via `koppeling_vervalt` en opnieuw koppelen.
-2. Zelf analyses opzetten — eigen analyses samenstellen, filteren en opslaan op de Analyse-pagina.
-3. Meertaligheid (vlak vóór live) — automatische vertaling via i18next/react-i18next (Nederlands standaard; taalkeuze uit selectielijst bij eerste aanmelding). Nieuwe npm-package, eerst overleggen. Vertaalsysteem trekt teksten uit de UI; vertalingen zelf moeten worden aangeleverd/nagekeken (financiële termen).
-4. Uitleg per pagina (vlak vóór live, als allerlaatste) — per pagina een volledige uitleg van de functies + eenvoudig uitgelegde formules, zichtbaar bij eerste aanmelding en opnieuw op te roepen via een knop. Pas bouwen na meertaligheid, zodat de uitlegteksten mee vertaald kunnen worden.
+1. Zelf analyses opzetten — eigen analyses samenstellen, filteren en opslaan op de Analyse-pagina.
+2. Meertaligheid (vlak vóór live) — automatische vertaling via i18next/react-i18next (Nederlands standaard; taalkeuze uit selectielijst bij eerste aanmelding). Nieuwe npm-package, eerst overleggen. Vertaalsysteem trekt teksten uit de UI; vertalingen zelf moeten worden aangeleverd/nagekeken (financiële termen).
+3. Uitleg per pagina (vlak vóór live, als allerlaatste) — per pagina een volledige uitleg van de functies + eenvoudig uitgelegde formules, zichtbaar bij eerste aanmelding en opnieuw op te roepen via een knop. Pas bouwen na meertaligheid, zodat de uitlegteksten mee vertaald kunnen worden.
+
+**Nog te controleren:** waar/hoe `subscriptions.trial_ends_at`/`status: 'trialing'` precies gezet worden bij huishouden-aanmaak (geen treffer in applicatiecode). De `[Placeholder: ...]`-teksten in `TermsPage.jsx` moeten juridisch nagekeken worden vóór live.
 
 ### 🔮 Later (niet nu)
 
 - Automatische AI-categorisering via Anthropic API (premium)
 - Paginering in tabellen (bij 2000+ transacties)
-- Stripe integratie voor premium-betalingen
 - Cookie-banner (bij analytics)
 
 ---
@@ -176,10 +206,15 @@ src/
 │   │   └── ProtectedRoute.jsx  → Route-bescherming (redirect naar /login)
 │   ├── feedback/
 │   │   └── FeedbackForm.jsx    → Slide-in panel: onderwerp, bericht, optioneel afbeelding
+│   ├── landing/                → LandingNav, LandingHero, LandingPainSection, LandingQuestionSection,
+│   │                             LandingUSP, LandingPricing, LandingCTA, LandingFooter,
+│   │                             mockups/ (ProgressMockup, DonutMockup, UpcomingMockup, StackedBarMockup)
+│   ├── paywall/                → Paywall.jsx (planskaarten + upgrade-CTA), RequireSubscription.jsx (wrapt MainLayout)
 │   ├── sidebar/                → Sidebar.jsx (navigatie, inklapbaar, premium-bewust, feedback-knop, bel-icoon),
 │   │                             AccountSwitcher.jsx (rekening-switcher dropdown onder logo, createPortal)
-│   ├── transactions/           → TransactionTopBar, TransactionFilters, TransactionTable, TransactionForm,
-│   │                             ImportFlow, ImportPreviewTable, ImportAiModal, BankInstructies
+│   ├── transactions/           → TransactionTopBar (incl. bank-ingang), TransactionFilters, TransactionTable,
+│   │                             TransactionForm, ImportFlow, ImportPreviewTable, ImportAiModal,
+│   │                             BankInstructies, BankImportFlow (Enable Banking preview-flow)
 │   ├── fixed/                  → FixedTopBar, FixedStats, FixedCategoryGroup, FixedForm,
 │   │                             FixedInkomstSection, FixedSuggesties, FixedLoanSection,
 │   │                             LoanCard, LoanForm
@@ -196,12 +231,15 @@ src/
 │   │                             DashboardLeningen
 │   └── settings/               → SettingsTopBar, SettingsSidebar, SettingsHousehold,
 │                                 SettingsHouseholdInvitations, SettingsProfile, SettingsAccounts,
+│                                 BankKoppelModal (Enable Banking koppelflow), AccountRow (per rekening,
+│                                 incl. vervalbadge + herkoppel-knop),
 │                                 SettingsSaldo, SettingsSaldoCheck, SettingsPreferences, SettingsCategories,
 │                                 SettingsDataManagement, SettingsDeleteAccount,
 │                                 SettingsNotifications, SettingsAbout, SettingsAdmin,
 │                                 SettingsFeedback, VerwijderLidModal
 │
 ├── pages/                      → Eén bestand per pagina (max 100 regels)
+│   ├── LandingPage.jsx         → Publieke landingspagina (/, /welkom, buiten ProtectedRoute)
 │   ├── DashboardPage.jsx
 │   ├── TransactionsPage.jsx
 │   ├── AnalyticsPage.jsx
@@ -209,8 +247,12 @@ src/
 │   ├── FixedPage.jsx
 │   ├── SettingsPage.jsx
 │   ├── PrivacyPage.jsx         → Statische privacy policy pagina (/privacy, geen login vereist)
+│   ├── TermsPage.jsx           → Voorwaardenpagina (/voorwaarden, geen login vereist, bevat placeholders)
 │   ├── CalendarPage.jsx        (premium only)
-│   └── InvitationPage.jsx      → Uitnodigingspagina (/uitnodiging/:token, buiten ProtectedRoute)
+│   ├── InvitationPage.jsx      → Uitnodigingspagina (/uitnodiging/:token, buiten ProtectedRoute)
+│   ├── BankCallbackPage.jsx    → Enable Banking terugkeerpagina (/bank/callback), rekening kiezen/koppelen
+│   ├── CheckoutSuccessPage.jsx → Stripe terugkeerpagina (/abonnement/geslaagd), pollt subscriptions.status
+│   └── CheckoutCancelPage.jsx  → Stripe terugkeerpagina (/abonnement/geannuleerd)
 │
 ├── layouts/MainLayout.jsx      → Sidebar + content wrapper
 ├── hooks/
@@ -219,6 +261,7 @@ src/
 │   ├── useHousehold.js         → Household_id ophalen van ingelogde user
 │   ├── useAccounts.js          → CRUD op rekeningen (Supabase rekeningen tabel)
 │   ├── useActiveAccount.jsx    → AccountProvider + useActiveAccount(): actieve rekening, activeStartsaldo
+│   ├── useSubscription.js      → isTrialing/isActive/hasAccess/trialDaysLeft uit subscriptions tabel
 │   ├── useSettings.js          → Centrale user settings (Supabase user_settings tabel)
 │   ├── useTransactions.js      → Alle transactie state & logica (Supabase)
 │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase, incl. type Inkomst/Uitgave, geen auto-transacties)
@@ -245,6 +288,7 @@ src/
 │   ├── vasteLastenDetectie.js  → detecteerVasteLasten (suggestie-motor vaste lasten uit transacties)
 │   ├── dashboardCalculations.js → o.a. berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)
 │   ├── loanCalculations.js     → huidigeMaandlast, berekenEinddatum, resterendeMaanden
+│   ├── checkout.js             → startCheckout(plan) — roept api/create-checkout aan, redirect naar Stripe
 │   └── parsers/                → Per bank een eigen parser + helpers.js
 │       ├── helpers.js          → parseCsvText, parseBedragKomma/Punt, parseDate*, makeTx, stripIBANs
 │       ├── parseRabobank.js
@@ -259,10 +303,19 @@ src/
 ├── styles/index.css            → Basis CSS
 ├── supabaseClient.js           → Supabase client configuratie
 ├── tokens.js                   → Design tokens (lightTokens/darkTokens) + fmt() + fmtShort() + fmtDate()
-└── App.jsx                     → Routing (ProtectedRoute; /privacy en /uitnodiging/:token buiten ProtectedRoute)
+└── App.jsx                     → Routing (ProtectedRoute; /, /welkom, /privacy, /voorwaarden,
+                                  /uitnodiging/:token, /bank/callback buiten ProtectedRoute;
+                                  RequireSubscription wrapt MainLayout binnen ProtectedRoute)
 
-vercel.json          ← In de root van de repo (naast webfinance/)
-api/delete-account.js ← Serverless functie (root van de repo), Stripe opzeggen + huishouden/gebruiker verwijderen
+vercel.json                 ← In de root van de repo (naast webfinance/), incl. crons-config
+api/delete-account.js       ← Serverless functie, Stripe opzeggen + huishouden/gebruiker verwijderen
+api/create-checkout.js      ← Serverless functie, maakt Stripe Checkout Session aan
+api/stripe-webhook.js       ← Serverless functie, verwerkt Stripe-webhookevents (subscriptions tabel)
+api/cron/retentie.js        ← Dagelijkse cron (03:00 UTC), verwerkt verlopen abonnementen/koppelingen
+api/bank/                   → start.js, callback.js, koppel.js, sync.js, ontkoppel.js, aspsps.js
+                               (Enable Banking koppelflow — serverside)
+api/_lib/                   → enableBanking.js (ebFetch helper), toegang.js (heeftToegang),
+                               mail.js (sendMail via Resend-SMTP), retentieMails.js (e-mailteksten)
 ```
 
 ---
@@ -308,6 +361,7 @@ Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
 - `useHousehold.js` — household_id van ingelogde user; gebruikt door alle data-hooks
 - `useAccounts.js` — CRUD op rekeningen (Supabase `rekeningen` tabel); persoonlijke rekening krijgt automatisch de ingelogde user als eigenaar
 - `useActiveAccount.jsx` — `AccountProvider` + `useActiveAccount()`: `accounts`, `activeAccount`, `activeAccountId`, `activeStartsaldo`, `setActiveAccount`; actieve rekening onthouden in localStorage
+- `useSubscription.js` — leidt `isTrialing`/`isActive`/`hasAccess`/`trialDaysLeft` af van de Supabase `subscriptions` tabel; drijft `RequireSubscription`/`Paywall` aan
 - `useSettings.js` — centrale user settings per user (Supabase `user_settings`)
 - `useTransactions.js` — transacties (lees, filter, sorteer, toevoegen, bewerken, verwijderen)
 - `useFixedExpenses.js` — vaste lasten en vaste inkomsten (CRUD, puur overzicht — maakt geen auto-transacties meer aan)
@@ -456,6 +510,30 @@ Premium-only. Combineert `useTransactions` en `useFixedExpenses` voor verwacht v
 
 `SettingsDeleteAccount.jsx` roept de serverless functie `/api/delete-account.js` aan (Bearer-token) i.p.v. rechtstreeks de RPC `delete_my_account()`. Solo-huishouden: Stripe-abonnement opzeggen + heel huishouden wissen + auth-user verwijderen (via SQL-functie `delete_household_cascade(p_household_id)`). Gedeeld huishouden: alleen de vertrekkende gebruiker verwijderen, eigenaarschap wordt overgedragen, gedeelde data + abonnement blijven behouden (via SQL-functie `depart_shared_household(p_user_id)`). Beide SQL-functies zijn SECURITY DEFINER en alleen aanroepbaar door `service_role`.
 
+### Stripe-abonnementen — toegangscontrole
+
+`subscriptions` (per `household_id`) is de bron van waarheid voor betaalde toegang: `status` (`trialing`/`active`/`past_due`/`canceled`), `plan`, `trial_ends_at`, `current_period_end`, `stripe_customer_id`, `stripe_subscription_id`.
+
+- **Client-side:** `useSubscription.js` berekent `isTrialing`/`isActive`/`hasAccess`/`trialDaysLeft`; `RequireSubscription.jsx` wrapt `MainLayout` in `App.jsx` en toont `Paywall.jsx` (roept `startCheckout(plan)` uit `utils/checkout.js` aan) zodra `hasAccess` false is.
+- **Server-side:** elk endpoint dat Enable Banking ontsluit checkt zelf nogmaals via `api/_lib/toegang.js` → `heeftToegang(supabase, householdId)` — fail-open (`true`) zonder bestaande `subscriptions`-rij, anders `true` bij niet-verlopen `trialing` of bij `active`.
+- **Checkout:** `api/create-checkout.js` maakt de Stripe Checkout Session aan. `api/stripe-webhook.js` is de enige plek die `subscriptions.status`/`plan`/`current_period_end` bijwerkt, op basis van vier Stripe-events.
+- **Openstaand:** niets in de repo zet `trial_ends_at`/`status: 'trialing'` bij het aanmaken van een huishouden — vermoedelijk een Supabase-default/trigger die nog niet in de codebase-documentatie zit.
+
+### Enable Banking bankkoppeling
+
+Volledige serverside flow onder `api/bank/` (`start.js`, `callback.js`, `koppel.js`, `sync.js`, `ontkoppel.js`, `aspsps.js`) plus de gedeelde helper `api/_lib/enableBanking.js` (`ebFetch`). Frontend: `BankKoppelModal.jsx` (starten), `BankCallbackPage.jsx` (`/bank/callback`, rekening kiezen/koppelen), `AccountRow.jsx` + `SettingsAccounts.jsx` (beheer, vervalbadges, herkoppelen), `BankImportFlow.jsx` (preview + import op de Transacties-pagina).
+
+- **Koppelen:** `start.js` → Enable Banking `/auth` (redirect naar eigen bank) → `bank_koppeling_sessies`-rij bijhoudt `state`/status. Na bank-login: `callback.js` wisselt de `code` om, matcht binnenkomende rekeningen op `identificatie_hash` (al gekoppeld → **stil herkoppelen**, geen keuzescherm nodig) of IBAN (suggestie) of biedt "nieuw" aan; `koppel.js` verwerkt de definitieve keuze in `rekeningen`.
+- **Rekeningen-kolommen:** `extern_account_id`, `provider` (`'enablebanking'`), `identificatie_hash`, `sessie_id`, `koppeling_vervalt`, `aspsp_naam`, `laatst_gesynct`.
+- **Sync is een preview, geen directe insert:** `sync.js` haalt en dedupliceert transacties (op `transactions.extern_transactie_id`) en geeft ze terug aan `BankImportFlow.jsx`, die ná gebruikersreview pas echt invoert (zelfde `markDuplicates`/`matchFixedExpenses` als bij CSV-import).
+- **Ontkoppelen:** `ontkoppel.js` wist alleen de bank-kolommen (rekening + transacties blijven bestaan) en sluit de EB-sessie als er geen andere rekening meer naar verwijst.
+- **Vervalmelding:** `koppeling_vervalt` (max 180 dagen) triggert een notificatie 14 dagen van tevoren via `useNotifications.js`; `AccountRow.jsx` toont een badge + herkoppel-knop, ook bij een syncfout in `BankImportFlow.jsx`.
+- **Achter abonnement:** elk van deze vier endpoints (`start`, `callback`, `koppel`, `sync`) checkt `heeftToegang()` en geeft `402` terug zonder geldig abonnement/proefperiode.
+
+### Retentie-cron
+
+`api/cron/retentie.js` draait dagelijks (`vercel.json` cron, 03:00 UTC, beveiligd met `CRON_SECRET`) en loopt over alle huishoudens. Zonder toegang (abonnement/proefperiode verlopen) en zonder bestaande `household_retentie`-rij: koppelingen opzeggen (EB-sessies sluiten + bank-kolommen op `rekeningen` wissen) + retentie-rij aanmaken + `mailVerlopen`. Met een bestaande rij: bij 335/358/365 dagen sinds `verlopen_sinds` respectievelijk een waarschuwingsmail op 30/7 dagen en, bij 365 dagen, `wis_household_data(household_id)` (RPC) + `mailDataGewist`. Krijgt het huishouden weer toegang vóór het wissen, dan wordt de retentie-rij verwijderd. E-mails via `api/_lib/mail.js` (nodemailer, Resend-SMTP, eigen `RESEND_API_KEY` los van de Supabase-auth-SMTP) en `api/_lib/retentieMails.js`.
+
 ### CSV Parser architectuur
 
 `src/utils/csvParser.js` is de orchestrator:
@@ -486,6 +564,9 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 | `budgets` | `can_access_account(account_id)` | Categorie-budgetten (uniek per household_id + account_id + categorie) |
 | `savings_goals` | `can_access_account(account_id)` | Spaardoelen |
 | `user_settings` | `user_id = auth.uid()` | Persoonlijke instellingen |
+| `subscriptions` | `household_id = get_my_household_id()` | Eén rij per huishouden: Stripe-abonnement/proefperiode-status |
+| `bank_koppeling_sessies` | `household_id = get_my_household_id()` | Enable Banking auth-state tijdens het koppelen (`state`, `status`) |
+| `household_retentie` | service_role only (geen directe app-toegang) | Voortgang van de retentie-cron per huishouden na verlopen abonnement |
 
 `can_access_account(p_account_id)` (STABLE) is de RLS-helper voor rekening-gebonden tabellen: toegestaan als de rekening persoonlijk van de aanroeper is, óf gedeeld binnen het eigen huishouden. Vervangt de oude household-brede policies op `transactions`, `fixed_expenses`, `budgets`, `savings_goals` en `loans`.
 
@@ -495,7 +576,8 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 |-------|-------|-------------------|
 | `transactions` | `type` | `'Inkomst'`, `'Uitgave'` |
 | `transactions` | `soort` | `'Noodzaak'`, `'Wens'`, `'Sparen'` |
-| `transactions` | `bron` | `'handmatig'`, `'auto'`, `'import'` |
+| `transactions` | `bron` | `'handmatig'`, `'auto'`, `'import'`, `'bank'` |
+| `rekeningen` | `bron` | `'handmatig'`, `'bank'` |
 | `fixed_expenses` | `soort` | `'Noodzaak'`, `'Wens'`, `'Sparen'` |
 | `fixed_expenses` | `frequentie` | `'Maandelijks'`, `'Jaarlijks'`, `'Kwartaal'`, `'Wekelijks'` |
 | `user_settings` | `datumformaat` | `'long'`, `'dmy'`, `'iso'` |
@@ -515,9 +597,11 @@ Volksbank-formaat (ASN/SNS/RegioBank): identiek, één parser voor alle drie.
 - `feedback.status` — TEXT: `'open'`, `'behandeld'`, `'afgewezen'`
 - `profiles.user_id` — UUID, koppelt profiel aan auth user (aangemaakt via `handle_new_user()`)
 - `rekeningen.user_id` — UUID, nullable; eigenaar bij persoonlijke rekening, `null` bij gedeelde rekening
-- `rekeningen.extern_account_id` / `rekeningen.provider` / `rekeningen.sessie_id` / `rekeningen.laatst_gesynct` / `rekeningen.koppeling_vervalt` — gereserveerd voor de Enable Banking-koppeling (`provider` waarde `'enablebanking'`, `koppeling_vervalt` voor de 180-dagen-vervalmelding); `transactions.extern_transactie_id` voor ontdubbeling; tabel `bank_koppeling_sessies` koppelt de auth-state aan huishouden+gebruiker
+- `rekeningen.extern_account_id` / `rekeningen.provider` / `rekeningen.identificatie_hash` / `rekeningen.sessie_id` / `rekeningen.laatst_gesynct` / `rekeningen.koppeling_vervalt` / `rekeningen.aspsp_naam` — gevuld door de Enable Banking-koppeling (`provider` waarde `'enablebanking'`, `koppeling_vervalt` voor de 180-dagen-vervalmelding, `identificatie_hash` voor automatisch herkoppelen); `transactions.extern_transactie_id` voor ontdubbeling; tabel `bank_koppeling_sessies` koppelt de auth-state aan huishouden+gebruiker
 - `transactions.account_id`, `fixed_expenses.account_id`, `budgets.account_id`, `savings_goals.account_id`, `loans.account_id` — FK naar `rekeningen.id`, ON DELETE CASCADE
 - `notifications.ref_key` — TEXT UNIQUE, voorkomt dubbele in-memory notificaties in database
+- `subscriptions.status` — TEXT: `'trialing'`, `'active'`, `'past_due'`, `'canceled'`; `subscriptions.plan` — TEXT: `'monthly'`/`'quarterly'`/`'yearly'`
+- `household_retentie.verlopen_sinds` — TIMESTAMPTZ, start van de aftelperiode na verlopen abonnement; `data_gewist_op` — NULL tot de 365-dagen-wis heeft plaatsgevonden
 
 ### Trigger: on_auth_user_created
 
@@ -544,6 +628,10 @@ Deze RPC wordt niet meer aangeroepen vanuit de frontend (mag later opgeruimd wor
 
 Beide zijn SECURITY DEFINER en alleen aanroepbaar met `service_role` (vanuit `/api/delete-account.js`). Dit zijn de **derde en vierde** uitzondering op de "geen SECURITY DEFINER" regel.
 
+### RPC: wis_household_data(p_household_id)
+
+Wist alle data van een huishouden na 365 dagen zonder abonnement (retentie-cron). SECURITY DEFINER, alleen `service_role`, aangeroepen vanuit `api/cron/retentie.js`. Dit is de **vijfde** uitzondering op de "geen SECURITY DEFINER" regel.
+
 ### Overzicht-views (alleen Supabase-dashboard)
 
 `household_overview` en `user_overview` koppelen ID's aan naam/e-mail voor handmatig beheer. Rechten ingetrokken voor `anon`/`authenticated` — nooit bereikbaar via de app-API.
@@ -566,6 +654,8 @@ Beide zijn SECURITY DEFINER en alleen aanroepbaar met `service_role` (vanuit `/a
 1. **Overflow hidden** — Cards met `overflow: 'hidden'` knippen slide-in formulieren of dropdowns af → fix: `createPortal` of `overflow: 'visible'`
 2. **CSV parsers ongetest** — parsers voor ING, ABN AMRO, bunq, Knab, Triodos, Revolut, Volksbank zijn geschreven op basis van gedocumenteerde formaten; correctie op basis van gebruikersfeedback
 3. ~~**Account verwijderen bij gedeeld huishouden**~~ — **OPGELOST**: `/api/delete-account.js` + `depart_shared_household()` handelen gedeelde huishoudens nu correct af (alleen de vertrekkende gebruiker wordt verwijderd, eigenaarschap overgedragen)
+4. **Proefperiode-toekenning onduidelijk** — geen frontend- of `api/`-code zet `subscriptions.trial_ends_at`/`status: 'trialing'` bij het aanmaken van een huishouden; vermoedelijk een Supabase-default/trigger die nog niet gedocumenteerd is. Controleren voordat hierop wordt vertrouwd
+5. **Voorwaardenpagina bevat placeholders** — `TermsPage.jsx` (`/voorwaarden`) heeft nog `[Placeholder: ...]`-teksten in alle 9 secties; juridisch laten nakijken vóór live
 
 ---
 
@@ -587,10 +677,10 @@ Kleuren per categorie (zie `src/data/categoryConfig.js`):
 
 ---
 
-## Verdienmodel (voor later, niet nu)
+## Verdienmodel (live via Stripe)
 
 - Gratis: basisfuncties
-- Premium (€3–5/mnd): ongelimiteerd, kalender, bankimport, bankkoppeling, AI-categorisering, meerdere bankrekeningen, aanpasbare analytics
+- Premium (€3,99/mnd, €9,99/kwartaal of €29,99/jaar, incl. proefperiode): ongelimiteerd, kalender, bankimport, Enable Banking bankkoppeling, meerdere bankrekeningen, aanpasbare analytics; AI-categorisering staat nog op de "later"-roadmap
 
 ---
 
