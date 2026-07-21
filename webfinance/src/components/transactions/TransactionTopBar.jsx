@@ -37,47 +37,49 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
         />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        {gekoppeld ? (
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={hasAccess ? onBankSyncClick : undefined}
-              disabled={!hasAccess}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 8,
-                border: `1px solid ${T.border}`, background: T.card,
-                fontSize: 13, fontWeight: 500, color: T.ink2, cursor: hasAccess ? 'pointer' : 'not-allowed',
-                fontFamily: 'inherit', opacity: hasAccess ? 1 : 0.5,
+        {bankKoppelingZichtbaar() ? (
+          gekoppeld ? (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={hasAccess ? onBankSyncClick : undefined}
+                disabled={!hasAccess}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', borderRadius: 8,
+                  border: `1px solid ${T.border}`, background: T.card,
+                  fontSize: 13, fontWeight: 500, color: T.ink2, cursor: hasAccess ? 'pointer' : 'not-allowed',
+                  fontFamily: 'inherit', opacity: hasAccess ? 1 : 0.5,
+                }}>
+                <span style={{ display: 'inline-flex' }}>{ICONS.refresh}</span>
+                Uit bank ophalen
+              </button>
+              <span style={{
+                position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                marginTop: 4, fontSize: 11, color: T.ink3, whiteSpace: 'nowrap',
               }}>
-              <span style={{ display: 'inline-flex' }}>{ICONS.refresh}</span>
-              Uit bank ophalen
-            </button>
-            <span style={{
-              position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-              marginTop: 4, fontSize: 11, color: T.ink3, whiteSpace: 'nowrap',
-            }}>
-              {hasAccess
-                ? (activeAccount.laatstGesynct ? `Laatst gesynct: ${fmtDate(activeAccount.laatstGesynct)}` : 'Nog niet gesynct')
-                : (
-                  <>
-                    Vereist een abonnement —{' '}
-                    <button
-                      onClick={() => startCheckout('monthly').catch(() => {})}
-                      style={{ background: 'none', border: 'none', padding: 0, color: T.blue, textDecoration: 'underline', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
-                    >
-                      bekijk abonnementen
-                    </button>
-                  </>
-                )}
+                {hasAccess
+                  ? (activeAccount.laatstGesynct ? `Laatst gesynct: ${fmtDate(activeAccount.laatstGesynct)}` : 'Nog niet gesynct')
+                  : (
+                    <>
+                      Vereist een abonnement —{' '}
+                      <button
+                        onClick={() => startCheckout('monthly').catch(() => {})}
+                        style={{ background: 'none', border: 'none', padding: 0, color: T.blue, textDecoration: 'underline', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
+                      >
+                        bekijk abonnementen
+                      </button>
+                    </>
+                  )}
+              </span>
+            </div>
+          ) : (
+            <span style={{ fontSize: 12, color: T.ink3 }}>
+              Automatisch transacties uit je bank halen?{' '}
+              <Link to="/instellingen?sectie=rekeningen" style={{ color: T.blue, textDecoration: 'underline' }}>
+                Koppel deze rekening
+              </Link>
             </span>
-          </div>
-        ) : bankKoppelingZichtbaar() ? (
-          <span style={{ fontSize: 12, color: T.ink3 }}>
-            Automatisch transacties uit je bank halen?{' '}
-            <Link to="/instellingen?sectie=rekeningen" style={{ color: T.blue, textDecoration: 'underline' }}>
-              Koppel deze rekening
-            </Link>
-          </span>
+          )
         ) : null}
         <button onClick={onImportClick} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,

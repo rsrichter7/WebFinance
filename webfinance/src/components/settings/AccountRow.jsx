@@ -11,6 +11,9 @@ const VEERTIEN_DAGEN_MS = 14 * 24 * 60 * 60 * 1000
 
 export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, onOntkoppel, onSync, onHerkoppelen }) {
   const gekoppeld = !!acc.externAccountId
+  // Alle UI die de gekoppelde toestand toont hangt op de vlag — anders lekt bank-info
+  // door op rekeningen die al gekoppeld zijn, ook met de feature uit beeld.
+  const toonBank = bankKoppelingZichtbaar() && gekoppeld
 
   // Vervalbadge en herkoppel-knop leiden naar een nieuwe koppeling — uit beeld
   // zolang de bankkoppeling-feature uit staat (bestaande koppeling blijft gewoon werken).
@@ -31,17 +34,17 @@ export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, o
           {acc.gedeeld
             ? <Badge color={T.blueText} bg={T.blueSoft}>Gedeeld</Badge>
             : <Badge color={T.ink3} bg={T.rule}>Persoonlijk</Badge>}
-          {gekoppeld && <Badge color={T.greenText} bg={T.greenSoft}>Gekoppeld</Badge>}
+          {toonBank && <Badge color={T.greenText} bg={T.greenSoft}>Gekoppeld</Badge>}
           {vervalStatus === 'verlopen' && <Badge color={T.redText} bg={T.redSoft}>Verlopen</Badge>}
           {vervalStatus === 'binnenkort' && <Badge color={T.amberText} bg={T.amberSoft}>Verloopt binnenkort</Badge>}
         </div>
         {acc.iban && <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>{acc.iban}</div>}
-        {gekoppeld && acc.koppelingVervalt && (
+        {toonBank && acc.koppelingVervalt && (
           <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
             Bankkoppeling · verloopt {fmtDate(acc.koppelingVervalt)}
           </div>
         )}
-        {gekoppeld && (
+        {toonBank && (
           <div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
             {acc.laatstGesynct ? `Laatst gesynct: ${fmtDate(acc.laatstGesynct)}` : 'Nog niet gesynct'}
           </div>
@@ -57,12 +60,12 @@ export default function AccountRow({ acc, T, kanVerwijderen, onEdit, onDelete, o
         )}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        {gekoppeld && (
+        {toonBank && (
           <button onClick={onSync} style={iconBtn} title="Nu synchroniseren">
             {ICONS.refresh}
           </button>
         )}
-        {gekoppeld && (
+        {toonBank && (
           <button onClick={onOntkoppel} style={iconBtn} title="Bankkoppeling verwijderen">
             {ICONS.link}
           </button>
