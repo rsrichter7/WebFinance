@@ -1,5 +1,7 @@
 # Webfinance — Projectdocumentatie voor Claude Code
 
+Bijgewerkt: 21 juli 2026.
+
 ---
 
 ## Wat is Webfinance?
@@ -32,6 +34,14 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ### ✅ Afgerond — alle pagina's + authenticatie + Supabase + CSV import + security + dark mode + notificaties + uitnodigingen + feedback + Vercel deployment + meerdere rekeningen + landingspagina + Stripe-abonnementen + Enable Banking bankkoppeling + retentie-cron
 
+**⚠️ Bankkoppeling tijdelijk volledig uit beeld (feature-vlag):**
+- Enable Banking-bankkoppeling is verborgen via `BANK_KOPPELING_ACTIEF = false` in `src/config/features.js`. Reden: productiegebruik vereist een betaald contract met Enable Banking met een maandelijks minimumbedrag, en dat is pas rendabel bij voldoende betalende gebruikers.
+- Alle code, endpoints (`api/bank/*`), database-kolommen en -tabellen (`rekeningen`, `bank_koppeling_sessies`, `transactions.extern_transactie_id`) en de retentie-cron blijven onveranderd en werkend — alleen de UI-ingangen zijn verborgen.
+- Verborgen achter de vlag: de "Koppel bank"-knop (`SettingsAccounts.jsx`), de vervalbadges ("Verlopen"/"Verloopt binnenkort") en de "Opnieuw koppelen"-knop (`AccountRow.jsx`), de bank-ingang op de Transacties-pagina (`TransactionTopBar.jsx`), de "Bankkoppeling verloopt"-notificatietoggle (`SettingsNotifications.jsx`) en het aanmaken van nieuwe `bank_koppeling`-notificaties (`useNotifications.js`).
+- **Fix: de GEKOPPELDE-toestand-UI lekte langs de vlag, nu gedicht.** De eerste versie zette de vlag alleen op de UI die een NIET-gekoppelde rekening toont (de uitnodiging om te koppelen) — op een rekening die al gekoppeld was, bleven de "Gekoppeld"-badge, het "Bankkoppeling · verloopt {datum}"-blok, "Laatst gesynct"/"Nog niet gesynct", de sync-knop en de ontkoppel-knop in `AccountRow.jsx` zichtbaar, en de "Uit bank ophalen"-knop in `TransactionTopBar.jsx` stond los van de vlag — al deze elementen hingen puur op `gekoppeld`/`externAccountId`. `AccountRow.jsx` gebruikt nu een afgeleide `const toonBank = bankKoppelingZichtbaar() && gekoppeld` die al deze elementen gate (de vervalbadges en "Opnieuw koppelen" hingen al terecht aan `vervalStatus`, zelf ook achter de vlag). `TransactionTopBar.jsx` heeft de hele bank-sectie (gekoppeld én niet-gekoppeld) nu onder één `bankKoppelingZichtbaar()`-check.
+- Bestaande, al gekoppelde rekeningen blijven gewoon synchroniseren, ontkoppelen werkt nog — dit zijn geen "ingangen" naar een nieuwe koppeling en een lopende koppeling mag niet breken. Route `/bank/callback` en `api/bank/*` blijven bestaan en checken zelf `heeftToegang()`.
+- Uitzondering: met admin ontgrendeld (`bankKoppelingZichtbaar()`, dezelfde `webfinance_admin_unlocked` localStorage-check als elders) blijft alles gewoon zichtbaar, zodat Ronald kan blijven testen zonder de vlag om te zetten.
+
 **Supabase backend volledig werkend:**
 - Authenticatie via email/wachtwoord én Google OAuth, `useAuth` hook, `LoginPage`, `ProtectedRoute`
 - Email-verificatie verplicht bij registratie (via Resend SMTP); wachtwoord minimaal 8 tekens
@@ -52,9 +62,9 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - **Transacties** — zoeken, filteren, sorteren, toevoegen, bewerken, verwijderen, auto-badge, import
 - **Vaste Lasten** — twee tabs (Uitgaven / Inkomsten), CRUD voor beide types, puur overzicht/referentie (maakt geen automatische transacties meer aan), donut chart, gegroepeerde tabellen per categorie, suggestie-motor herkent terugkerende vaste lasten uit transacties, leningen-sectie met gekoppelde aflossing-vaste-last
 - **Budgetten** — 50/30/20 + handmatige modus, categorie-tabel, spaardoelen met storten
-- **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters, premium sectie
+- **Analyse** — 4 grafieken in versleepbaar 2×2 grid, periode-filters
 - **Instellingen** — profiel, huishouden (met ledenlijst + uitnodigingen), saldo, voorkeuren (incl. thema), categorieën, data beheer, notificaties, admin (incl. feedback-overzicht)
-- **Kalender** — premium-only, maand/week view, verwacht vs. werkelijk, inkomsten zichtbaar, hoge uitgaven gemarkeerd
+- **Kalender** — maand/week view, verwacht vs. werkelijk, inkomsten zichtbaar, hoge uitgaven gemarkeerd
 - **Privacy policy** — statische pagina op `/privacy`, toegankelijk zonder login (AVG)
 - **Uitnodigingspagina** — `/uitnodiging/:token`, buiten ProtectedRoute
 
@@ -89,7 +99,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Persoonlijk profiel aangemaakt bij registratie via trigger; `user_id` kolom aanwezig
 
 **Security-hardening afgerond:**
-- Centrale invoervalidatie (`src/utils/validation.js`) — 7 functies
+- Centrale invoervalidatie (`src/utils/validation.js`) — 8 functies, incl. `validateVerplichteTekst()` (verplichte tekstvelden zoals Winkel/Bron)
 - Content Security Policy + security headers in `vercel.json`
 - Account verwijderen (AVG) via serverless functie `/api/delete-account.js` (Stripe opzeggen + huishouden/gebruiker correct verwijderen — zie hieronder), data-export als Excel (.xlsx)
 
@@ -116,9 +126,11 @@ React-code zit in de `webfinance/` submap binnen de repo.
 - Solo-huishouden: Stripe-abonnement direct opzeggen + heel huishouden wissen + auth-user verwijderen. Gedeeld huishouden: alleen de vertrekkende gebruiker verwijderen, eigenaarschap wordt overgedragen, gedeelde data + abonnement blijven behouden
 - Nieuwe SQL-functies `delete_household_cascade(p_household_id)` en `depart_shared_household(p_user_id)` — SECURITY DEFINER, alleen `service_role`
 
-**Design — winkel/bron vooraan:**
+**Design — winkel/bron vooraan, verplicht + notitie-veld:**
 - Winkel/Bron staat nu vóór Omschrijving en is dikgedrukt; Omschrijving erachter en licht. Toegepast in `TransactionTable`, `IncomeCategoryGroup`, `FixedCategoryGroup`; `DashboardRecentTx` toont winkel als hoofdregel; `CalendarDayDetail`-label toont winkel (valt terug op naam)
 - In de slide-in formulieren (`TransactionForm`, `FixedForm`) staat het Winkel-veld vóór het Omschrijving-veld
+- **Winkel/Bron is nu het verplichte veld, Omschrijving is optioneel** — in beide formulieren via `validateVerplichteTekst(form.winkel, 'Winkel/Bron')` uit `utils/validation.js`
+- **Nieuw `notitie`-veld op transacties** — kolom `transactions.notitie` (optioneel, vrije tekst), zit in de `useTransactions`-mapping en wordt in `TransactionForm` getoond bij toevoegen én bewerken (`editingTransaction.notitie`). `FixedForm` heeft bewust géén notitie-veld
 
 **Leningen — nu live (was "geparkeerd"):**
 - Nieuwe Supabase-tabel `loans` (RLS via `get_my_household_id()` + grants). `loans.id` is een volgnummer (bigint), maar `loans.vaste_last_id` is een uuid (verwijst naar `fixed_expenses.id`)
@@ -185,7 +197,7 @@ React-code zit in de `webfinance/` submap binnen de repo.
 
 ### 🔮 Later (niet nu)
 
-- Automatische AI-categorisering via Anthropic API (premium)
+- Automatische AI-categorisering via Anthropic API
 - Paginering in tabellen (bij 2000+ transacties)
 - Cookie-banner (bij analytics)
 
@@ -210,7 +222,7 @@ src/
 │   │                             LandingUSP, LandingPricing, LandingCTA, LandingFooter,
 │   │                             mockups/ (ProgressMockup, DonutMockup, UpcomingMockup, StackedBarMockup)
 │   ├── paywall/                → Paywall.jsx (planskaarten + upgrade-CTA), RequireSubscription.jsx (wrapt MainLayout)
-│   ├── sidebar/                → Sidebar.jsx (navigatie, inklapbaar, premium-bewust, feedback-knop, bel-icoon),
+│   ├── sidebar/                → Sidebar.jsx (navigatie, inklapbaar, proefperiode-indicator, feedback-knop, bel-icoon),
 │   │                             AccountSwitcher.jsx (rekening-switcher dropdown onder logo, createPortal)
 │   ├── transactions/           → TransactionTopBar (incl. bank-ingang), TransactionFilters, TransactionTable,
 │   │                             TransactionForm, ImportFlow, ImportPreviewTable, ImportAiModal,
@@ -222,7 +234,7 @@ src/
 │   │                             BudgetSavingsGoals, BudgetForm
 │   ├── analytics/              → AnalyticsTopBar, AnalyticsPeriodFilter, AnalyticsChartCard,
 │   │                             AnalyticsTopCategories, AnalyticsTopSubcategories, AnalyticsSoortDonut,
-│   │                             AnalyticsIncomeExpense, AnalyticsPremiumSection
+│   │                             AnalyticsIncomeExpense
 │   ├── calendar/               → CalendarTopBar, CalendarMonthNav, CalendarGrid, CalendarDayCell,
 │   │                             CalendarWeekView, CalendarDayDetail, CalendarStats, CalendarLegend
 │   ├── dashboard/              → DashboardTopBar, DashboardStatCards, DashboardCategoryDonut,
@@ -248,7 +260,7 @@ src/
 │   ├── SettingsPage.jsx
 │   ├── PrivacyPage.jsx         → Statische privacy policy pagina (/privacy, geen login vereist)
 │   ├── TermsPage.jsx           → Voorwaardenpagina (/voorwaarden, geen login vereist, bevat placeholders)
-│   ├── CalendarPage.jsx        (premium only)
+│   ├── CalendarPage.jsx
 │   ├── InvitationPage.jsx      → Uitnodigingspagina (/uitnodiging/:token, buiten ProtectedRoute)
 │   ├── BankCallbackPage.jsx    → Enable Banking terugkeerpagina (/bank/callback), rekening kiezen/koppelen
 │   ├── CheckoutSuccessPage.jsx → Stripe terugkeerpagina (/abonnement/geslaagd), pollt subscriptions.status
@@ -267,12 +279,15 @@ src/
 │   ├── useFixedExpenses.js     → Alle vaste lasten state & logica (Supabase, incl. type Inkomst/Uitgave, geen auto-transacties)
 │   ├── useLoans.js             → Leningen CRUD + gekoppelde aflossing-vaste-last (Supabase loans tabel)
 │   ├── useBudgets.js           → Alle budget state & logica (Supabase)
-│   ├── usePremium.js           → Centrale premium-status app-breed (via useSettings)
 │   ├── useProfiles.js          → Centrale profielen app-breed (Supabase profiles tabel)
 │   ├── useTheme.jsx            → ThemeProvider + useTheme hook (licht/donker/auto)
 │   ├── useFeedback.js          → Feedback CRUD (Supabase feedback tabel)
 │   ├── useInvitations.js       → Huishouden uitnodigingen (aanmaken, accepteren, afwijzen, annuleren)
 │   └── useNotifications.js     → Combineert database- en in-memory notificaties (persistent via ref_key)
+│
+├── config/
+│   └── features.js             → Feature-vlaggen: BANK_KOPPELING_ACTIEF + bankKoppelingZichtbaar()
+│                                  (admin-uitzondering via webfinance_admin_unlocked)
 │
 ├── data/
 │   ├── categories.js           → CATEGORIES + getMergedCategories(customCategories?) + SOORTEN
@@ -283,7 +298,7 @@ src/
 │
 ├── utils/
 │   ├── csvParser.js            → Bankdetectie (detectBank) + parseCSV + markDuplicates + matchFixedExpenses
-│   ├── validation.js           → Centrale invoervalidatie: validateBedrag/Datum/Tekst/Categorie/Soort/Type/Wie
+│   ├── validation.js           → Centrale invoervalidatie: validateBedrag/Datum/Tekst/VerplichteTekst/Categorie/Soort/Type/Wie
 │   ├── kalenderMatch.js        → MATCH_CONFIG + maakActualsIndex + isVerwachtGedekt (tolerante kalender-match)
 │   ├── vasteLastenDetectie.js  → detecteerVasteLasten (suggestie-motor vaste lasten uit transacties)
 │   ├── dashboardCalculations.js → o.a. berekendSaldoOpDatum(allTransactions, startsaldo, peildatum)
@@ -367,7 +382,6 @@ Elke domein heeft zijn eigen hook — de **enige** plek voor state en logica:
 - `useFixedExpenses.js` — vaste lasten en vaste inkomsten (CRUD, puur overzicht — maakt geen auto-transacties meer aan)
 - `useLoans.js` — leningen (CRUD + berekeningen, aflossing-vaste-last aanmaken/bijwerken/verwijderen in `fixed_expenses`)
 - `useBudgets.js` — budgetten en spaardoelen (berekeningen, CRUD, maand/jaar filter)
-- `usePremium.js` — centrale premium-status app-breed (leest van `useSettings`)
 - `useProfiles.js` — centrale profielen app-breed (Supabase `profiles` tabel)
 - `useTheme.jsx` — ThemeProvider + `useTheme()` hook (licht/donker/auto, T-tokens per thema)
 - `useFeedback.js` — feedback aanmaken + admin-overzicht (Supabase `feedback` tabel)
@@ -426,7 +440,7 @@ Gebruik dit overal waar categorieën getoond of gekozen worden.
 
 `useSettings()` exporteert: `settings`, `loading`, `error`, `updateSetting(key, value)`, `updateSettings(updates)`.
 
-Schrijft `datumformaat`, `custom_categories` en `premium` ook naar localStorage (backward-compat voor `fmtDate` en `getMergedCategories`).
+Schrijft `datumformaat` en `custom_categories` ook naar localStorage (backward-compat voor `fmtDate` en `getMergedCategories`).
 
 ### useProfiles hook
 
@@ -452,11 +466,9 @@ Op een persoonlijke rekening is `wie` altijd de eigenaar: `TransactionForm` en `
 
 `AccountSwitcher.jsx` (sidebar, onder het logo) wisselt de actieve rekening; `SettingsAccounts.jsx` (Instellingen → Rekeningen) beheert CRUD. Verwijderen van een rekening cascadeert naar alle gekoppelde data; bij verwijderen van de actieve rekening springt de app naar een andere.
 
-### Sidebar premium-logica
+### Sidebar — proefperiode-indicator
 
-- PREMIUM badge bij Kalender verborgen als `isPremium === true`
-- "Upgrade naar Premium" blok verborgen als `isPremium === true`
-- Profiel-chip toont "PREMIUM" (blauw) of "GRATIS" (grijs)
+Geen premium-vs-gratis onderscheid meer (zie "Verdienmodel"), dus geen PREMIUM/GRATIS-badges. Zolang `useSubscription().isTrialing && trialDaysLeft > 0` toont de sidebar een subtiel regeltje boven de profielchip: "Nog X dagen gratis". Profiel-chip toont alleen naam + profielkleur.
 
 ### Sorteerlogica transacties
 
@@ -488,7 +500,7 @@ Bij gelijke datum worden nieuwste transacties (hoogste `created_at`) eerst getoo
 
 ### Kalender architectuur
 
-Premium-only. Combineert `useTransactions` en `useFixedExpenses` voor verwacht vs. werkelijk. `buildDayMap` en `getMondayOfWeek` zijn named exports die in `CalendarPage` hergebruikt worden. Matching is tolerant (niet exact): `src/utils/kalenderMatch.js` met `MATCH_CONFIG` (speling op dagen en op bedrag-%) bepaalt via `isVerwachtGedekt` of een verwachte post al gedekt is door een echte transactie. `getOccurrencesInMonth` projecteert ook Kwartaal-items.
+Combineert `useTransactions` en `useFixedExpenses` voor verwacht vs. werkelijk. `buildDayMap` en `getMondayOfWeek` zijn named exports die in `CalendarPage` hergebruikt worden. Matching is tolerant (niet exact): `src/utils/kalenderMatch.js` met `MATCH_CONFIG` (speling op dagen en op bedrag-%) bepaalt via `isVerwachtGedekt` of een verwachte post al gedekt is door een echte transactie. `getOccurrencesInMonth` projecteert ook Kwartaal-items.
 
 ### Saldo-controle (Instellingen → Saldo)
 
@@ -645,7 +657,6 @@ Wist alle data van een huishouden na 365 dagen zonder abonnement (retentie-cron)
 | `"webfinance_admin_unlocked"` | Boolean | Development only, niet gemigreerd |
 | `"webfinance_datumformaat"` | Backward-compat cache | Voor `fmtDate()` zonder format param |
 | `"webfinance_custom_categories"` | Backward-compat cache | Voor `getMergedCategories()` zonder param |
-| `"webfinance_premium"` | Backward-compat cache | Voor `usePremium()` |
 
 ---
 
@@ -679,8 +690,11 @@ Kleuren per categorie (zie `src/data/categoryConfig.js`):
 
 ## Verdienmodel (live via Stripe)
 
-- Gratis: basisfuncties
-- Premium (€3,99/mnd, €9,99/kwartaal of €29,99/jaar, incl. proefperiode): ongelimiteerd, kalender, bankimport, Enable Banking bankkoppeling, meerdere bankrekeningen, aanpasbare analytics; AI-categorisering staat nog op de "later"-roadmap
+**Geen gratis tier.** Elk huishouden krijgt een proefperiode van 30 dagen; daarna is een betaald abonnement vereist om de app te blijven gebruiken: Maandelijks €3,99, Per kwartaal €9,99 (~16% korting), Per jaar €29,99 (37% korting).
+
+Alle functionaliteit zit achter dezelfde abonnementscheck (`subscriptions`-tabel / `heeftToegang()` / `RequireSubscription`) — geen premium-vs-gratis onderscheid en dus geen aparte featurelijst per tier. Client-side: `RequireSubscription.jsx` toont `Paywall.jsx` zodra `hasAccess` false is; sidebar toont tijdens de proefmaand "Nog X dagen gratis". Server-side: elk endpoint dat verder gaat dan basis-CRUD (met name Enable Banking) checkt zelf `heeftToegang()`.
+
+Enable Banking-bankkoppeling staat los van dit model uit beeld (zie feature-vlag hierboven) — komt mogelijk later terug als apart betaald plan.
 
 ---
 
