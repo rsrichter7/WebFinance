@@ -91,11 +91,34 @@ export default function useCustomAnalyses() {
     invalideerEnHerlaad()
   }, [fetchAll])
 
+  const voegAnalyseToe = useCallback(async (data) => {
+    if (!householdId) return
+    await supabase.from('custom_analyses').insert({
+      household_id: householdId,
+      naam:         data.naam,
+      familie:      data.familie,
+      config:       data.config,
+      volgorde:     analyses.length,
+    })
+    invalideerEnHerlaad()
+  }, [householdId, analyses.length, fetchAll])
+
+  const wijzigAnalyse = useCallback(async (id, data) => {
+    await supabase.from('custom_analyses').update({
+      naam:    data.naam,
+      familie: data.familie,
+      config:  data.config,
+    }).eq('id', id)
+    invalideerEnHerlaad()
+  }, [fetchAll])
+
   return {
     analyses,
     loading,
     error,
     herordenAnalyses,
     verwijderAnalyse,
+    voegAnalyseToe,
+    wijzigAnalyse,
   }
 }
