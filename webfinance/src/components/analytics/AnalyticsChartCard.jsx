@@ -8,10 +8,12 @@ import AnalyticsPeriodFilter, { initPeriod } from './AnalyticsPeriodFilter'
 
 export default function AnalyticsChartCard({
   title, children, isDragging, isOver,
-  onDragStart, onDragOver, onDrop, onDragEnd,
+  onDragStart, onDragOver, onDrop, onDragEnd, onDelete,
 }) {
   const { T } = useTheme()
   const [period, setPeriod] = useState(initPeriod)
+
+  const iconBtn = { border: 'none', background: 'transparent', padding: 4, borderRadius: 6, cursor: 'pointer', color: T.ink4, display: 'inline-flex' }
 
   return (
     <div
@@ -30,6 +32,9 @@ export default function AnalyticsChartCard({
         <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: -0.1 }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <AnalyticsPeriodFilter value={period} onChange={setPeriod} />
+          {onDelete && (
+            <button onClick={onDelete} style={iconBtn}>{ICONS.trash}</button>
+          )}
           <div style={{ color: T.ink3, cursor: 'grab', display: 'inline-flex' }}>
             {ICONS.grip}
           </div>
