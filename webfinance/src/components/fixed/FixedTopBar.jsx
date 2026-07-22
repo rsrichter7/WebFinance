@@ -11,7 +11,7 @@ export default function FixedTopBar({ onAdd }) {
 
   const bullets = [
     'Voeg een vaste last toe met een startdatum en herhaling (wekelijks, maandelijks of jaarlijks).',
-    <>Transacties worden automatisch aangemaakt op basis van de herhaling. Deze herken je aan het <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 3, background: T.violetSoft, color: T.violet }}>AUTO</span> label op de transactiepagina.</>,
+    'Deze pagina is een overzicht: vaste lasten worden hier niet als transacties geboekt. Werkelijke transacties komen uit je CSV-import of handmatige invoer.',
     'Bedragen worden omgerekend naar maandbedragen voor het overzicht.',
   ]
 
@@ -26,7 +26,7 @@ export default function FixedTopBar({ onAdd }) {
         </div>
         <PageInfoPopover
           titel="Hoe werkt deze pagina?"
-          intro="Vaste lasten zijn terugkerende kosten en inkomsten die automatisch worden bijgehouden."
+          intro="Vaste lasten zijn je terugkerende kosten en inkomsten — een overzicht van wat er maandelijks binnenkomt en uitgaat."
           bullets={bullets}
         />
       </div>

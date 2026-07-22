@@ -32,7 +32,7 @@ export default function TransactionTopBar({ onNewClick, onImportClick, activeAcc
             'Voeg transacties handmatig toe via de knop rechtsboven.',
             'Importeer transacties via CSV vanuit je bank.',
             'Filter op categorie, persoon, type of periode via de filterbalk.',
-            'Transacties met een AUTO label zijn automatisch aangemaakt vanuit je vaste lasten.',
+            'Transacties met een AUTO label zijn automatisch aangemaakt bij een storting op een spaardoel.',
           ]}
         />
       </div>
